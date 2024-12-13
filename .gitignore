@@ -1,0 +1,7 @@
+data/
+img/
+
+__pycache__/
+
+.gradio
+*.egg-info

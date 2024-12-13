@@ -1,0 +1,15 @@
+[build-system]
+requires = [
+   "setuptools",
+   "wheel"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyeyes"
+version = "0.0.1"
+authors = [
+  { name="Zachary Shah", email="zshah9@stanford.edu" },
+]
+description = "A package for MRI visualization in Python"
+readme = "README.md"
