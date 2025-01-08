@@ -12,8 +12,8 @@ import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .utils import tonp
-from .plotting import dark_mode
+from ..utils import tonp
+from .mpl import dark_mode
 
 @dataclass
 class ROIFeature:

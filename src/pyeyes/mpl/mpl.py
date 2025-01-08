@@ -7,8 +7,8 @@ from matplotlib.animation import FuncAnimation
 from typing import Union, Sequence, Optional
 from tqdm import tqdm
 
-from .utils import tonp, normalize, RMSE
-from .plot_config import PlotConfig, get_line_colors
+from ..utils import tonp, normalize, RMSE
+from .mpl_config import PlotConfig, get_line_colors
 
 # Custom Color Maps. TODO: move all custom color stuff to its own file
 from matplotlib.colors import LinearSegmentedColormap

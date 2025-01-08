@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import gradio as gr
 import numpy as np
 
-from .roi import ROIFeature, roi_grid_plot 
+from ..mpl.roi import ROIFeature, roi_grid_plot 
 
 class RoiPlot:
     def __init__(self, gt, img_list, img_titles):

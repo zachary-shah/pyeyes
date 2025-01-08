@@ -1,5 +1,7 @@
 """
 Plotting tools for DTI data.
+
+TODO: Port to Bokeh (currently mpl backend)
 """
 
 import os
@@ -11,8 +13,8 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 import nibabel as nib
 
-from .utils import tonp
-from .plotting import dark_mode, PlotConfig
+from ..utils import tonp
+from .mpl import dark_mode, PlotConfig
 
 def load_dti(dti_path):
     dti_keys = ['FA', 'MD', 'MO', 'S0', 'L1', 'L2', 'L3', 'V1', 'V2', 'V3']
