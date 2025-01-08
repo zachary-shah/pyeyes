@@ -1,7 +1,9 @@
 # pyeyes
 
+Pyeyes is a n-dimensional data visualization tool for comparing images. Especially designed as an MRI visualization tool, inspired by FSLEyes.
+
 ## Installation
-You can create the relevant conda environment using mamba (you can use conda but it will be very slow):
+You can create the relevant conda environment using mamba:
 ```
 mamba env create -n pyeyes --file env.yml
 ```
@@ -11,7 +13,7 @@ Activate the installed environment:
 mamba activate pyeyes
 ```
 
-Then install the mr_recon library by moving to the mr_recon directory and running
+Then install the pyeyes library by moving to the mr_recon directory and running
 ```
 pip install -e ./
 ```
