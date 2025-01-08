@@ -15,3 +15,18 @@ Then install the mr_recon library by moving to the mr_recon directory and runnin
 ```
 pip install -e ./
 ```
+
+## Feature List
+- [ ] select value dimensions (default x, y)
+- [x] slicer dimensions
+- [ ] toggle real, im, mag, phase
+- [x] control contrast (vmin/vmax)
+- [x] select colormap
+- [ ] select width, height to crop image to
+- [ ] toggle select which images to display
+- [ ] toggle difference maps
+    - [ ] select reference for difference map
+    - [ ] select difference maps
+- [ ] toggle ROI selection
+    - [ ] select ROI center
+    - [ ] select ROI height, width

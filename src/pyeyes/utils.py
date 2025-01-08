@@ -61,6 +61,8 @@ def normalize(shifted, target, ofs=True, mag=False, eps=1e-12):
     --------
     array
         corrected data
+
+    TODO: batch function so it is faster
     """
 
     shifted = tonp(shifted)
