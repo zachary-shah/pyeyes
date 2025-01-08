@@ -8,6 +8,7 @@ import os
 import warnings
 
 import numpy as np
+from matplotlib import use as backend_use
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
@@ -352,3 +353,7 @@ class PlotDTIDynamic:
         self.axim[1,2].set_data(self.L3[self.px, self.py, self.z])
         self.axim[1,3].set_data(self.MD[self.px, self.py, self.z])
         self.axim[1,4].set_data(self.S0[self.px, self.py, self.z])
+
+    def launch(self):
+        plt.show()
+
