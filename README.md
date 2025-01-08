@@ -13,14 +13,14 @@ Activate the installed environment:
 mamba activate pyeyes
 ```
 
-Then install the pyeyes library by moving to the mr_recon directory and running
-```
-pip install -e ./
-```
+## Example scripts
+
+Under `/tests`, run `compare_diffusion.py` to see diffusion weighted image example. Run `compare_mrf.py` to see MRF example (Note: offical MRF colormap implementation still a TODO.)
 
 ## Feature List
 - [ ] select value dimensions (default x, y)
 - [x] slicer dimensions
+- [ ] allow for categorical dimensions
 - [ ] toggle real, im, mag, phase
 - [x] control contrast (vmin/vmax)
 - [x] select colormap
