@@ -9,6 +9,13 @@ import numpy as np
 import holoviews as hv
 import panel as pn
 
+from .icons import (
+    LR_FLIP_OFF,
+    LR_FLIP_ON,
+    UD_FLIP_OFF,
+    UD_FLIP_ON,
+)
+
 hv.extension("bokeh")
 pn.extension()
 
@@ -25,13 +32,15 @@ VALID_COLORMAPS = [
 ]
 
 class NDSlicer(param.Parameterized):
-    # Global Parameters
+    # Viewing Parameters
     vmin       = param.Number(default=0.0)
     vmax       = param.Number(default=1.0)
     size_scale = param.Number(default=400, bounds=(100, 1000), step=10)
     cmap       = param.ObjectSelector(default='gray', objects=VALID_COLORMAPS)
-    
-    # Dimension Parameters
+    flip_ud    = param.Boolean(default=False)
+    flip_lr    = param.Boolean(default=False)
+
+    # Slice Dimension Parameters
     dim_indices = param.Dict(default={}, doc="Mapping: dim_name -> int index")
     
     def __init__(self, 
@@ -66,9 +75,6 @@ class NDSlicer(param.Parameterized):
         assert len(vdims) == 2, "Viewing dims must be length 2"
         assert np.array([vd in self.ndims for vd in vdims]).all(), "Viewing dims must be in all dims"
         
-        # view dimensions
-        self.vdims = vdims
-
         # collate-able dimension
         if cdim is not None:
             assert cdim in self.ndims, "Collate dim must be in named dims"
@@ -82,24 +88,13 @@ class NDSlicer(param.Parameterized):
             self.clabs = clabs
             self.cdim = cdim
             self.Nc   = self.dim_sizes[cdim]
-            self.non_sdims = [cdim] + vdims
         else:
             self.clabs = None
             self.cdim = None
             self.Nc   = 1
-            self.non_sdims = vdims
-            
-        # sliceable dimensions
-        self.sdims = [d for d in self.ndims if d not in self.non_sdims]
-        
-        # Start in the center of each sliceable dimension
-        slice_dim_names = {}
-        for dim in self.sdims:
-            slice_dim_names[dim] = self.dim_sizes[dim] // 2
 
-        # Set default slice indicess
-        self.param.dim_indices.default = slice_dim_names
-        self.dim_indices = slice_dim_names
+        # This sets self.vdims, self.sdims, self.non_sdims, and upates self.dim_indices param
+        self._set_volatile_dims(vdims)
         
         # Update color limits
         mn = np.min(np.stack([data[v.name] for v in data.vdims]))
@@ -112,9 +107,6 @@ class NDSlicer(param.Parameterized):
         self.param.vmax.step = (mx-mn)/200
         self.vmin = mn
         self.vmax = mx
-
-        # Scaling to update height and width range
-        self.img_dims = np.array([self.dim_sizes[vd] for vd in self.vdims])
  
     @param.depends(
             "dim_indices", 
@@ -122,6 +114,8 @@ class NDSlicer(param.Parameterized):
             "vmax",
             "cmap",
             "size_scale",
+            "flip_ud",
+            "flip_lr",
     )
     def view(self) -> hv.Layout:
         """
@@ -143,18 +137,21 @@ class NDSlicer(param.Parameterized):
                     **sdim_dict
                 ).reduce([self.cdim] + self.sdims, np.mean)
 
+                # order vdims in slice the same as self.vdims
+                sliced_2d = sliced_2d.reindex(self.vdims)
+
                 imgs.append(hv.Image(sliced_2d, label=self.clabs[i]))
         else:
 
             # Select slice indices for each dimension
             sliced_2d = self.data.select(
                     **{self.cdim: i}
-            ).reduce(self.sdims, np.mean)
+            ).reduce(self.sdims, np.mean).reindex(self.vdims)
         
             imgs = [hv.Image(sliced_2d)]
 
         for i in range(len(imgs)):
-            
+
             # TODO: parameterize more options
             imgs[i] = imgs[i].opts(
                 cmap=self.cmap,
@@ -162,17 +159,20 @@ class NDSlicer(param.Parameterized):
                 clim=(self.vmin, self.vmax),
                 width  = int(self.size_scale * self.img_dims[0] / np.max(self.img_dims)),
                 height = int(self.size_scale * self.img_dims[1] / np.max(self.img_dims)),
+                invert_yaxis = self.flip_ud,
+                invert_xaxis = self.flip_lr,
             )
 
         return hv.Layout(imgs)
 
-    def get_widgets(self) -> Sequence[pn.widgets.Widget]:
+    def get_sdim_widgets(self) -> dict:
         """
-        Return a list of panel widgets to interactively control slicing and other parameters.
+        Return a dictionary of panel widgets to interactively control slicing.
         """
-        
-        sliders = []
+
+        sliders = {}
         for dim in self.sdims:
+
             s = pn.widgets.EditableIntSlider(
                 name=dim,
                 start=0,
@@ -187,8 +187,41 @@ class NDSlicer(param.Parameterized):
             
             s.param.watch(_update_dim_indices, "value")
 
-            sliders.append(s)
+            sliders[dim] = s
 
+        return sliders
+
+    def get_viewing_widgets(self) -> Sequence[pn.widgets.Widget]:
+
+        sliders = []
+
+
+        # Flip Widgets
+        ud_w = self.__add_widget(
+            pn.widgets.ToggleIcon,
+            "flip_ud",
+            description="Flip Image Up/Down",
+            icon=UD_FLIP_OFF,
+            active_icon=UD_FLIP_ON,
+            size='10em',
+            margin = (-20, 10, -20, 25),
+            show_name=False,
+        )
+
+        lr_w = self.__add_widget(
+            pn.widgets.ToggleIcon,
+            "flip_lr",
+            description="Flip Image Left/Right",
+            icon=LR_FLIP_OFF,
+            active_icon=LR_FLIP_ON,
+            size='10em',
+            margin = (-20, 10, -20, 10),
+            show_name=False,
+        )
+
+        sliders.append(
+            pn.Row(ud_w, lr_w)
+        )
 
         # vmin/vmax use different Range slider
         range_slier = pn.widgets.EditableRangeSlider(
@@ -251,15 +284,18 @@ class NDSlicer(param.Parameterized):
             )
         )
 
-
         return sliders
     
     def __add_widget(self, 
                      widget: callable,
                      name: str,
                      **kwargs) -> pn.widgets.Widget:
-                     
-        w = widget(name=name, **kwargs)
+        
+        if "show_name" in kwargs and kwargs["show_name"] == False:
+            kwargs.pop("show_name")
+            w = widget(**kwargs)
+        else:
+            w = widget(name=name, **kwargs)
         
         def _update(event):
             # update self.name
@@ -271,3 +307,49 @@ class NDSlicer(param.Parameterized):
         w.param.watch(_update, "value")
         
         return w
+    
+
+    def _set_volatile_dims(self, vdims: Sequence[str]):
+        """
+        Sets dimensions which could be updated upon a change in viewing dimension.
+        """
+        vdims = list(vdims)
+
+        self.vdims = vdims
+
+        if self.cdim is not None:
+            self.non_sdims = [self.cdim] + vdims
+        else:
+            self.non_sdims = vdims
+            
+        # sliceable dimensions
+        self.sdims = [d for d in self.ndims if d not in self.non_sdims]
+        
+        # Start in the center of each sliceable dimension
+        slice_dim_names = {}
+        for dim in self.sdims:
+            slice_dim_names[dim] = self.dim_sizes[dim] // 2
+
+        # Set default slice indicess
+        self.param.dim_indices.default = slice_dim_names
+        self.dim_indices = slice_dim_names
+
+        # Update scaling for height and width ranges
+        self.img_dims = np.array([self.dim_sizes[vd] for vd in self.vdims])
+
+    def update_vdims(self, vdims: Sequence[str]):
+        """
+        Update viewing dimensions and associated widgets
+        """
+        old_vdims = self.vdims
+        
+        self._set_volatile_dims(vdims)  
+        
+        # Trigger a view update
+        self.param.trigger("dim_indices")
+
+        # Update widgets only if inter-change of slice and view dimensions
+        if set(old_vdims) != set(vdims):
+            return self.get_sdim_widgets()
+        else:
+            return {}
