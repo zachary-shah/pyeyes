@@ -18,17 +18,20 @@ mamba activate pyeyes
 Under `/tests`, run `compare_diffusion.py` to see diffusion weighted image example. Run `compare_mrf.py` to see MRF example (Note: offical MRF colormap implementation still a TODO.)
 
 ## Feature List
-- [ ] select value dimensions (default x, y)
+- [x] select value dimensions (default x, y)
 - [x] slicer dimensions
 - [ ] allow for categorical dimensions
-- [ ] toggle real, im, mag, phase
+- [x] toggle real, im, mag, phase
 - [x] control contrast (vmin/vmax)
 - [x] select colormap
-- [ ] select width, height to crop image to
-- [ ] toggle select which images to display
+- [x] select width, height to crop image to
+- [x] toggle select which images to display
 - [ ] toggle difference maps
     - [ ] select reference for difference map
     - [ ] select difference maps
 - [ ] toggle ROI selection
     - [ ] select ROI center
     - [ ] select ROI height, width
+- [ ] Add MRF color maps
+- [ ] Export figure 
+- [ ] Export figure-generating config
