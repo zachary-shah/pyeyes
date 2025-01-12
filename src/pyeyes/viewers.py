@@ -131,7 +131,12 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # Instantiate slicer
         self.slicer = NDSlicer(
-            self.dataset, self.vdims, cdim="ImgName", clabs=img_names, cat_dims=cat_dims
+            self.dataset,
+            self.vdims,
+            cdim="ImgName",
+            clabs=img_names,
+            cat_dims=cat_dims,
+            viewer=self,
         )
 
         """
@@ -329,7 +334,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         self.app[0][1][2].value = self.slicer.cmap
 
-    def _autoscale_clim(self, event):
+    def _autoscale_clim(self, event=None):
         """
         Routine to run to update the viewing dimensions of the data.
         """

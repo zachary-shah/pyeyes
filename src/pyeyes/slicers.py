@@ -64,6 +64,7 @@ class NDSlicer(param.Parameterized):
         cdim: Optional[str] = None,
         clabs: Optional[Sequence[str]] = None,
         cat_dims: Optional[Dict[str, List]] = None,
+        viewer=None,
         **params
     ):
         """
@@ -81,6 +82,8 @@ class NDSlicer(param.Parameterized):
         self.data = data
 
         self.cat_dims = cat_dims
+
+        self.viewer = viewer
 
         # all dimensions
         self.ndims = [d.name for d in data.kdims][::-1]
@@ -140,12 +143,12 @@ class NDSlicer(param.Parameterized):
         # Initialize display images
         self.param.display_images.objects = self.clabs
         self.display_images = self.clabs
+        self.figure_ty_change = False
 
     def update_cache(self):
         """
         Cache inputs that may be useful to remember when we change other parameters.
         """
-
         # Cache cropped view
         self.crop_cache[self.vdims[0]] = (self.lr_crop[0], self.lr_crop[1])
         self.crop_cache[self.vdims[1]] = (self.ud_crop[0], self.ud_crop[1])
@@ -157,6 +160,10 @@ class NDSlicer(param.Parameterized):
 
         # Slice cache
         for dim in self.sdims:
+            # If one of the categorical dims has changes, we set this flag to run autoscaling of the vmin/vmax
+            if dim in self.cat_dims.keys():
+                if self.slice_cache[dim] != self.dim_indices[dim]:
+                    self.figure_ty_change = True
             self.slice_cache[dim] = self.dim_indices[dim]
 
     def slice(self) -> Sequence[hv.Image]:
@@ -223,8 +230,13 @@ class NDSlicer(param.Parameterized):
         """
         Return the formatted view of the data given the current slice indices.
         """
-
         self.update_cache()
+
+        # This will run the viewer's autoscale clim to also update the contrast tab
+        if self.figure_ty_change:
+            self.figure_ty_change = False
+            with param.parameterized.discard_events(self):
+                self.viewer._autoscale_clim()
 
         imgs = self.slice()
 
