@@ -44,13 +44,10 @@ class NDSlicer(param.Parameterized):
     vmin = param.Number(default=0.0)
     vmax = param.Number(default=1.0)
     size_scale = param.Number(default=400, bounds=(100, 1000), step=10)
-    # TODO: ObjectSelector is deprecated. Use Select instead
-    cmap = param.ObjectSelector(default="gray", objects=VALID_COLORMAPS)
+    cmap = param.Selector(default="gray", objects=VALID_COLORMAPS)
     flip_ud = param.Boolean(default=False)
     flip_lr = param.Boolean(default=False)
-    cplx_view = param.ObjectSelector(
-        default="mag", objects=["mag", "phase", "real", "imag"]
-    )
+    cplx_view = param.Selector(default="mag", objects=["mag", "phase", "real", "imag"])
     display_images = param.ListSelector(default=[], objects=[])
 
     # Slice Dimension Parameters
