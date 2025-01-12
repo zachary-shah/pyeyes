@@ -2,7 +2,7 @@
 Slicers: Defined as classes that take N-dimensional data and can return a 2D view of that data given some input
 """
 
-from typing import Sequence, Optional
+from typing import Sequence, Optional, Dict, List
 
 import param
 import numpy as np
@@ -62,6 +62,7 @@ class NDSlicer(param.Parameterized):
                  vdims: Sequence[str],
                  cdim:  Optional[str] = None,
                  clabs: Optional[Sequence[str]] = None,
+                 cat_dims: Optional[Dict[str, List]] = None,
                  **params):
         
         """
@@ -77,6 +78,8 @@ class NDSlicer(param.Parameterized):
 
         self.data = data
 
+        self.cat_dims = cat_dims
+
         # all dimensions
         self.ndims = [d.name for d in data.kdims][::-1]
 
@@ -88,7 +91,10 @@ class NDSlicer(param.Parameterized):
         # Initialize slize cache
         self.slice_cache = {}
         for dim in self.ndims:
-            self.slice_cache[dim] = self.dim_sizes[dim] // 2
+            if dim in self.cat_dims.keys():
+                self.slice_cache[dim] = self.cat_dims[dim][self.dim_sizes[dim] // 2]
+            else:
+                self.slice_cache[dim] = self.dim_sizes[dim] // 2
 
         assert len(vdims) == 2, "Viewing dims must be length 2"
         assert np.array([vd in self.ndims for vd in vdims]).all(), "Viewing dims must be in all dims"
@@ -375,13 +381,19 @@ class NDSlicer(param.Parameterized):
 
         sliders = {}
         for dim in self.sdims:
-
-            s = pn.widgets.EditableIntSlider(
-                name=dim,
-                start=0,
-                end=self.dim_sizes[dim]-1,
-                value=self.dim_indices[dim]
-            )
+            if dim in self.cat_dims.keys():
+                s = pn.widgets.Select(
+                    name=dim,
+                    options=self.cat_dims[dim],
+                    value=self.slice_cache[dim]
+                )
+            else:
+                s = pn.widgets.EditableIntSlider(
+                    name=dim,
+                    start=0,
+                    end=self.dim_sizes[dim]-1,
+                    value=self.dim_indices[dim]
+                )
 
             def _update_dim_indices(event, this_dim=dim):
                 self.dim_indices[this_dim] = event.new
