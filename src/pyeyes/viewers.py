@@ -175,7 +175,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             self.slicer.view
         )
 
-        self._autoscale_clim()
+        self._autoscale_clim(event=None)
 
     def launch(self):
         pn.serve(self.app, title="MRI Viewer", show=True)
