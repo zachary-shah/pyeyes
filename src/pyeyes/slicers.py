@@ -8,6 +8,9 @@ import param
 import numpy as np
 import holoviews as hv
 import panel as pn
+import matplotlib.colors as mcolors
+
+from .q_cmap.cmap import relaxation_color_map
 
 from .icons import (
     LR_FLIP_OFF,
@@ -29,6 +32,7 @@ VALID_COLORMAPS = [
     'Iridescent',
     'Plasma', 
     'Magma', 
+    "Quantitative",
 ]
 # TODO: add mrf colormaps
 
@@ -44,6 +48,7 @@ class NDSlicer(param.Parameterized):
     vmin       = param.Number(default=0.0)
     vmax       = param.Number(default=1.0)
     size_scale = param.Number(default=400, bounds=(100, 1000), step=10)
+    # TODO: ObjectSelector is deprecated. Use Select instead
     cmap       = param.ObjectSelector(default='gray', objects=VALID_COLORMAPS)
     flip_ud    = param.Boolean(default=False)
     flip_lr    = param.Boolean(default=False)
@@ -228,9 +233,15 @@ class NDSlicer(param.Parameterized):
             # Apply complex view
             imgs[i].data['Value'] = CPLX_VIEW_MAP[self.cplx_view](imgs[i].data['Value'])
 
+            if self.cmap == "Quantitative":
+                imgs[i].data['Value'], rgb_vec = relaxation_color_map(self._infer_quantitative(), imgs[i].data['Value'], self.vmin, self.vmax)
+                cmap = mcolors.ListedColormap(rgb_vec)
+            else:
+                cmap = self.cmap
+
             # parameterized view options
             imgs[i] = imgs[i].opts(
-                cmap=self.cmap,
+                cmap=cmap,
                 xaxis=None, yaxis=None,
                 clim=(self.vmin, self.vmax),
                 width  = int(self.size_scale * new_im_size[0] / np.max(new_im_size)),
@@ -240,6 +251,10 @@ class NDSlicer(param.Parameterized):
             )
 
         return hv.Layout(imgs)
+
+    def _infer_quantitative(self):
+        if "MRF Type" in self.cat_dims and "MRF Type" in self.dim_indices:
+            return self.dim_indices["MRF Type"]
     
     def _set_volatile_dims(self, vdims: Sequence[str]):
         """
