@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Sequence, Union, Optional
+from typing import Sequence, Union, Optional, Dict, List
 
 import warnings
 
@@ -57,6 +57,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
                  data: dict[np.ndarray],
                  named_dims: Sequence[str],
                  view_dims: Optional[Sequence[str]] = None,
+                 cat_dims: Optional[Dict[str, List]] = None,
                  **kwargs):
         """
         Viewer for comparing n-dimensional image data.
@@ -115,6 +116,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
         self.N_img = N_img
         self.N_dim = N_dim
 
+        self.cat_dims = cat_dims
+
         # Aggregate data, stacking image type to first axis
         self.raw_data = np.stack(img_list, axis=0)
 
@@ -122,7 +125,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         self.dataset = self._build_dataset(self.vdims)
 
         # Instantiate slicer
-        self.slicer = NDSlicer(self.dataset, self.vdims, cdim='ImgName', clabs=img_names)
+        self.slicer = NDSlicer(self.dataset, self.vdims, cdim='ImgName', clabs=img_names, cat_dims=cat_dims)
 
         """
         Create Panel Layout
@@ -172,6 +175,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
             self.slicer.view
         )
 
+        self.slicer.autoscale_clim()
+
     def launch(self):
         pn.serve(self.app, title="MRI Viewer", show=True)
 
@@ -185,7 +190,13 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         proc_data = self._normalize(self.raw_data)
 
-        dim_ranges = [self.img_names] + [range(proc_data.shape[i]) for i in range(1, proc_data.ndim)]
+        # dim_ranges = [self.img_names] + [range(proc_data.shape[i]) for i in range(1, proc_data.ndim)]
+        dim_ranges = [self.img_names]
+        for i in range(1, proc_data.ndim):
+            if self.ndims[i-1] in self.cat_dims:
+                dim_ranges.append(self.cat_dims[self.ndims[i-1]])
+            else:
+                dim_ranges.append(range(proc_data.shape[i]))
 
         # Convention is to reverse ordering relative to dimensions named
         proc_data = proc_data.transpose(*list(range(proc_data.ndim-1, -1, -1)))

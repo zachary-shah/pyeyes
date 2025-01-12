@@ -23,11 +23,13 @@ img_dict = {
 # Parameters
 named_dims = ['MRF Type', 'x', 'y', 'z']
 vdims = ['y', 'z']
+cat_dims = {'MRF Type': ['PD', 'T1', 'T2']}
 
 Viewer = ComparativeViewer(
     data = img_dict,
     named_dims = named_dims,
-    view_dims = vdims
+    view_dims = vdims,
+    cat_dims=cat_dims,
 )
 
 Viewer.launch()
