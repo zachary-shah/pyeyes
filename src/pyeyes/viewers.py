@@ -190,7 +190,6 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         proc_data = self._normalize(self.raw_data)
 
-        # dim_ranges = [self.img_names] + [range(proc_data.shape[i]) for i in range(1, proc_data.ndim)]
         dim_ranges = [self.img_names]
         for i in range(1, proc_data.ndim):
             if self.ndims[i-1] in self.cat_dims:
