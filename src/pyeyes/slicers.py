@@ -39,6 +39,21 @@ CPLX_VIEW_MAP = {
 }
 
 
+def _hide_image(plot, element):
+    """
+    Hook to hide the image in a plot and only show the colorbar.
+    """
+    for r in plot.state.renderers:
+        if hasattr(r, "glyph"):
+            r.visible = False
+    # Remove border/outline/background so only the colorbar remains
+    plot.state.outline_line_color = None
+    plot.state.min_border = 0
+    plot.state.border_fill_alpha = 0
+    plot.state.background_fill_alpha = 0
+    plot.state.toolbar_location = None
+
+
 class NDSlicer(param.Parameterized):
     # Viewing Parameters
     vmin = param.Number(default=0.0)
@@ -233,21 +248,22 @@ class NDSlicer(param.Parameterized):
             self.ud_crop[1] - self.ud_crop[0],
         )
 
-        for i in range(len(imgs)):
+        if self.cmap == "Quantitative":
+            rgb_vec, clip_for_qmap = relaxation_color_map(
+                self._infer_quantitative(),
+                self.vmin,
+                self.vmax,
+            )
+            cmap = mcolors.ListedColormap(rgb_vec)
 
+            for i in range(len(imgs)):
+                imgs[i].data["Value"] = clip_for_qmap(imgs[i].data["Value"])
+        else:
+            cmap = self.cmap
+
+        for i in range(len(imgs)):
             # Apply complex view
             imgs[i].data["Value"] = CPLX_VIEW_MAP[self.cplx_view](imgs[i].data["Value"])
-
-            if self.cmap == "Quantitative":
-                imgs[i].data["Value"], rgb_vec = relaxation_color_map(
-                    self._infer_quantitative(),
-                    imgs[i].data["Value"],
-                    self.vmin,
-                    self.vmax,
-                )
-                cmap = mcolors.ListedColormap(rgb_vec)
-            else:
-                cmap = self.cmap
 
             # parameterized view options
             imgs[i] = imgs[i].opts(
@@ -261,7 +277,21 @@ class NDSlicer(param.Parameterized):
                 invert_xaxis=self.flip_lr,
             )
 
-        return hv.Layout(imgs)
+        # This is a workaround to show the colorbar, since with Layout it is only possible to create a colorbar
+        # per element, and not per Layout. So we create a dummy Image element with the same colorbar settings.
+        colorbar = hv.Image(np.zeros((2, 2))).opts(
+            cmap=cmap,
+            clim=(self.vmin, self.vmax),
+            colorbar=True,
+            colorbar_position="right",
+            xaxis=None,
+            yaxis=None,
+            width=50,
+            height=int(self.size_scale * new_im_size[1] / np.max(new_im_size)),
+            hooks=[_hide_image],  # Hide the dummy glyph
+        )
+
+        return hv.Layout(imgs + [colorbar]).opts(shared_axes=False)
 
     def _infer_quantitative(self):
         if "MRF Type" in self.cat_dims and "MRF Type" in self.dim_indices:
