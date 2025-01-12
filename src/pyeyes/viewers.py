@@ -40,8 +40,8 @@ class Viewer:
 class ComparativeViewer(Viewer, param.Parameterized):
 
     # Viewing Dimensions
-    vdim_horiz = param.ObjectSelector(default="x")
-    vdim_vert = param.ObjectSelector(default="y")
+    vdim_horiz = param.Selector(default="x")
+    vdim_vert = param.Selector(default="y")
 
     # Displayed Images
     single_image_toggle = param.Boolean(default=False)
