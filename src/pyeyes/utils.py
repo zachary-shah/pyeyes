@@ -1,9 +1,12 @@
+from typing import Union
+
 import numpy as np
 import torch
-from typing import Union
+
 
 def rescale01(image):
     return (image - image.min()) / (image.max() - image.min())
+
 
 def tonp(x: Union[np.ndarray, torch.tensor]):
     """
@@ -20,12 +23,11 @@ def tonp(x: Union[np.ndarray, torch.tensor]):
         return np.array(x)
     else:
         return x
-    
-def RMSE(recon: np.ndarray, 
-         true: np.ndarray,
-         normalized: float = True) -> float:
+
+
+def RMSE(recon: np.ndarray, true: np.ndarray, normalized: float = True) -> float:
     """
-    Given 2 complex arrays of the same shape, recon (g) and true (f), compute the RMSE between arrays 
+    Given 2 complex arrays of the same shape, recon (g) and true (f), compute the RMSE between arrays
     If normalized --> compute NRMSE, else compute RMSE
         RMSE = SQRT(|f-g|^2)
         NRMSE = SQRT(|f-g|^2 / |f|^2)
@@ -33,8 +35,9 @@ def RMSE(recon: np.ndarray,
 
     assert recon.shape == true.shape, "Input array dimensions mismatch."
 
-    mse = np.mean(np.abs(recon - true)**2)
-    if normalized: mse /= np.mean(np.abs(true)**2)
+    mse = np.mean(np.abs(recon - true) ** 2)
+    if normalized:
+        mse /= np.mean(np.abs(true) ** 2)
     return np.sqrt(mse)
 
 
@@ -56,7 +59,7 @@ def normalize(shifted, target, ofs=True, mag=False, eps=1e-12):
         include b offset in the correction
     mag : bool
         use magnitude of data for correction
-    
+
     Returns:
     --------
     array
