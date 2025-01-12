@@ -35,3 +35,4 @@ Under `/tests`, run `compare_diffusion.py` to see diffusion weighted image examp
 - [ ] Add MRF color maps
 - [ ] Export figure 
 - [ ] Export figure-generating config
+- [ ] Add a colorbar
