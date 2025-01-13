@@ -9,12 +9,12 @@ from holoviews import opts
 
 from .slicers import NDSlicer
 from .utils import normalize, tonp
+from . import themes
 
-# FIXME: make theme and backend configurable
 hv.extension("bokeh")
-pn.extension(theme="dark")
-hv.renderer("bokeh").theme = "dark_minimal"
 
+# NOTE: api to set theme. can be done by user outside of this api; can't be updated live easily because panels html page style will be static
+themes.set_theme("dark")
 
 class Viewer:
 
@@ -46,6 +46,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
     # Displayed Images
     single_image_toggle = param.Boolean(default=False)
     display_images = param.ListSelector(default=[], objects=[])
+
+    # Theme selection
+    theme = param.ObjectSelector(default="dark", objects=list(themes.SUPPORTED_THEMES.keys()))
 
     def __init__(
         self,

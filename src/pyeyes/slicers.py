@@ -12,23 +12,19 @@ import param
 
 from .icons import LR_FLIP_OFF, LR_FLIP_ON, UD_FLIP_OFF, UD_FLIP_ON
 from .q_cmap.cmap import relaxation_color_map
+from . import themes
 
 hv.extension("bokeh")
-pn.extension()
 
 VALID_COLORMAPS = [
     "gray",
+    "jet",
     "viridis",
     "inferno",
-    "PRGn",
     "RdBu",
-    "HighContrast",
-    "Iridescent",
-    "Plasma",
     "Magma",
     "Quantitative",
 ]
-# TODO: add mrf colormaps
 
 # Complex view mapping
 CPLX_VIEW_MAP = {
@@ -38,6 +34,91 @@ CPLX_VIEW_MAP = {
     "imag": np.imag,
 }
 
+def _format_image(plot, element):
+    """
+    For setting image theme (light/dark mode).
+    """
+
+    # Enforce theme
+    plot.state.background_fill_color = themes.VIEW_THEME.background_color
+    plot.state.border_fill_color = themes.VIEW_THEME.background_color
+
+    # decrease border size
+    min_border = 3
+    plot.state.min_border_bottom = min_border
+    plot.state.min_border_left = min_border
+    plot.state.min_border_right = min_border
+    plot.state.min_border_top = min_border
+    plot.state.min_border = min_border
+    plot.border = min_border
+
+    # Constant height for the figure title
+    if plot.state.title.text_font_size[-2:] == "px":
+        tfs = int(plot.state.title.text_font_size[:-2]) * 2 + plot.border
+        plot.state.height = plot.state.height + tfs
+    else:
+        print("WARNING: Could not parse title font size. Figure scale may be skewed.")
+
+    # Color to match theme
+    plot.state.outline_line_color = themes.VIEW_THEME.background_color
+    plot.state.outline_line_alpha = 1.0
+    plot.state.title.text_color = themes.VIEW_THEME.text_color
+    plot.state.title.text_font = themes.VIEW_THEME.text_font
+
+def _hide_image(plot, element):
+    """
+    Hook to hide the image in a plot and only show the colorbar.
+    """
+    for r in plot.state.renderers:
+        if hasattr(r, "glyph"):
+            r.visible = False
+
+    # # Remove border/outline so only the colorbar remains
+    plot.state.outline_line_color = None
+    plot.state.toolbar_location = None
+    plot.state.background_fill_alpha = 1.0
+    plot.state.outline_line_alpha = 0
+
+def _format_colorbar(plot, element):
+    """
+    Colorbar formatting. Just need to ensure that colorbar scales with plot height.
+    Assumes that colorbar is the first element in the right panel.
+    """
+    p = plot.state.right[0]
+
+    # title
+    if p.title == "":
+        p.title = None
+
+    # sizes
+    p.major_label_text_font_size = f"{int(plot.state.height/38)}pt"
+    p.title_text_font_size = f"{int(plot.state.height/38)}pt"
+    p.width  = int(plot.state.width * (0.22 - 0.03 * (p.title is not None)))
+        
+    # spacing
+    p.padding = 5
+
+    # coloring
+    p.background_fill_color = themes.VIEW_THEME.background_color
+    p.background_fill_alpha = 1.0
+    p.major_label_text_color = themes.VIEW_THEME.text_color
+    p.major_tick_line_color = themes.VIEW_THEME.text_color
+    p.title_text_color = themes.VIEW_THEME.text_color
+    p.title_text_align = "center"
+    p.title_text_baseline = "middle"    
+
+    # text font
+    p.title_text_font = themes.VIEW_THEME.text_font
+    p.major_label_text_font = themes.VIEW_THEME.text_font
+
+    # other keys to format
+    p.major_label_text_align = "left"
+    p.major_label_text_alpha = 1.0
+    p.major_label_text_baseline = "middle"
+    p.major_label_text_line_height = 1.2
+    p.major_tick_line_alpha = 1.0
+    p.major_tick_line_dash_offset = 0
+    p.major_tick_line_width = 1
 
 class NDSlicer(param.Parameterized):
     # Viewing Parameters
@@ -49,6 +130,8 @@ class NDSlicer(param.Parameterized):
     flip_lr = param.Boolean(default=False)
     cplx_view = param.Selector(default="mag", objects=["mag", "phase", "real", "imag"])
     display_images = param.ListSelector(default=[], objects=[])
+    colorbar_on = param.Boolean(default=True)
+    colorbar_label = param.String(default="")
 
     # Slice Dimension Parameters
     dim_indices = param.Dict(default={}, doc="Mapping: dim_name -> int index")
@@ -159,7 +242,7 @@ class NDSlicer(param.Parameterized):
         for dim in self.sdims:
             self.slice_cache[dim] = self.dim_indices[dim]
 
-    def slice(self) -> Sequence[hv.Image]:
+    def slice(self) -> List[hv.Image]:
         """
         Return the slice of the hv.Dataset given the current slice indices.
         """
@@ -218,6 +301,8 @@ class NDSlicer(param.Parameterized):
         "lr_crop",
         "ud_crop",
         "display_images",
+        "colorbar_on",
+        "colorbar_label",
     )
     def view(self) -> hv.Layout:
         """
@@ -233,21 +318,22 @@ class NDSlicer(param.Parameterized):
             self.ud_crop[1] - self.ud_crop[0],
         )
 
-        for i in range(len(imgs)):
+        if self.cmap == "Quantitative":
+            rgb_vec, clip_for_qmap = relaxation_color_map(
+                self._infer_quantitative(),
+                self.vmin,
+                self.vmax,
+            )
+            cmap = mcolors.ListedColormap(rgb_vec)
 
+            for i in range(len(imgs)):
+                imgs[i].data["Value"] = clip_for_qmap(imgs[i].data["Value"])
+        else:
+            cmap = self.cmap
+
+        for i in range(len(imgs)):
             # Apply complex view
             imgs[i].data["Value"] = CPLX_VIEW_MAP[self.cplx_view](imgs[i].data["Value"])
-
-            if self.cmap == "Quantitative":
-                imgs[i].data["Value"], rgb_vec = relaxation_color_map(
-                    self._infer_quantitative(),
-                    imgs[i].data["Value"],
-                    self.vmin,
-                    self.vmax,
-                )
-                cmap = mcolors.ListedColormap(rgb_vec)
-            else:
-                cmap = self.cmap
 
             # parameterized view options
             imgs[i] = imgs[i].opts(
@@ -259,9 +345,33 @@ class NDSlicer(param.Parameterized):
                 height=int(self.size_scale * new_im_size[1] / np.max(new_im_size)),
                 invert_yaxis=self.flip_ud,
                 invert_xaxis=self.flip_lr,
+                hooks=[_format_image],
             )
 
-        return hv.Layout(imgs)
+        # This is a workaround to show the colorbar, since with Layout it is only possible to create a colorbar
+        # per element, and not per Layout. So we create a dummy Image element with the same colorbar settings.
+        if self.colorbar_on:
+            cbar_fig = hv.Image(np.zeros((2, 2))).opts(
+                cmap=cmap,
+                clim=(self.vmin, self.vmax),
+                colorbar=True,
+                colorbar_opts={
+                    "title":self.colorbar_label,
+                },
+                colorbar_position="right",
+                xaxis=None,
+                yaxis=None,
+                width=int(self.size_scale * (new_im_size[1] / np.max(new_im_size)) * 0.20 + 30), # 5% maintained aspect
+                height=int(self.size_scale * new_im_size[1] / np.max(new_im_size)),
+                hooks=[_format_image, _hide_image, _format_colorbar],  # Hide the dummy glyph
+
+            )
+
+            imgs.append(cbar_fig)
+
+        return hv.Layout(imgs).opts(
+            shared_axes=True,
+        )
 
     def _infer_quantitative(self):
         if "MRF Type" in self.cat_dims and "MRF Type" in self.dim_indices:
@@ -552,6 +662,33 @@ class NDSlicer(param.Parameterized):
                 value=self.cmap,
             )
         )
+
+        # Colorbar toggle
+        colorbar_widget = pn.widgets.Checkbox(
+            name = "Add Colorbar",
+            value = self.colorbar_on,
+        )
+        def _update_colorbar(event):
+            self.colorbar_on = event.new
+            self.param.trigger("colorbar_on")
+        colorbar_widget.param.watch(_update_colorbar, "value")
+        sliders.append(colorbar_widget)
+
+        colorbar_label_widget = pn.widgets.TextInput(
+            name = "Colorbar Label",
+            value = self.colorbar_label,
+        )
+        def _update_colorbar_label(event):
+            self.colorbar_label = event.new
+            self.param.trigger("colorbar_label")
+        colorbar_label_widget.param.watch(_update_colorbar_label, "value")
+
+        # disable colorbar label if colorbar is off
+        def _update_colorbar_label_disabled(x):
+            colorbar_label_widget.disabled = not x
+        pn.bind(_update_colorbar_label_disabled, colorbar_widget, watch=True)
+
+        sliders.append(colorbar_label_widget)
 
         return sliders
 
