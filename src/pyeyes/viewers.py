@@ -68,7 +68,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         named_dims: Sequence[str],
         view_dims: Optional[Sequence[str]] = None,
         cat_dims: Optional[Dict[str, List]] = {},
-        **kwargs
+        **kwargs,
     ):
         """
         Viewer for comparing n-dimensional image data.
@@ -154,6 +154,18 @@ class ComparativeViewer(Viewer, param.Parameterized):
         analysis_pane_widgets = self._init_analysis_pane_widgets()
         export_pane_widgets = self._init_export_pane_widgets()
 
+        def keys_to_index_dict(d):
+            return dict(zip((list(d.keys())), range(len(d))))
+
+        # image of control panel through nested dict
+        self.panel_tab_index_dict = {
+            "View": [0, keys_to_index_dict(view_pane_widgets)],
+            "Contrast": [1, keys_to_index_dict(contrast_pane_widgets)],
+            "ROI": [2, keys_to_index_dict(roi_pane_widgets)],
+            "Analysis": [3, keys_to_index_dict(analysis_pane_widgets)],
+            "Export": [4, keys_to_index_dict(export_pane_widgets)],
+        }
+
         # Build Control Panel
         control_panel = pn.Tabs(
             (
@@ -173,6 +185,37 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
     def launch(self):
         pn.serve(self.app, title="MRI Viewer", show=True)
+
+    """
+    Widget Management
+    """
+
+    def _get_app_widget(self, tab_name, widget_name):
+        """
+        Get a widget from the app by tab name and widget name.
+        """
+
+        tab_index, widget_dict = self.panel_tab_index_dict[tab_name]
+
+        return self.app[0][tab_index][widget_dict[widget_name]]
+
+    def _set_app_widget(self, tab_name, widget_name, new_widget):
+        """
+        Replace a widget from the app by tab name and widget name.
+        """
+
+        tab_index, widget_dict = self.panel_tab_index_dict[tab_name]
+
+        self.app[0][tab_index][widget_dict[widget_name]] = new_widget
+
+    def _set_app_widget_attr(self, tab_name, widget_name, attr_name, new_attr):
+        """
+        Set an attribute of a widget from the app by tab name and widget name.
+        """
+
+        tab_index, widget_dict = self.panel_tab_index_dict[tab_name]
+
+        setattr(self.app[0][tab_index][widget_dict[widget_name]], attr_name, new_attr)
 
     """
     Build Widgets for each tab
@@ -210,13 +253,13 @@ class ComparativeViewer(Viewer, param.Parameterized):
         cplx_widget, clim_scale_widget = self._build_cplx_widget()
 
         # Select which real-valued view of complex data to view
-        widgets["cplx_widget"] = cplx_widget
+        widgets["cplx_view"] = cplx_widget
 
         # Color map stuff
         widgets.update(self._build_contrast_widgets())
 
         # Auto-scaling button
-        widgets["clim_scale_widget"] = clim_scale_widget
+        widgets["autoscale"] = clim_scale_widget
 
         return widgets
 
@@ -315,7 +358,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         vdim_vert_widget.param.watch(vdim_vert_callback, "value")
 
-        return {self.vdims[0]: vdim_horiz_widget, self.vdims[1]: vdim_vert_widget}
+        return {"vdim_horiz": vdim_horiz_widget, "vdim_vert": vdim_vert_widget}
 
     def _update_vdims(self, new_vdims):
         """
@@ -332,8 +375,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
             self.vdim_vert = new_vdims[1]
 
             # Update vdim widgets
-            self.app[0][0][0].value = new_vdims[0]
-            self.app[0][0][1].value = new_vdims[1]
+            self._set_app_widget_attr("View", "vdim_horiz", "value", new_vdims[0])
+            self._set_app_widget_attr("View", "vdim_vert", "value", new_vdims[1])
 
             # Update Slicer
             old_vdims = self.slicer.vdims
@@ -344,13 +387,17 @@ class ComparativeViewer(Viewer, param.Parameterized):
                 new_sdim_widget_dict = self._build_sdim_widgets()
 
                 for i, w in enumerate(list(new_sdim_widget_dict.keys())):
-                    self.app[0][0][i + 2] = new_sdim_widget_dict[w]
+                    self._set_app_widget("View", f"sdim{i}", new_sdim_widget_dict[w])
 
             # Reset crops
-            self.app[0][0][-4].bounds = (0, self.slicer.img_dims[0])
-            self.app[0][0][-3].bounds = (0, self.slicer.img_dims[1])
-            self.app[0][0][-4].value = self.slicer.lr_crop
-            self.app[0][0][-3].value = self.slicer.ud_crop
+            self._set_app_widget_attr(
+                "View", "lr_crop", "bounds", (0, self.slicer.img_dims[0])
+            )
+            self._set_app_widget_attr(
+                "View", "ud_crop", "bounds", (0, self.slicer.img_dims[1])
+            )
+            self._set_app_widget_attr("View", "lr_crop", "value", self.slicer.lr_crop)
+            self._set_app_widget_attr("View", "ud_crop", "value", self.slicer.ud_crop)
 
         self.slicer.param.trigger("dim_indices")
 
@@ -360,7 +407,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         """
 
         sliders = {}
-        for dim in self.slicer.sdims:
+        for i, dim in enumerate(self.slicer.sdims):
             if dim in self.cat_dims.keys():
                 s = pn.widgets.Select(
                     name=dim,
@@ -381,7 +428,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
             s.param.watch(_update_dim_indices, "value")
 
-            sliders[dim] = s
+            sliders[f"sdim{i}"] = s
 
         return sliders
 
@@ -507,9 +554,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
         # build new widget
         new_display_images_widget = self._build_display_images_widget()
 
-        # update
-        self.app[0][0].pop(-1)
-        self.app[0][0].append(new_display_images_widget)
+        # update gui
+        self._set_app_widget("View", "im_display", new_display_images_widget)
 
         if self.single_image_toggle:
             self.display_images = [self.display_images[0]]
@@ -596,12 +642,21 @@ class ComparativeViewer(Viewer, param.Parameterized):
             self.slicer.update_cplx_view(new_cplx_view)
 
             # Reset clim
-            self.app[0][1][1].start = self.slicer.param.vmin.bounds[0]
-            self.app[0][1][1].end = self.slicer.param.vmax.bounds[1]
-            self.app[0][1][1].value = (self.slicer.vmin, self.slicer.vmax)
-            self.app[0][1][1].step = self.slicer.param.vmax.step
+            self._set_app_widget_attr(
+                "Contrast", "clim", "start", self.slicer.param.vmin.bounds[0]
+            )
+            self._set_app_widget_attr(
+                "Contrast", "clim", "end", self.slicer.param.vmax.bounds[1]
+            )
+            self._set_app_widget_attr(
+                "Contrast", "clim", "value", (self.slicer.vmin, self.slicer.vmax)
+            )
+            self._set_app_widget_attr(
+                "Contrast", "clim", "step", self.slicer.param.vmin.step
+            )
 
-            self.app[0][1][2].value = self.slicer.cmap
+            # Reset cmap value
+            self._set_app_widget_attr("Contrast", "cmap", "value", self.slicer.cmap)
 
         self.slicer.param.trigger("vmin", "vmax", "cmap")
 
@@ -690,7 +745,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
             self.slicer.autoscale_clim()
 
             # Update gui
-            self.app[0][1][1].value = (self.slicer.vmin, self.slicer.vmax)
+            self._set_app_widget_attr(
+                "Contrast", "clim", "value", (self.slicer.vmin, self.slicer.vmax)
+            )
 
         self.slicer.param.trigger("vmin", "vmax")
 
