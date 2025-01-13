@@ -2,17 +2,16 @@
 Slicers: Defined as classes that take N-dimensional data and can return a 2D view of that data given some input
 """
 
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Union
 
 import holoviews as hv
-import matplotlib.colors as mcolors
 import numpy as np
 import panel as pn
 import param
 
 from . import themes
 from .icons import LR_FLIP_OFF, LR_FLIP_ON, UD_FLIP_OFF, UD_FLIP_ON
-from .q_cmap.cmap import relaxation_color_map
+from .q_cmap.cmap import QUANTITATIVE_MAPTYPES, ColorMap, QuantitativeColorMap
 
 hv.extension("bokeh")
 
@@ -129,11 +128,13 @@ class NDSlicer(param.Parameterized):
     vmin = param.Number(default=0.0)
     vmax = param.Number(default=1.0)
     size_scale = param.Number(default=400, bounds=(100, 1000), step=10)
-    cmap = param.Selector(default="gray", objects=VALID_COLORMAPS)
     flip_ud = param.Boolean(default=False)
     flip_lr = param.Boolean(default=False)
     cplx_view = param.Selector(default="mag", objects=["mag", "phase", "real", "imag"])
     display_images = param.ListSelector(default=[], objects=[])
+
+    # Color mapping
+    cmap = param.Selector(default="gray", objects=VALID_COLORMAPS)
     colorbar_on = param.Boolean(default=True)
     colorbar_label = param.String(default="")
 
@@ -165,68 +166,83 @@ class NDSlicer(param.Parameterized):
 
         super().__init__(**params)
 
-        self.data = data
+        with param.parameterized.discard_events(self):
 
-        self.cat_dims = cat_dims
+            self.data = data
 
-        # all dimensions
-        self.ndims = [d.name for d in data.kdims][::-1]
+            self.cat_dims = cat_dims
 
-        # Dictionary of all total size of each dimension
-        self.dim_sizes = {}
-        for dim in self.ndims:
-            self.dim_sizes[dim] = data.aggregate(dim, np.mean).data[dim].size
+            # all dimensions
+            self.ndims = [d.name for d in data.kdims][::-1]
 
-        # Initialize slize cache
-        self.slice_cache = {}
-        for dim in self.ndims:
-            if dim in self.cat_dims.keys():
-                self.slice_cache[dim] = self.cat_dims[dim][self.dim_sizes[dim] // 2]
+            # Dictionary of all total size of each dimension
+            self.dim_sizes = {}
+            for dim in self.ndims:
+                self.dim_sizes[dim] = data.aggregate(dim, np.mean).data[dim].size
+
+            # Initialize slize cache
+            self.slice_cache = {}
+            for dim in self.ndims:
+                if dim in self.cat_dims.keys():
+                    self.slice_cache[dim] = self.cat_dims[dim][self.dim_sizes[dim] // 2]
+                else:
+                    self.slice_cache[dim] = self.dim_sizes[dim] // 2
+
+            assert len(vdims) == 2, "Viewing dims must be length 2"
+            assert np.array(
+                [vd in self.ndims for vd in vdims]
+            ).all(), "Viewing dims must be in all dims"
+
+            # collate-able dimension
+            if cdim is not None:
+                assert cdim in self.ndims, "Collate dim must be in named dims"
+
+                if clabs is not None:
+                    assert (
+                        len(clabs) == self.dim_sizes[cdim]
+                    ), "Collate labels must match collate dimension size"
+                else:
+                    # assume data categorical. FIXME: infer c data type in general
+                    clabs = (
+                        self.data.aggregate(self.cdim, np.mean).data[self.cdim].tolist()
+                    )
+
+                self.clabs = clabs
+                self.cdim = cdim
+                self.Nc = self.dim_sizes[cdim]
             else:
-                self.slice_cache[dim] = self.dim_sizes[dim] // 2
+                self.clabs = None
+                self.cdim = None
+                self.Nc = 1
 
-        assert len(vdims) == 2, "Viewing dims must be length 2"
-        assert np.array(
-            [vd in self.ndims for vd in vdims]
-        ).all(), "Viewing dims must be in all dims"
+            # Initialize cropping
+            self.crop_cache = {}
+            for dim in self.ndims:
+                self.crop_cache[dim] = (0, self.dim_sizes[dim])
 
-        # collate-able dimension
-        if cdim is not None:
-            assert cdim in self.ndims, "Collate dim must be in named dims"
+            # This sets self.vdims, self.sdims, self.non_sdims, and upates self.dim_indices param
+            self._set_volatile_dims(vdims)
 
-            if clabs is not None:
-                assert (
-                    len(clabs) == self.dim_sizes[cdim]
-                ), "Collate labels must match collate dimension size"
+            # Initialize view cache
+            self.CPLX_VIEW_CLIM_CACHE = {}
+
+            # Update color limits with default
+            self.update_cplx_view("mag")
+
+            # Initialize display images
+            self.param.display_images.objects = self.clabs
+            self.display_images = self.clabs
+
+            # Color map object. Auto-select "Quantitative" if inferred from named dimensions.
+            if self._infer_quantitative_maptype() is not None:
+                self.ColorMapper = QuantitativeColorMap(
+                    self._infer_quantitative_maptype(), self.vmin, self.vmax
+                )
+                self.cmap = "Quantitative"
             else:
-                # assume data categorical. FIXME: infer c data type in general
-                clabs = self.data.aggregate(self.cdim, np.mean).data[self.cdim].tolist()
+                self.ColorMapper = ColorMap(self.cmap)
 
-            self.clabs = clabs
-            self.cdim = cdim
-            self.Nc = self.dim_sizes[cdim]
-        else:
-            self.clabs = None
-            self.cdim = None
-            self.Nc = 1
-
-        # Initialize cropping
-        self.crop_cache = {}
-        for dim in self.ndims:
-            self.crop_cache[dim] = (0, self.dim_sizes[dim])
-
-        # This sets self.vdims, self.sdims, self.non_sdims, and upates self.dim_indices param
-        self._set_volatile_dims(vdims)
-
-        # Initialize view cache
-        self.CPLX_VIEW_CLIM_CACHE = {}
-
-        # Update color limits with default
-        self.update_cplx_view("mag")
-
-        # Initialize display images
-        self.param.display_images.objects = self.clabs
-        self.display_images = self.clabs
+            self.param.trigger("vmin", "vmax", "cmap")
 
     def update_cache(self):
         """
@@ -298,7 +314,6 @@ class NDSlicer(param.Parameterized):
         "dim_indices",
         "vmin",
         "vmax",
-        "cmap",
         "size_scale",
         "flip_ud",
         "flip_lr",
@@ -322,26 +337,19 @@ class NDSlicer(param.Parameterized):
             self.ud_crop[1] - self.ud_crop[0],
         )
 
-        if self.cmap == "Quantitative":
-            rgb_vec, clip_for_qmap = relaxation_color_map(
-                self._infer_quantitative(),
-                self.vmin,
-                self.vmax,
-            )
-            cmap = mcolors.ListedColormap(rgb_vec)
-
-            for i in range(len(imgs)):
-                imgs[i].data["Value"] = clip_for_qmap(imgs[i].data["Value"])
-        else:
-            cmap = self.cmap
-
         for i in range(len(imgs)):
+
+            # Potential colormap pre-processing
+            imgs[i].data["Value"] = self.ColorMapper.preprocess_data(
+                imgs[i].data["Value"]
+            )
+
             # Apply complex view
             imgs[i].data["Value"] = CPLX_VIEW_MAP[self.cplx_view](imgs[i].data["Value"])
 
             # parameterized view options
             imgs[i] = imgs[i].opts(
-                cmap=cmap,
+                cmap=self.ColorMapper.get_cmap(),
                 xaxis=None,
                 yaxis=None,
                 clim=(self.vmin, self.vmax),
@@ -356,7 +364,7 @@ class NDSlicer(param.Parameterized):
         # per element, and not per Layout. So we create a dummy Image element with the same colorbar settings.
         if self.colorbar_on:
             cbar_fig = hv.Image(np.zeros((2, 2))).opts(
-                cmap=cmap,
+                cmap=self.ColorMapper.get_cmap(),
                 clim=(self.vmin, self.vmax),
                 colorbar=True,
                 colorbar_opts={
@@ -369,6 +377,7 @@ class NDSlicer(param.Parameterized):
                     self.size_scale * (new_im_size[1] / np.max(new_im_size)) * 0.20 + 30
                 ),  # 5% maintained aspect
                 height=int(self.size_scale * new_im_size[1] / np.max(new_im_size)),
+                shared_axes=False,  # Unlink from holoviews shared toolbar
                 hooks=[
                     _format_image,
                     _hide_image,
@@ -382,9 +391,15 @@ class NDSlicer(param.Parameterized):
             shared_axes=True,
         )
 
-    def _infer_quantitative(self):
-        if "MRF Type" in self.cat_dims and "MRF Type" in self.dim_indices:
-            return self.dim_indices["MRF Type"]
+    def _infer_quantitative_maptype(self) -> Union[str, None]:
+        """
+        Determine if slice is quantitative.
+        """
+        for dim in self.cat_dims.keys():
+            if self.dim_indices[dim].capitalize() in QUANTITATIVE_MAPTYPES:
+                return self.dim_indices[dim].capitalize()
+
+        return None
 
     def _set_volatile_dims(self, vdims: Sequence[str]):
         """
@@ -528,7 +543,7 @@ class NDSlicer(param.Parameterized):
         )
 
         with param.parameterized.discard_events(self):
-            self.vmin = np.percentile(data, 0.0)
+            self.vmin = np.percentile(data, 0.1)
             self.vmax = np.percentile(data, 99.9)
         self.param.trigger("vmin", "vmax")
 
@@ -537,6 +552,30 @@ class NDSlicer(param.Parameterized):
         self.display_images = display_images
 
         self.param.trigger("display_images")
+
+    def update_colormap(self):
+        """
+        Trigger for colormap change. Handles Quantitative colormap needs as well.
+        """
+
+        if self.cmap.capitalize() == "Quantitative":
+
+            qmaptype = self._infer_quantitative_maptype()
+
+            if qmaptype is not None:
+                self.ColorMapper = QuantitativeColorMap(qmaptype, self.vmin, self.vmax)
+
+            else:
+                # TODO: parameterize what colormap should be default
+                print(
+                    "Could not infer quantitative maptype. Using default colormap 'gray'."
+                )
+                self.ColorMapper = ColorMap("gray")
+        else:
+            self.ColorMapper = ColorMap(self.cmap)
+
+        # Trigger view update. FIXME: this does not update lims on gui. should move all widget management to viewer.
+        self.autoscale_clim()
 
     def get_sdim_widgets(self) -> dict:
         """
@@ -558,7 +597,18 @@ class NDSlicer(param.Parameterized):
                 )
 
             def _update_dim_indices(event, this_dim=dim):
-                self.dim_indices[this_dim] = event.new
+
+                new_val = event.new
+
+                self.dim_indices[this_dim] = new_val
+
+                # Update colormap only if quantitative dimension is updated
+                if (
+                    isinstance(new_val, str)
+                    and new_val.capitalize() in QUANTITATIVE_MAPTYPES
+                ):
+                    self.update_colormap()
+
                 # trigger dim_indices has been changed
                 self.param.trigger("dim_indices")
 
@@ -663,14 +713,20 @@ class NDSlicer(param.Parameterized):
         range_slider.param.watch(_update_clim, "value")
         sliders.append(range_slider)
 
-        sliders.append(
-            self.__add_widget(
-                pn.widgets.Select,
-                "cmap",
-                options=VALID_COLORMAPS,
-                value=self.cmap,
-            )
+        # Colormap
+        cmap_widget = pn.widgets.Select(
+            name="Color Map",
+            options=VALID_COLORMAPS,
+            value=self.cmap,
         )
+
+        def _update_cmap(event):
+            self.cmap = event.new
+            self.param.trigger("cmap")
+            self.update_colormap()
+
+        cmap_widget.param.watch(_update_cmap, "value")
+        sliders.append(cmap_widget)
 
         # Colorbar toggle
         colorbar_widget = pn.widgets.Checkbox(

@@ -59,7 +59,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         data: dict[np.ndarray],
         named_dims: Sequence[str],
         view_dims: Optional[Sequence[str]] = None,
-        cat_dims: Optional[Dict[str, List]] = None,
+        cat_dims: Optional[Dict[str, List]] = {},
         **kwargs
     ):
         """
