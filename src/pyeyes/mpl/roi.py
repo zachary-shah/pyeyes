@@ -15,6 +15,7 @@ import numpy as np
 from ..utils import tonp
 from .mpl import dark_mode
 
+
 @dataclass
 class ROIFeature:
     """
@@ -286,7 +287,9 @@ def amplify_plot_regions(img, ax, roi_cfgs: Union[ROIFeature, Sequence[ROIFeatur
     return ax
 
 
-def roi_grid_plot(img_list, roi_cfgs, img_titles=None, crops=(0, 0, 0, 0), transpose=True):
+def roi_grid_plot(
+    img_list, roi_cfgs, img_titles=None, crops=(0, 0, 0, 0), transpose=True
+):
     """
     Given a list of N images and K configs for ROIs, make an N x (K+1) plot, showing
     each image with the respective ROIs outlined and amplified.
@@ -306,7 +309,7 @@ def roi_grid_plot(img_list, roi_cfgs, img_titles=None, crops=(0, 0, 0, 0), trans
     fig, ax = plt.subplots(K + 1, N, figsize=(6 * N, 6 * (K + 1)))
 
     if transpose:
-        tax = (1,0,2) if is_color else (1,0)
+        tax = (1, 0, 2) if is_color else (1, 0)
         img_list = [np.flip(np.transpose(img, tax), axis=0) for img in img_list]
 
     for n, img in enumerate(img_list):
