@@ -3,7 +3,7 @@ import os
 import numpy as np
 
 
-def relaxation_color_map(maptype, x, loLev, upLev):
+def relaxation_color_map(maptype, loLev, upLev):
     """
     Acts in two ways:
     1. Generates a colormap to be used on display, given the image type.
@@ -33,14 +33,15 @@ def relaxation_color_map(maptype, x, loLev, upLev):
     # Modification of the image to be displayed
     eps = (upLev - loLev) / colortable.shape[0]
 
-    x_clip = np.where(
-        x < eps, loLev - eps, np.where(x < loLev + eps, loLev + 1.5 * eps, x)
-    )
+    def clip_for_qmap(x):
+        return np.where(
+            x < eps, loLev - eps, np.where(x < loLev + eps, loLev + 1.5 * eps, x)
+        )
 
     # Apply color remapping
     lut_cmap = color_log_remap(colortable, loLev, upLev)
 
-    return x_clip, lut_cmap
+    return lut_cmap, clip_for_qmap
 
 
 def color_log_remap(ori_cmap, loLev, upLev):
