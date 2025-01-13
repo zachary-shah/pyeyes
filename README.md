@@ -42,3 +42,4 @@ pre-commit install
 - [x] Add MRF color maps
 - [ ] Export figure
 - [ ] Export figure-generating config
+
