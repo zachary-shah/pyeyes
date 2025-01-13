@@ -1,16 +1,114 @@
 import os
+from typing import Union
 
 import numpy as np
+from matplotlib import colors as mcolors
+
+VALID_COLORMAPS = [
+    "gray",
+    "jet",
+    "viridis",
+    "inferno",
+    "RdBu",
+    "Magma",
+    "Quantitative",
+]
+
+QUANTITATIVE_MAPTYPES = [
+    "T1",
+    "T2",
+    "R1",
+    "R2",
+    "T1rho",
+    "T1ρ",
+    "R1rho",
+    "R1ρ",
+    "T2*",
+    "R2*",
+]
 
 
-def relaxation_color_map(maptype, x, loLev, upLev):
+class ColorMap:
+    """
+    Abstract class for colormap generation.
+    """
+
+    def __init__(self, cmap: Union[mcolors.ListedColormap, str]):
+        self.cmap = cmap
+
+    def preprocess_data(self, x: np.ndarray) -> np.ndarray:
+        """
+        Pre-process data for display, if needed (e.g. clipping)
+
+        Parameters
+        ----------
+        x : np.ndarray
+            Data to be processed
+
+        Returns
+        -------
+        np.ndarray
+            Processed data of same shape
+        """
+        return x
+
+    def get_cmap(self) -> Union[mcolors.ListedColormap, str]:
+        """
+        Get the colormap for display.
+
+        Returns
+        -------
+        Union[matplotlib.colors.ListedColormap, str]
+            Colormap for display. Can be a string or ListedColormap.
+        """
+        return self.cmap
+
+
+class QuantitativeColorMap(ColorMap):
+
+    def __init__(
+        self,
+        maptype: str,
+        loLev: float,
+        upLev: float,
+    ):
+        """
+        General colormap for quantitative data.
+        """
+
+        self.maptype = maptype
+        self.loLev = loLev
+        self.upLev = upLev
+
+        # Generate colormap and epsilon for data processing
+        self.lut_cmap, self.eps = relaxation_color_map(maptype, loLev, upLev)
+
+        # Process colormap into a matplotlib colormap list
+        self.cmap = mcolors.ListedColormap(self.lut_cmap)
+
+        super().__init__(self.cmap)
+
+    def preprocess_data(self, x):
+        return np.where(
+            x < self.eps,
+            self.loLev - self.eps,
+            np.where(x < self.loLev + self.eps, self.loLev + 1.5 * self.eps, x),
+        )
+
+
+def relaxation_color_map(maptype, loLev, upLev):
     """
     Acts in two ways:
     1. Generates a colormap to be used on display, given the image type.
-    2. Generates a 'clipped' image, where values are clipped to the lower level.
+    2. Generates standard deviation for 'clipping' image, where values are clipped to the lower level.
     """
+
     # Load the colormap depending on the map type
     maptype = maptype.capitalize()
+
+    assert (
+        maptype in QUANTITATIVE_MAPTYPES
+    ), f"Got {maptype} maptype, expected one of {QUANTITATIVE_MAPTYPES}"
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -30,17 +128,13 @@ def relaxation_color_map(maptype, x, loLev, upLev):
     # Set the 'invalid value' color
     colortable[0, :] = 0.0
 
-    # Modification of the image to be displayed
+    # Epsilon for modification of the image to be displayed
     eps = (upLev - loLev) / colortable.shape[0]
-
-    x_clip = np.where(
-        x < eps, loLev - eps, np.where(x < loLev + eps, loLev + 1.5 * eps, x)
-    )
 
     # Apply color remapping
     lut_cmap = color_log_remap(colortable, loLev, upLev)
 
-    return x_clip, lut_cmap
+    return lut_cmap, eps
 
 
 def color_log_remap(ori_cmap, loLev, upLev):
