@@ -7,14 +7,16 @@ import panel as pn
 import param
 from holoviews import opts
 
+from . import themes
 from .slicers import NDSlicer
 from .utils import normalize, tonp
-from . import themes
 
 hv.extension("bokeh")
 
-# NOTE: api to set theme. can be done by user outside of this api; can't be updated live easily because panels html page style will be static
+# NOTE: api to set theme. can be done by user outside of this api;
+# (can't be updated live easily because panels html page style will be static)
 themes.set_theme("dark")
+
 
 class Viewer:
 
@@ -48,7 +50,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
     display_images = param.ListSelector(default=[], objects=[])
 
     # Theme selection
-    theme = param.ObjectSelector(default="dark", objects=list(themes.SUPPORTED_THEMES.keys()))
+    theme = param.ObjectSelector(
+        default="dark", objects=list(themes.SUPPORTED_THEMES.keys())
+    )
 
     def __init__(
         self,

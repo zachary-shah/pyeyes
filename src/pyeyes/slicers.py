@@ -10,9 +10,9 @@ import numpy as np
 import panel as pn
 import param
 
+from . import themes
 from .icons import LR_FLIP_OFF, LR_FLIP_ON, UD_FLIP_OFF, UD_FLIP_ON
 from .q_cmap.cmap import relaxation_color_map
-from . import themes
 
 hv.extension("bokeh")
 
@@ -33,6 +33,7 @@ CPLX_VIEW_MAP = {
     "real": np.real,
     "imag": np.imag,
 }
+
 
 def _format_image(plot, element):
     """
@@ -65,6 +66,7 @@ def _format_image(plot, element):
     plot.state.title.text_color = themes.VIEW_THEME.text_color
     plot.state.title.text_font = themes.VIEW_THEME.text_font
 
+
 def _hide_image(plot, element):
     """
     Hook to hide the image in a plot and only show the colorbar.
@@ -78,6 +80,7 @@ def _hide_image(plot, element):
     plot.state.toolbar_location = None
     plot.state.background_fill_alpha = 1.0
     plot.state.outline_line_alpha = 0
+
 
 def _format_colorbar(plot, element):
     """
@@ -93,8 +96,8 @@ def _format_colorbar(plot, element):
     # sizes
     p.major_label_text_font_size = f"{int(plot.state.height/38)}pt"
     p.title_text_font_size = f"{int(plot.state.height/38)}pt"
-    p.width  = int(plot.state.width * (0.22 - 0.03 * (p.title is not None)))
-        
+    p.width = int(plot.state.width * (0.22 - 0.03 * (p.title is not None)))
+
     # spacing
     p.padding = 5
 
@@ -105,7 +108,7 @@ def _format_colorbar(plot, element):
     p.major_tick_line_color = themes.VIEW_THEME.text_color
     p.title_text_color = themes.VIEW_THEME.text_color
     p.title_text_align = "center"
-    p.title_text_baseline = "middle"    
+    p.title_text_baseline = "middle"
 
     # text font
     p.title_text_font = themes.VIEW_THEME.text_font
@@ -119,6 +122,7 @@ def _format_colorbar(plot, element):
     p.major_tick_line_alpha = 1.0
     p.major_tick_line_dash_offset = 0
     p.major_tick_line_width = 1
+
 
 class NDSlicer(param.Parameterized):
     # Viewing Parameters
@@ -147,7 +151,7 @@ class NDSlicer(param.Parameterized):
         cdim: Optional[str] = None,
         clabs: Optional[Sequence[str]] = None,
         cat_dims: Optional[Dict[str, List]] = None,
-        **params
+        **params,
     ):
         """
         Slicer for N-dimensional data. This class is meant to be a subclass of a Viewer.
@@ -356,15 +360,20 @@ class NDSlicer(param.Parameterized):
                 clim=(self.vmin, self.vmax),
                 colorbar=True,
                 colorbar_opts={
-                    "title":self.colorbar_label,
+                    "title": self.colorbar_label,
                 },
                 colorbar_position="right",
                 xaxis=None,
                 yaxis=None,
-                width=int(self.size_scale * (new_im_size[1] / np.max(new_im_size)) * 0.20 + 30), # 5% maintained aspect
+                width=int(
+                    self.size_scale * (new_im_size[1] / np.max(new_im_size)) * 0.20 + 30
+                ),  # 5% maintained aspect
                 height=int(self.size_scale * new_im_size[1] / np.max(new_im_size)),
-                hooks=[_format_image, _hide_image, _format_colorbar],  # Hide the dummy glyph
-
+                hooks=[
+                    _format_image,
+                    _hide_image,
+                    _format_colorbar,
+                ],  # Hide the dummy glyph
             )
 
             imgs.append(cbar_fig)
@@ -665,27 +674,32 @@ class NDSlicer(param.Parameterized):
 
         # Colorbar toggle
         colorbar_widget = pn.widgets.Checkbox(
-            name = "Add Colorbar",
-            value = self.colorbar_on,
+            name="Add Colorbar",
+            value=self.colorbar_on,
         )
+
         def _update_colorbar(event):
             self.colorbar_on = event.new
             self.param.trigger("colorbar_on")
+
         colorbar_widget.param.watch(_update_colorbar, "value")
         sliders.append(colorbar_widget)
 
         colorbar_label_widget = pn.widgets.TextInput(
-            name = "Colorbar Label",
-            value = self.colorbar_label,
+            name="Colorbar Label",
+            value=self.colorbar_label,
         )
+
         def _update_colorbar_label(event):
             self.colorbar_label = event.new
             self.param.trigger("colorbar_label")
+
         colorbar_label_widget.param.watch(_update_colorbar_label, "value")
 
         # disable colorbar label if colorbar is off
         def _update_colorbar_label_disabled(x):
             colorbar_label_widget.disabled = not x
+
         pn.bind(_update_colorbar_label_disabled, colorbar_widget, watch=True)
 
         sliders.append(colorbar_label_widget)
