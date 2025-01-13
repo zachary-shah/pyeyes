@@ -27,7 +27,7 @@ pre-commit install
 ## Feature List
 - [x] select value dimensions (default x, y)
 - [x] slicer dimensions
-- [ ] allow for categorical dimensions
+- [x] allow for categorical dimensions
 - [x] toggle real, im, mag, phase
 - [x] control contrast (vmin/vmax)
 - [x] select colormap
@@ -39,6 +39,6 @@ pre-commit install
 - [ ] toggle ROI selection
     - [ ] select ROI center
     - [ ] select ROI height, width
-- [ ] Add MRF color maps
+- [x] Add MRF color maps
 - [ ] Export figure
 - [ ] Export figure-generating config

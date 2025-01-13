@@ -4,6 +4,16 @@ from typing import Union
 import numpy as np
 from matplotlib import colors as mcolors
 
+VALID_COLORMAPS = [
+    "gray",
+    "jet",
+    "viridis",
+    "inferno",
+    "RdBu",
+    "Magma",
+    "Quantitative",
+]
+
 QUANTITATIVE_MAPTYPES = [
     "T1",
     "T2",

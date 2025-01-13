@@ -6,24 +6,17 @@ from typing import Dict, List, Optional, Sequence, Union
 
 import holoviews as hv
 import numpy as np
-import panel as pn
 import param
 
 from . import themes
-from .icons import LR_FLIP_OFF, LR_FLIP_ON, UD_FLIP_OFF, UD_FLIP_ON
-from .q_cmap.cmap import QUANTITATIVE_MAPTYPES, ColorMap, QuantitativeColorMap
+from .q_cmap.cmap import (
+    QUANTITATIVE_MAPTYPES,
+    VALID_COLORMAPS,
+    ColorMap,
+    QuantitativeColorMap,
+)
 
 hv.extension("bokeh")
-
-VALID_COLORMAPS = [
-    "gray",
-    "jet",
-    "viridis",
-    "inferno",
-    "RdBu",
-    "Magma",
-    "Quantitative",
-]
 
 # Complex view mapping
 CPLX_VIEW_MAP = {
@@ -139,7 +132,9 @@ class NDSlicer(param.Parameterized):
     colorbar_label = param.String(default="")
 
     # Slice Dimension Parameters
-    dim_indices = param.Dict(default={}, doc="Mapping: dim_name -> int index")
+    dim_indices = param.Dict(
+        default={}, doc="Mapping: dim_name -> int or categorical index"
+    )
 
     # Crop Range Parameters
     lr_crop = param.Range(default=(0, 100), bounds=(0, 100), step=1)
@@ -202,7 +197,7 @@ class NDSlicer(param.Parameterized):
                         len(clabs) == self.dim_sizes[cdim]
                     ), "Collate labels must match collate dimension size"
                 else:
-                    # assume data categorical. FIXME: infer c data type in general
+                    # assume data categorical.
                     clabs = (
                         self.data.aggregate(self.cdim, np.mean).data[self.cdim].tolist()
                     )
@@ -270,8 +265,8 @@ class NDSlicer(param.Parameterized):
         # Dimensions to select
         sdim_dict = {dim: self.dim_indices[dim] for dim in self.sdims}
 
-        # Collate case. FIXME: simply code
         if self.cdim is not None:
+            # Collate Case
 
             imgs = []
 
@@ -292,6 +287,7 @@ class NDSlicer(param.Parameterized):
 
                 imgs.append(hv.Image(sliced_2d, label=img_label))
         else:
+            # Single image case
 
             # Select slice indices for each dimension
             sliced_2d = (
@@ -314,6 +310,7 @@ class NDSlicer(param.Parameterized):
         "dim_indices",
         "vmin",
         "vmax",
+        "cmap",
         "size_scale",
         "flip_ud",
         "flip_lr",
@@ -442,20 +439,6 @@ class NDSlicer(param.Parameterized):
         # trigger callbacks now
         self.param.trigger("dim_indices", "lr_crop", "ud_crop")
 
-    def update_vdims(self, vdims: Sequence[str]):
-        """
-        Update viewing dimensions and associated widgets
-        """
-        old_vdims = self.vdims
-
-        self._set_volatile_dims(vdims)
-
-        # Update widgets only if inter-change of slice and view dimensions
-        if set(old_vdims) != set(vdims):
-            return self.get_sdim_widgets()
-        else:
-            return {}
-
     def update_cplx_view(self, new_cplx_view: str):
 
         # set attribute
@@ -517,15 +500,16 @@ class NDSlicer(param.Parameterized):
             )
 
         # Update color limits
-        self.param.vmin.default = vmind
-        self.param.vmin.bounds = vminb
-        self.param.vmin.step = vmins
-        self.param.vmax.default = vmaxd
-        self.param.vmax.bounds = vmaxb
-        self.param.vmax.step = vmaxs
-        self.param.cmap.default = cmap
-
         with param.parameterized.discard_events(self):
+
+            self.param.vmin.default = vmind
+            self.param.vmin.bounds = vminb
+            self.param.vmin.step = vmins
+            self.param.vmax.default = vmaxd
+            self.param.vmax.bounds = vmaxb
+            self.param.vmax.step = vmaxs
+            self.param.cmap.default = cmap
+
             self.vmin = vmind
             self.vmax = vmaxd
             self.cmap = cmap
@@ -545,11 +529,13 @@ class NDSlicer(param.Parameterized):
         with param.parameterized.discard_events(self):
             self.vmin = np.percentile(data, 0.1)
             self.vmax = np.percentile(data, 99.9)
+
         self.param.trigger("vmin", "vmax")
 
     def update_display_image_list(self, display_images: Sequence[str]):
 
-        self.display_images = display_images
+        with param.parameterized.discard_events(self):
+            self.display_images = display_images
 
         self.param.trigger("display_images")
 
@@ -574,285 +560,4 @@ class NDSlicer(param.Parameterized):
         else:
             self.ColorMapper = ColorMap(self.cmap)
 
-        # Trigger view update. FIXME: this does not update lims on gui. should move all widget management to viewer.
-        self.autoscale_clim()
-
-    def get_sdim_widgets(self) -> dict:
-        """
-        Return a dictionary of panel widgets to interactively control slicing.
-        """
-
-        sliders = {}
-        for dim in self.sdims:
-            if dim in self.cat_dims.keys():
-                s = pn.widgets.Select(
-                    name=dim, options=self.cat_dims[dim], value=self.slice_cache[dim]
-                )
-            else:
-                s = pn.widgets.EditableIntSlider(
-                    name=dim,
-                    start=0,
-                    end=self.dim_sizes[dim] - 1,
-                    value=self.dim_indices[dim],
-                )
-
-            def _update_dim_indices(event, this_dim=dim):
-
-                new_val = event.new
-
-                self.dim_indices[this_dim] = new_val
-
-                # Update colormap only if quantitative dimension is updated
-                if (
-                    isinstance(new_val, str)
-                    and new_val.capitalize() in QUANTITATIVE_MAPTYPES
-                ):
-                    self.update_colormap()
-
-                # trigger dim_indices has been changed
-                self.param.trigger("dim_indices")
-
-            s.param.watch(_update_dim_indices, "value")
-
-            sliders[dim] = s
-
-        return sliders
-
-    def get_viewing_widgets(self) -> Sequence[pn.widgets.Widget]:
-
-        sliders = []
-
-        # Flip Widgets
-        ud_w = self.__add_widget(
-            pn.widgets.ToggleIcon,
-            "flip_ud",
-            description="Flip Image Up/Down",
-            icon=UD_FLIP_OFF,
-            active_icon=UD_FLIP_ON,
-            size="10em",
-            margin=(-20, 10, -20, 25),
-            show_name=False,
-        )
-
-        lr_w = self.__add_widget(
-            pn.widgets.ToggleIcon,
-            "flip_lr",
-            description="Flip Image Left/Right",
-            icon=LR_FLIP_OFF,
-            active_icon=LR_FLIP_ON,
-            size="10em",
-            margin=(-20, 10, -20, 10),
-            show_name=False,
-        )
-
-        sliders.append(pn.Row(ud_w, lr_w))
-
-        sliders.append(
-            self.__add_widget(
-                pn.widgets.EditableIntSlider,
-                "size_scale",
-                start=self.param.size_scale.bounds[0],
-                end=self.param.size_scale.bounds[1],
-                value=self.size_scale,
-                step=self.param.size_scale.step,
-            )
-        )
-
-        # bounding box crop for each L/R/U/D edge
-        lr_crop_slider = pn.widgets.IntRangeSlider(
-            name="L/R Display Range",
-            start=self.param.lr_crop.bounds[0],
-            end=self.param.lr_crop.bounds[1],
-            value=(self.lr_crop[0], self.lr_crop[1]),
-            step=self.param.lr_crop.step,
-        )
-
-        def _update_lr_slider(event):
-            crop_lower, crop_upper = event.new
-            self.lr_crop = (crop_lower, crop_upper)
-            self.param.trigger("lr_crop")
-
-        lr_crop_slider.param.watch(_update_lr_slider, "value")
-        sliders.append(lr_crop_slider)
-
-        ud_crop_slider = pn.widgets.IntRangeSlider(
-            name="U/D Display Range",
-            start=self.param.ud_crop.bounds[0],
-            end=self.param.ud_crop.bounds[1],
-            value=(self.ud_crop[0], self.ud_crop[1]),
-            step=self.param.ud_crop.step,
-        )
-
-        def _update_ud_slider(event):
-            crop_lower, crop_upper = event.new
-            self.ud_crop = (crop_lower, crop_upper)
-            self.param.trigger("ud_crop")
-
-        ud_crop_slider.param.watch(_update_ud_slider, "value")
-        sliders.append(ud_crop_slider)
-        return sliders
-
-    def get_contrast_widgets(self) -> Sequence[pn.widgets.Widget]:
-
-        sliders = []
-
-        # vmin/vmax use different Range slider
-        range_slider = pn.widgets.EditableRangeSlider(
-            name="clim",
-            start=self.param.vmin.bounds[0],
-            end=self.param.vmax.bounds[1],
-            value=(self.vmin, self.vmax),
-            step=self.param.vmin.step,
-        )
-
-        def _update_clim(event):
-            self.vmin, self.vmax = event.new
-            self.param.trigger("vmin")
-            self.param.trigger("vmax")
-
-        range_slider.param.watch(_update_clim, "value")
-        sliders.append(range_slider)
-
-        # Colormap
-        cmap_widget = pn.widgets.Select(
-            name="Color Map",
-            options=VALID_COLORMAPS,
-            value=self.cmap,
-        )
-
-        def _update_cmap(event):
-            self.cmap = event.new
-            self.param.trigger("cmap")
-            self.update_colormap()
-
-        cmap_widget.param.watch(_update_cmap, "value")
-        sliders.append(cmap_widget)
-
-        # Colorbar toggle
-        colorbar_widget = pn.widgets.Checkbox(
-            name="Add Colorbar",
-            value=self.colorbar_on,
-        )
-
-        def _update_colorbar(event):
-            self.colorbar_on = event.new
-            self.param.trigger("colorbar_on")
-
-        colorbar_widget.param.watch(_update_colorbar, "value")
-        sliders.append(colorbar_widget)
-
-        colorbar_label_widget = pn.widgets.TextInput(
-            name="Colorbar Label",
-            value=self.colorbar_label,
-        )
-
-        def _update_colorbar_label(event):
-            self.colorbar_label = event.new
-            self.param.trigger("colorbar_label")
-
-        colorbar_label_widget.param.watch(_update_colorbar_label, "value")
-
-        # disable colorbar label if colorbar is off
-        def _update_colorbar_label_disabled(x):
-            colorbar_label_widget.disabled = not x
-
-        pn.bind(_update_colorbar_label_disabled, colorbar_widget, watch=True)
-
-        sliders.append(colorbar_label_widget)
-
-        return sliders
-
-    def get_roi_widgets(self) -> Sequence[pn.widgets.Widget]:
-        # TODO: roi page
-
-        sliders = []
-
-        sliders.append(
-            self.__add_widget(
-                pn.widgets.TextInput,
-                "ROI (TODO)",
-                value="",
-            )
-        )
-
-        sliders.append(
-            self.__add_widget(
-                pn.widgets.Switch,
-                "ROI (TODO)",
-                value=False,
-            )
-        )
-
-        sliders.append(
-            self.__add_widget(
-                pn.widgets.Switch,
-                "RMSE (TODO)",
-                value=False,
-            )
-        )
-
-        return sliders
-
-    def get_analysis_widgets(self) -> Sequence[pn.widgets.Widget]:
-        # TODO: add more analysis options
-
-        sliders = []
-
-        sliders.append(
-            self.__add_widget(
-                pn.widgets.TextInput,
-                "Analysis (TODO)",
-                value="",
-            )
-        )
-
-        sliders.append(
-            self.__add_widget(
-                pn.widgets.Switch,
-                "Analysis (TODO)",
-                value=False,
-            )
-        )
-
-        return sliders
-
-    def get_export_widgets(self) -> Sequence[pn.widgets.Widget]:
-        # TODO: add more export options
-
-        sliders = []
-
-        sliders.append(
-            self.__add_widget(
-                pn.widgets.FileDownload,
-                "Export",
-                label="Export Image",
-                filename="image.png",
-                callback=lambda: self.view,
-            )
-        )
-
-        return sliders
-
-    def __add_widget(self, widget: callable, name: str, **kwargs) -> pn.widgets.Widget:
-
-        initialized = False
-        if "show_name" in kwargs and kwargs["show_name"] == False:
-            kwargs.pop("show_name")
-            w = widget(**kwargs)
-            initialized = True
-        elif "show_name" in kwargs:
-            kwargs.pop("show_name")
-
-        if not initialized:
-            w = widget(name=name, **kwargs)
-
-        def _update(event):
-            # update self.name
-            # self.__dict__[name] = event.new
-            if hasattr(self, name):
-                setattr(self, name, event.new)
-                self.param.trigger(name)
-
-        w.param.watch(_update, "value")
-
-        return w
+        self.param.trigger("vmin", "vmax")
