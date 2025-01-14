@@ -767,6 +767,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         # ROI Widgets
         roi_button = pn.widgets.Button(name="Draw ROI (TODO)", button_type="primary")
 
+        @error.error_handler_decorator()
         def _draw_roi(event):
             raise NotImplementedError("Draw ROI not yet implemented.")
 
@@ -784,6 +785,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="Run Analysis (TODO)", button_type="primary"
         )
 
+        @error.error_handler_decorator()
         def _run_analysis(event):
             raise NotImplementedError("Run Analysis not yet implemented.")
 
