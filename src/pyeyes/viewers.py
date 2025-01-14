@@ -7,7 +7,7 @@ import panel as pn
 import param
 from holoviews import opts
 
-from . import themes
+from . import error, themes
 from .q_cmap.cmap import VALID_COLORMAPS
 from .slicers import NDSlicer
 from .utils import normalize, tonp
@@ -338,6 +338,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="L/R Viewing Dimension", options=self.noncat_dims, value=self.vdims[0]
         )
 
+        @error.error_handler_decorator()
         def vdim_horiz_callback(event):
             if event.new != event.old:
                 vh_new = event.new
@@ -350,6 +351,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="U/D Viewing Dimension", options=self.noncat_dims, value=self.vdims[1]
         )
 
+        @error.error_handler_decorator()
         def vdim_vert_callback(event):
             if event.new != event.old:
                 vv_new = event.new
@@ -432,6 +434,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         return sliders
 
+    @error.error_handler_decorator()
     def _update_sdim(self, sdim, new_dim_val):
         """
         Callback to update a specific slicing dimension.
@@ -459,6 +462,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         # Flip Widgets
         ud_w = pn.widgets.Checkbox(name="Flip Image Up/Down", value=False)
 
+        @error.error_handler_decorator()
         def flip_ud_callback(event):
             if event.new != event.old:
                 with param.parameterized.discard_events(self.slicer):
@@ -470,6 +474,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         lr_w = pn.widgets.Checkbox(name="Flip Image Left/Right", value=False)
 
+        @error.error_handler_decorator()
         def flip_lr_callback(event):
             if event.new != event.old:
                 with param.parameterized.discard_events(self.slicer):
@@ -487,6 +492,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             step=self.slicer.param.size_scale.step,
         )
 
+        @error.error_handler_decorator()
         def size_scale_callback(event):
             with param.parameterized.discard_events(self.slicer):
                 self.slicer.size_scale = event.new
@@ -536,6 +542,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         # Single toggle view
         single_toggle = pn.widgets.Checkbox(name="Single View", value=False)
 
+        @error.error_handler_decorator()
         def single_toggle_callback(event):
             if event.new != event.old:
                 self._update_toggle_single_view(event.new)
@@ -586,6 +593,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
                 button_style="outline",
             )
 
+        @error.error_handler_decorator()
         def display_images_callback(event):
             if event.new != event.old:
                 self._update_image_display(event.new)
@@ -620,6 +628,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             button_style="outline",
         )
 
+        @error.error_handler_decorator()
         def cplx_callback(event):
             if event.new != event.old:
                 self._update_cplx_view(event.new)
@@ -759,7 +768,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         roi_button = pn.widgets.Button(name="Draw ROI (TODO)", button_type="primary")
 
         def _draw_roi(event):
-            print("Draw ROI not yet implemented.")
+            raise NotImplementedError("Draw ROI not yet implemented.")
 
         roi_button.on_click(_draw_roi)
         widgets["draw_roi"] = roi_button
@@ -776,7 +785,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         )
 
         def _run_analysis(event):
-            print("Run Analysis not yet implemented.")
+            raise NotImplementedError("Run Analysis not yet implemented.")
 
         analysis_button.on_click(_run_analysis)
         widgets["run_analysis"] = analysis_button
@@ -801,14 +810,16 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         return widgets
 
+    @error.error_handler_decorator()
     def _export_image(self):
         """
         Export the current image as a PNG.
         """
-        print("Exporting image not yet implemented.")
+        raise NotImplementedError("Exporting image not yet implemented.")
 
+    @error.error_handler_decorator()
     def _export_config(self):
         """
         Export the current configuration as a JSON.
         """
-        print("Exporting config not yet implemented.")
+        raise NotImplementedError("Exporting config not yet implemented.")

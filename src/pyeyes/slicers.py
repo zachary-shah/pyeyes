@@ -6,9 +6,10 @@ from typing import Dict, List, Optional, Sequence, Union
 
 import holoviews as hv
 import numpy as np
+import panel as pn
 import param
 
-from . import themes
+from . import error, themes
 from .q_cmap.cmap import (
     QUANTITATIVE_MAPTYPES,
     VALID_COLORMAPS,
@@ -50,7 +51,7 @@ def _format_image(plot, element):
         tfs = int(plot.state.title.text_font_size[:-2]) * 2 + plot.border
         plot.state.height = plot.state.height + tfs
     else:
-        print("WARNING: Could not parse title font size. Figure scale may be skewed.")
+        error.warning("Could not parse title font size. Figure scale may be skewed.")
 
     # Color to match theme
     plot.state.outline_line_color = themes.VIEW_THEME.background_color
@@ -320,6 +321,7 @@ class NDSlicer(param.Parameterized):
         "colorbar_on",
         "colorbar_label",
     )
+    @error.error_handler_decorator()
     def view(self) -> hv.Layout:
         """
         Return the formatted view of the data given the current slice indices.
@@ -553,7 +555,7 @@ class NDSlicer(param.Parameterized):
 
             else:
                 # TODO: parameterize what colormap should be default
-                print(
+                error.warning(
                     "Could not infer quantitative maptype. Using default colormap 'gray'."
                 )
                 self.ColorMapper = ColorMap("gray")
