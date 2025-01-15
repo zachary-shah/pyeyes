@@ -39,7 +39,11 @@ pre-commit install
 - [x] toggle ROI selection
     - [x] select ROI center
     - [x] select ROI height, width
-    - [ ] allow ROI to be displayed out of figure pane instead
+    - [x] allow ROI to be displayed out of figure pane instead
 - [x] Add MRF color maps
 - [ ] Export figure
 - [ ] Export figure-generating config
+
+Other viewing Features to add
+- [ ] Allow renaming of image labels
+- [ ] Add option to add borders for gridspec layout

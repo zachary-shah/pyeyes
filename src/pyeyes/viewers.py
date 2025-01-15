@@ -768,6 +768,18 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         widgets = {}
 
+        # Option for ROI in-figure
+        roi_mode = pn.widgets.Checkbox(
+            name="ROI Overlay Enabled",
+            value=True,
+        )
+
+        def _update_roi_mode(event):
+            self.slicer.update_roi_mode(event.new)
+
+        roi_mode.param.watch(_update_roi_mode, "value")
+        widgets["roi_mode"] = roi_mode
+
         # ROI Button
         roi_button = pn.widgets.Button(name="Draw ROI", button_type="primary")
 
@@ -908,7 +920,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
     def _roi_state_watcher(self, event):
 
-        print(f"ROI STATE EVENT: {event.old}->{event.new}")
+        print(f"VIEWER CAPTURING ROI UPDATE: State {event.old}->{event.new}")
 
         new_state = event.new
 
@@ -960,6 +972,20 @@ class ComparativeViewer(Viewer, param.Parameterized):
             )
             self._set_app_widget_attr(
                 "ROI", "roi_zoom_order", "visible", new_state == 2
+            )
+
+            # Enable certain widgets only if roi_mode = infigure
+            self._set_app_widget_attr(
+                "ROI",
+                "zoom_scale",
+                "disabled",
+                self.slicer.roi_mode == "separate",
+            )
+            self._set_app_widget_attr(
+                "ROI",
+                "roi_loc",
+                "disabled",
+                self.slicer.roi_mode == "separate",
             )
 
     def _build_analysis_widgets(self) -> Dict[str, pn.widgets.Widget]:

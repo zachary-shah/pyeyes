@@ -93,9 +93,9 @@ def _format_colorbar(plot, element):
         p.title = None
 
     # sizes
-    p.major_label_text_font_size = f"{int(plot.state.height/38)}pt"
-    p.title_text_font_size = f"{int(plot.state.height/38)}pt"
     p.width = int(plot.state.width * (0.22 - 0.03 * (p.title is not None)))
+    p.major_label_text_font_size = f"{int(plot.state.width/8)}pt"
+    p.title_text_font_size = f"{int(plot.state.width/8)}pt"
 
     # spacing
     p.padding = 5
@@ -127,7 +127,7 @@ class NDSlicer(param.Parameterized):
     # Viewing Parameters
     vmin = param.Number(default=0.0)
     vmax = param.Number(default=1.0)
-    size_scale = param.Number(default=400, bounds=(100, 1000), step=10)
+    size_scale = param.Number(default=400, bounds=(200, 1000), step=10)
     flip_ud = param.Boolean(default=False)
     flip_lr = param.Boolean(default=False)
     cplx_view = param.Selector(default="mag", objects=["mag", "phase", "real", "imag"])
@@ -155,6 +155,7 @@ class NDSlicer(param.Parameterized):
     roi_line_color = param.Color(default="red")
     roi_line_width = param.Integer(default=2)
     roi_zoom_order = param.Integer(default=1)
+    roi_mode = param.ObjectSelector(default="inview", objects=["inview", "separate"])
 
     def __init__(
         self,
@@ -348,10 +349,17 @@ class NDSlicer(param.Parameterized):
 
         imgs = self.slice()
 
+        # To start
+        Ncols = len(imgs)
+
         new_im_size = (
             self.lr_crop[1] - self.lr_crop[0],
             self.ud_crop[1] - self.ud_crop[0],
         )
+
+        if self.roi_mode == "separate" and self.roi_state == 2:
+
+            roi_row = []
 
         for i in range(len(imgs)):
 
@@ -376,7 +384,7 @@ class NDSlicer(param.Parameterized):
                 hooks=[_format_image],
             )
 
-            # add bounding box
+            # If ROI already defined, compute the ROI and integrate to composite depending on mode
             if self.roi_state == 2:
 
                 x1, x2, y1, y2 = self.ROI.x1, self.ROI.x2, self.ROI.y1, self.ROI.y2
@@ -393,22 +401,44 @@ class NDSlicer(param.Parameterized):
                     show_legend=False,
                 )
 
-                addnl_opts = dict(
-                    xaxis=None,
-                    yaxis=None,
-                    clim=(self.vmin, self.vmax),
-                )
+                # Show ROI in figure
+                if self.roi_mode == "inview":
 
-                # Extract bounded region. TODO: only do if roi_inview = true
-                roi = self.ROI.get_inview_roi(imgs[i], addnl_opts=addnl_opts)
+                    addnl_opts = dict(
+                        xaxis=None,
+                        yaxis=None,
+                        clim=(self.vmin, self.vmax),
+                    )
 
-                # Show original area
-                imgs[i] = imgs[i] * bounding_box * roi
+                    # Extract bounded region.
+                    roi = self.ROI.get_inview_roi(imgs[i], addnl_opts=addnl_opts)
+
+                # Show ROI in a row below main images (with equivalent widths)
+                elif self.roi_mode == "separate":
+
+                    addnl_opts = dict(
+                        xaxis=None,
+                        yaxis=None,
+                        clim=(self.vmin, self.vmax),
+                        shared_axes=False,
+                        hooks=[_format_image],
+                    )
+
+                    # Get ROI in separate view
+                    roi = self.ROI.get_separate_roi(imgs[i], addnl_opts=addnl_opts)
+
+                    roi_row.append(roi)
+
+                imgs[i] = imgs[i] * bounding_box
+
+                # Put bounding box on final layer
+                if self.roi_mode == "inview":
+                    imgs[i] = imgs[i] * roi
 
         row = hv.Layout(imgs)
 
         """
-        Overlay for ROI
+        Building Overlay for ROI
         """
 
         if self.roi_state == 0:
@@ -452,23 +482,34 @@ class NDSlicer(param.Parameterized):
             row = row * hv.DynamicMap(roi_state_2_callback, streams=[pointer])
             row = row * hv.HLine(self.ROI.y1) * hv.VLine(self.ROI.x1)
 
-        # This is a workaround to show the colorbar, since with Layout it is only possible to create a colorbar
-        # per element, and not per Layout. So we create a dummy Image element with the same colorbar settings.
+        """
+        Add Colorbar elements (via dummy Image element)
+        """
+
         if self.colorbar_on:
-            cbar_fig = hv.Image(np.zeros((2, 2))).opts(
-                cmap=self.ColorMapper.get_cmap(),
+
+            Ncols += 1
+
+            cb_h = int(self.size_scale * new_im_size[1] / np.max(new_im_size))
+
+            # Add constant width for cbar
+            cbar_const_w = 35 + 18 * int(
+                self.colorbar_label is not None and len(self.colorbar_label) > 0
+            )
+
+            cbar_const_opts = dict(
                 clim=(self.vmin, self.vmax),
                 colorbar=True,
                 colorbar_opts={
                     "title": self.colorbar_label,
                 },
+                width=int(
+                    self.size_scale * (new_im_size[1] / np.max(new_im_size)) * 0.15
+                    + cbar_const_w
+                ),  # 5% maintained aspect
                 colorbar_position="right",
                 xaxis=None,
                 yaxis=None,
-                width=int(
-                    self.size_scale * (new_im_size[1] / np.max(new_im_size)) * 0.20 + 30
-                ),  # 5% maintained aspect
-                height=int(self.size_scale * new_im_size[1] / np.max(new_im_size)),
                 shared_axes=False,  # Unlink from holoviews shared toolbar
                 hooks=[
                     _format_image,
@@ -477,9 +518,32 @@ class NDSlicer(param.Parameterized):
                 ],  # Hide the dummy glyph
             )
 
-            row += cbar_fig
+            main_cbar_fig = hv.Image(np.zeros((2, 2))).opts(
+                cmap=self.ColorMapper.get_cmap(),
+                height=cb_h,
+                **cbar_const_opts,
+            )
 
-        # TODO: if roi_state == 2 and roi_inview = false, add separate row for ROI
+            row += main_cbar_fig
+
+        # Add another row for ROI
+        if self.roi_state == 2 and self.roi_mode == "separate":
+
+            for roi_img in roi_row:
+                row += roi_img
+
+            if self.colorbar_on:
+
+                roi_cbar_fig = hv.Image(np.zeros((2, 2))).opts(
+                    cmap=self.ROI.cmap.get_cmap(),
+                    height=roi_row[0].Image.ROI.opts["height"],
+                    **cbar_const_opts,
+                )
+
+                row += roi_cbar_fig
+
+        # set number of columns
+        row = row.cols(Ncols)
 
         return pn.Row(row)
 
@@ -740,6 +804,17 @@ class NDSlicer(param.Parameterized):
 
         self.param.trigger("roi_state")
 
+    def update_roi_mode(self, new_mode: int):
+
+        if new_mode == 0:
+            self.roi_mode = "separate"
+        elif new_mode == 1:
+            self.roi_mode = "inview"
+        else:
+            raise ValueError("Invalid ROI mode")
+
+        self.param.trigger("roi_state")
+
     def update_roi(self, new_state):
         """
         ROI interactivity based on state.
@@ -761,11 +836,9 @@ class NDSlicer(param.Parameterized):
         - ROI appears
         """
 
-        print("Update called with new_state:", new_state)
-
         prev_state = self.roi_state
 
-        # State-based update and print corresponding message
+        # State-based update and display corresponding message
         if prev_state == -1 and new_state == -1:
 
             pn.state.notifications.clear()

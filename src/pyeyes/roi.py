@@ -29,6 +29,10 @@ class ROI:
         zoom_order: Optional[int] = 1,
         padding_pct: Optional[float] = 0.001,
     ):
+        """
+        Basic ROI class responsible for extracting ROIs from images.
+        """
+
         self.x1 = x1
         self.x2 = x2
         self.y1 = y1
@@ -44,8 +48,13 @@ class ROI:
         self.padding_pct = padding_pct
 
     def get_inview_roi(
-        self, img: hv.Image, addnl_opts: Optional[dict] = {}
+        self,
+        img: hv.Image,
+        addnl_opts: Optional[dict] = {},
     ) -> hv.Image:
+        """
+        Return the overlay layer for the ROI inside the main image.
+        """
 
         assert self._can_apply(), "Need to set x1, x2, y1, y2 before applying ROI"
 
@@ -114,6 +123,71 @@ class ROI:
         # add bounding box
         scaled_roi_img = scaled_roi_img * hv.Bounds(
             (new_x_min, new_y_min, new_x_max, new_y_max), label=img.label
+        ).opts(
+            color=self.color,
+            line_width=self.line_width,
+        )
+
+        return scaled_roi_img
+
+    def get_separate_roi(
+        self,
+        img: hv.Image,
+        addnl_opts: Optional[dict] = {},
+    ) -> hv.Image:
+        """
+        Return a new image object for the ROI with size scaled to have equivalent width to original image
+        """
+
+        assert self._can_apply(), "Need to set x1, x2, y1, y2 before applying ROI"
+
+        # Original image bounds
+        x0_l, x0_b, x0_r, x0_t = img.bounds.lbrt()
+
+        # We want to maintain crop aspect ratio with equivalent image width
+        width = img.opts["width"]
+
+        # Crop Bounds
+        x1, x2 = sorted([self.x1, self.x2])
+        y1, y2 = sorted([self.y1, self.y2])
+
+        # Extract data
+        cropped_region = img[x1:x2, y1:y2].clone()
+        data_np = cropped_region.data["Value"]
+
+        # New zoom scale -> always determined by width
+        zoom_scale_x = (x0_r - x0_l) / (x2 - x1)
+        data_np = zoom(data_np, zoom_scale_x, order=self.zoom_order)
+
+        # Flip y-axis
+        data_np = np.flipud(data_np)
+
+        scaled_roi_img = hv.Image(
+            data_np,
+            bounds=img.bounds.lbrt(),
+            kdims=cropped_region.kdims,
+            vdims=cropped_region.vdims,
+            label="ROI",
+        ).opts(
+            cmap=self.cmap.get_cmap(),
+            width=int(width),
+            height=int(width * (y2 - y1) / (x2 - x1)),
+            **addnl_opts,
+        )
+
+        # Add bounding box around extent
+        extent = scaled_roi_img.bounds.lbrt()
+        # add padding
+        extent_padded = (
+            extent[0] + 0.5,
+            extent[1] + 0.5,
+            extent[2] - 0.5,
+            extent[3] - 0.5,
+        )
+
+        scaled_roi_img = scaled_roi_img * hv.Bounds(
+            extent_padded,
+            label="ROI_BB",  # purposely use different label to prevent title from showing up
         ).opts(
             color=self.color,
             line_width=self.line_width,
