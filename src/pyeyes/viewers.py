@@ -7,12 +7,13 @@ import panel as pn
 import param
 from holoviews import opts
 
-from . import error, themes
+from . import error, roi, themes
 from .q_cmap.cmap import VALID_COLORMAPS
 from .slicers import NDSlicer
 from .utils import normalize, tonp
 
 hv.extension("bokeh")
+pn.extension(notifications=True)
 
 # NOTE: api to set theme. can be done by user outside of this api;
 # (can't be updated live easily because panels html page style will be static)
@@ -143,6 +144,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
         self.slicer = NDSlicer(
             self.dataset, self.vdims, cdim="ImgName", clabs=img_names, cat_dims=cat_dims
         )
+
+        # Attach watcher variables to slicer attributes that need GUI updates
+        self.slicer.param.watch(self._roi_state_watcher, "roi_state")
 
         """
         Create Panel Layout
@@ -764,17 +768,199 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         widgets = {}
 
-        # ROI Widgets
-        roi_button = pn.widgets.Button(name="Draw ROI (TODO)", button_type="primary")
+        # ROI Button
+        roi_button = pn.widgets.Button(name="Draw ROI", button_type="primary")
 
-        @error.error_handler_decorator()
         def _draw_roi(event):
-            raise NotImplementedError("Draw ROI not yet implemented.")
+            self.slicer.update_roi(0)
 
         roi_button.on_click(_draw_roi)
         widgets["draw_roi"] = roi_button
 
+        # Clear Button
+        clear_button = pn.widgets.Button(name="Clear ROI", button_type="warning")
+
+        def _clear_roi(event):
+            self.slicer.update_roi(-1)
+
+        # Enable only if roi is drawn
+        clear_button.on_click(_clear_roi)
+        clear_button.disabled = True
+
+        widgets["clear_roi"] = clear_button
+
+        # Colormap
+        roi_cmap_widget = pn.widgets.Select(
+            name="ROI Color Map",
+            options=VALID_COLORMAPS + ["Same"],
+            value="Same",
+        )
+
+        def _update_cmap(event):
+            self.slicer.update_roi_colormap(event.new)
+
+        roi_cmap_widget.param.watch(_update_cmap, "value")
+        widgets["roi_cmap"] = roi_cmap_widget
+
+        # Zoom Scale
+        zoom_scale_widget = pn.widgets.EditableFloatSlider(
+            name="Zoom Scale",
+            start=1.0,
+            end=10.0,
+            value=2.0,
+            step=0.1,
+        )
+
+        def _update_zoom_scale(event):
+            self.slicer.update_roi_zoom_scale(event.new)
+
+        zoom_scale_widget.param.watch(_update_zoom_scale, "value")
+        widgets["zoom_scale"] = zoom_scale_widget
+
+        # Location
+        roi_loc_widget = pn.widgets.Select(
+            name="ROI Location",
+            options=roi.ROI_LOCATIONS,
+            value="top_right",
+        )
+
+        def _update_roi_loc(event):
+            self.slicer.update_roi_loc(event.new)
+
+        roi_loc_widget.param.watch(_update_roi_loc, "value")
+        widgets["roi_loc"] = roi_loc_widget
+
+        # add widget to adjust roi location
+        roi_lr_crop_slider = pn.widgets.EditableRangeSlider(
+            name="ROI L/R Crop",
+            value=(0, 1),
+            start=0,
+            end=100000,
+            step=0.1,
+        )
+
+        def _update_roi_lr_crop(event):
+            crop_lower, crop_upper = event.new
+            with param.parameterized.discard_events(self.slicer):
+                self.slicer.update_roi_lr_crop((crop_lower, crop_upper))
+            self.slicer.param.trigger("roi_state")
+
+        roi_lr_crop_slider.param.watch(_update_roi_lr_crop, "value")
+        widgets["roi_lr_crop"] = roi_lr_crop_slider
+
+        roi_ud_crop_slider = pn.widgets.EditableRangeSlider(
+            name="ROI U/D Crop",
+            value=(0, 1),
+            start=0,
+            end=100000,
+            step=0.1,
+        )
+
+        def _update_roi_ud_crop(event):
+            crop_lower, crop_upper = event.new
+            with param.parameterized.discard_events(self.slicer):
+                self.slicer.update_roi_ud_crop((crop_lower, crop_upper))
+            self.slicer.param.trigger("roi_state")
+
+        roi_ud_crop_slider.param.watch(_update_roi_ud_crop, "value")
+        widgets["roi_ud_crop"] = roi_ud_crop_slider
+
+        # Bounding box details
+        roi_line_color = pn.widgets.ColorPicker(name="ROI Line Color", value="red")
+
+        def _update_roi_line_color(event):
+            self.slicer.update_roi_line_color(event.new)
+
+        roi_line_color.param.watch(_update_roi_line_color, "value")
+        widgets["roi_line_color"] = roi_line_color
+
+        roi_line_width = pn.widgets.IntSlider(
+            name="ROI Line Width", start=1, end=10, value=2
+        )
+
+        def _update_roi_line_width(event):
+            self.slicer.update_roi_line_width(event.new)
+
+        roi_line_width.param.watch(_update_roi_line_width, "value")
+        widgets["roi_line_width"] = roi_line_width
+
+        roi_zoom_order = pn.widgets.IntInput(
+            name="ROI Zoom Order", value=1, start=0, end=3
+        )
+
+        def _update_roi_zoom_order(event):
+            self.slicer.update_roi_zoom_order(event.new)
+
+        roi_zoom_order.param.watch(_update_roi_zoom_order, "value")
+        widgets["roi_zoom_order"] = roi_zoom_order
+
+        # Default not visible
+        widgets["roi_cmap"].visible = False
+        widgets["zoom_scale"].visible = False
+        widgets["roi_loc"].visible = False
+        widgets["roi_lr_crop"].visible = False
+        widgets["roi_ud_crop"].visible = False
+        widgets["roi_line_color"].visible = False
+        widgets["roi_line_width"].visible = False
+        widgets["roi_zoom_order"].visible = False
+
         return widgets
+
+    def _roi_state_watcher(self, event):
+
+        print(f"ROI STATE EVENT: {event.old}->{event.new}")
+
+        new_state = event.new
+
+        # Clear button enabled or not
+        self._set_app_widget_attr("ROI", "clear_roi", "disabled", new_state == -1)
+
+        with param.parameterized.discard_events(self.slicer):
+            # update ranges of sliders upon completion of ROI
+            if event.old >= 1 and event.new == 2:
+
+                lr = tuple(sorted([self.slicer.ROI.x1, self.slicer.ROI.x2]))
+                lr_max = self.slicer.lr_crop
+
+                self._set_app_widget_attr("ROI", "roi_lr_crop", "start", lr_max[0])
+                self._set_app_widget_attr("ROI", "roi_lr_crop", "end", lr_max[1])
+                self._set_app_widget_attr("ROI", "roi_lr_crop", "value", lr)
+                self._set_app_widget_attr(
+                    "ROI", "roi_lr_crop", "step", self.slicer.param.lr_crop.step
+                )
+
+                ud = tuple(sorted([self.slicer.ROI.y1, self.slicer.ROI.y2]))
+                ud_max = self.slicer.ud_crop
+
+                self._set_app_widget_attr("ROI", "roi_ud_crop", "start", ud_max[0])
+                self._set_app_widget_attr("ROI", "roi_ud_crop", "end", ud_max[1])
+                self._set_app_widget_attr("ROI", "roi_ud_crop", "value", ud)
+                self._set_app_widget_attr(
+                    "ROI", "roi_ud_crop", "step", self.slicer.param.ud_crop.step
+                )
+
+                # Constrain Zoom scale
+                max_lr_zoom = abs(lr_max[1] - lr_max[0]) / abs(lr[1] - lr[0])
+                max_ud_zoom = abs(ud_max[1] - ud_max[0]) / abs(ud[1] - ud[0])
+                max_zoom = round(min(max_lr_zoom, max_ud_zoom), 1)
+
+                self._set_app_widget_attr("ROI", "zoom_scale", "start", 1.0)
+                self._set_app_widget_attr("ROI", "zoom_scale", "end", max_zoom)
+
+            self._set_app_widget_attr("ROI", "roi_cmap", "visible", new_state == 2)
+            self._set_app_widget_attr("ROI", "zoom_scale", "visible", new_state == 2)
+            self._set_app_widget_attr("ROI", "roi_loc", "visible", new_state == 2)
+            self._set_app_widget_attr("ROI", "roi_lr_crop", "visible", new_state == 2)
+            self._set_app_widget_attr("ROI", "roi_ud_crop", "visible", new_state == 2)
+            self._set_app_widget_attr(
+                "ROI", "roi_line_color", "visible", new_state == 2
+            )
+            self._set_app_widget_attr(
+                "ROI", "roi_line_width", "visible", new_state == 2
+            )
+            self._set_app_widget_attr(
+                "ROI", "roi_zoom_order", "visible", new_state == 2
+            )
 
     def _build_analysis_widgets(self) -> Dict[str, pn.widgets.Widget]:
 

@@ -36,10 +36,10 @@ pre-commit install
 - [ ] toggle difference maps
     - [ ] select reference for difference map
     - [ ] select difference maps
-- [ ] toggle ROI selection
-    - [ ] select ROI center
-    - [ ] select ROI height, width
+- [x] toggle ROI selection
+    - [x] select ROI center
+    - [x] select ROI height, width
+    - [ ] allow ROI to be displayed out of figure pane instead
 - [x] Add MRF color maps
 - [ ] Export figure
 - [ ] Export figure-generating config
-
