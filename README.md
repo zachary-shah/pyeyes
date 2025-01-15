@@ -43,7 +43,9 @@ pre-commit install
 - [x] Add MRF color maps
 - [ ] Export figure
 - [ ] Export figure-generating config
-
-Other viewing Features to add
+- [ ] Image Masking
+- [ ] "Auto-crop" to crop out all white-space from image
 - [ ] Allow renaming of image labels
 - [ ] Add option to add borders for gridspec layout
+- [ ] Replace ROI 2-click selection with BoundsXY (first attempt at this failed... will revisit later)
+- [ ] Speed up rendering
