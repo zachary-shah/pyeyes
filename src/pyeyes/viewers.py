@@ -785,7 +785,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         roi_button = pn.widgets.Button(name="Draw ROI", button_type="primary")
 
         def _draw_roi(event):
-            self.slicer.update_roi(ROI_STATE.FIRST_SELECTION)
+            self.slicer.update_roi_state(ROI_STATE.FIRST_SELECTION)
 
         roi_button.on_click(_draw_roi)
         widgets["draw_roi"] = roi_button
@@ -794,7 +794,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         clear_button = pn.widgets.Button(name="Clear ROI", button_type="warning")
 
         def _clear_roi(event):
-            self.slicer.update_roi(ROI_STATE.INACTIVE)
+            self.slicer.update_roi_state(ROI_STATE.INACTIVE)
 
         # Enable only if roi is drawn
         clear_button.on_click(_clear_roi)
@@ -939,19 +939,18 @@ class ComparativeViewer(Viewer, param.Parameterized):
                 lr_max = self.slicer.lr_crop
                 ud_max = self.slicer.ud_crop
 
+                lr_step = self.slicer.param.lr_crop.step
+                ud_step = self.slicer.param.ud_crop.step
+
                 self._set_app_widget_attr("ROI", "roi_lr_crop", "start", lr_max[0])
                 self._set_app_widget_attr("ROI", "roi_lr_crop", "end", lr_max[1])
                 self._set_app_widget_attr("ROI", "roi_lr_crop", "value", (roi_l, roi_r))
-                self._set_app_widget_attr(
-                    "ROI", "roi_lr_crop", "step", self.slicer.param.lr_crop.step
-                )
+                self._set_app_widget_attr("ROI", "roi_lr_crop", "step", lr_step)
 
                 self._set_app_widget_attr("ROI", "roi_ud_crop", "start", ud_max[0])
                 self._set_app_widget_attr("ROI", "roi_ud_crop", "end", ud_max[1])
                 self._set_app_widget_attr("ROI", "roi_ud_crop", "value", (roi_b, roi_t))
-                self._set_app_widget_attr(
-                    "ROI", "roi_ud_crop", "step", self.slicer.param.ud_crop.step
-                )
+                self._set_app_widget_attr("ROI", "roi_ud_crop", "step", ud_step)
 
                 # Constrain Zoom scale
                 max_lr_zoom = abs(lr_max[1] - lr_max[0]) / abs(roi_r - roi_l)
@@ -961,44 +960,20 @@ class ComparativeViewer(Viewer, param.Parameterized):
                 self._set_app_widget_attr("ROI", "zoom_scale", "start", 1.0)
                 self._set_app_widget_attr("ROI", "zoom_scale", "end", max_zoom)
 
-            self._set_app_widget_attr(
-                "ROI", "roi_cmap", "visible", new_state == ROI_STATE.ACTIVE
-            )
-            self._set_app_widget_attr(
-                "ROI", "zoom_scale", "visible", new_state == ROI_STATE.ACTIVE
-            )
-            self._set_app_widget_attr(
-                "ROI", "roi_loc", "visible", new_state == ROI_STATE.ACTIVE
-            )
-            self._set_app_widget_attr(
-                "ROI", "roi_lr_crop", "visible", new_state == ROI_STATE.ACTIVE
-            )
-            self._set_app_widget_attr(
-                "ROI", "roi_ud_crop", "visible", new_state == ROI_STATE.ACTIVE
-            )
-            self._set_app_widget_attr(
-                "ROI", "roi_line_color", "visible", new_state == ROI_STATE.ACTIVE
-            )
-            self._set_app_widget_attr(
-                "ROI", "roi_line_width", "visible", new_state == ROI_STATE.ACTIVE
-            )
-            self._set_app_widget_attr(
-                "ROI", "roi_zoom_order", "visible", new_state == ROI_STATE.ACTIVE
-            )
+            active = new_state == ROI_STATE.ACTIVE
+            self._set_app_widget_attr("ROI", "roi_cmap", "visible", active)
+            self._set_app_widget_attr("ROI", "zoom_scale", "visible", active)
+            self._set_app_widget_attr("ROI", "roi_loc", "visible", active)
+            self._set_app_widget_attr("ROI", "roi_lr_crop", "visible", active)
+            self._set_app_widget_attr("ROI", "roi_ud_crop", "visible", active)
+            self._set_app_widget_attr("ROI", "roi_line_color", "visible", active)
+            self._set_app_widget_attr("ROI", "roi_line_width", "visible", active)
+            self._set_app_widget_attr("ROI", "roi_zoom_order", "visible", active)
 
             # Enable certain widgets only if roi_mode = infigure
-            self._set_app_widget_attr(
-                "ROI",
-                "zoom_scale",
-                "disabled",
-                self.slicer.roi_mode == ROI_VIEW_MODE.Separate,
-            )
-            self._set_app_widget_attr(
-                "ROI",
-                "roi_loc",
-                "disabled",
-                self.slicer.roi_mode == ROI_VIEW_MODE.Separate,
-            )
+            is_sep = self.slicer.roi_mode == ROI_VIEW_MODE.Separate
+            self._set_app_widget_attr("ROI", "zoom_scale", "disabled", is_sep)
+            self._set_app_widget_attr("ROI", "roi_loc", "disabled", is_sep)
 
     def _build_analysis_widgets(self) -> Dict[str, pn.widgets.Widget]:
 
