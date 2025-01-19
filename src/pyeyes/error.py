@@ -18,6 +18,8 @@ def error_handler_decorator(disp_duration_ms=3000):
                 pn.state.notifications.error(
                     f"An error occurred: {e}", duration=disp_duration_ms
                 )
+                # We should still print full traceback to console - otherwise it's hard to debug
+                raise e
 
         return wrapper
 

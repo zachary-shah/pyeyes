@@ -2,14 +2,16 @@
 Slicers: Defined as classes that take N-dimensional data and can return a 2D view of that data given some input
 """
 
-from typing import Dict, List, Optional, Sequence, Union
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import holoviews as hv
 import numpy as np
 import panel as pn
 import param
+from holoviews import streams
 
-from . import error, themes
+from . import error, roi, themes
+from .enums import ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
 from .q_cmap.cmap import (
     QUANTITATIVE_MAPTYPES,
     VALID_COLORMAPS,
@@ -50,8 +52,13 @@ def _format_image(plot, element):
     if plot.state.title.text_font_size[-2:] == "px":
         tfs = int(plot.state.title.text_font_size[:-2]) * 2 + plot.border
         plot.state.height = plot.state.height + tfs
+    elif plot.state.title.text_font_size[-2:] == "em":
+        pass  # Child of parent uses relative font size
     else:
-        error.warning("Could not parse title font size. Figure scale may be skewed.")
+        error.warning(
+            f"_format_image hook could not parse title font size: \
+            {plot.state.title.text_font_size}. Figure scale may be skewed."
+        )
 
     # Color to match theme
     plot.state.outline_line_color = themes.VIEW_THEME.background_color
@@ -87,9 +94,9 @@ def _format_colorbar(plot, element):
         p.title = None
 
     # sizes
-    p.major_label_text_font_size = f"{int(plot.state.height/38)}pt"
-    p.title_text_font_size = f"{int(plot.state.height/38)}pt"
     p.width = int(plot.state.width * (0.22 - 0.03 * (p.title is not None)))
+    p.major_label_text_font_size = f"{int(plot.state.width/8)}pt"
+    p.title_text_font_size = f"{int(plot.state.width/8)}pt"
 
     # spacing
     p.padding = 5
@@ -121,7 +128,7 @@ class NDSlicer(param.Parameterized):
     # Viewing Parameters
     vmin = param.Number(default=0.0)
     vmax = param.Number(default=1.0)
-    size_scale = param.Number(default=400, bounds=(100, 1000), step=10)
+    size_scale = param.Number(default=400, bounds=(200, 1000), step=10)
     flip_ud = param.Boolean(default=False)
     flip_lr = param.Boolean(default=False)
     cplx_view = param.Selector(default="mag", objects=["mag", "phase", "real", "imag"])
@@ -140,6 +147,13 @@ class NDSlicer(param.Parameterized):
     # Crop Range Parameters
     lr_crop = param.Range(default=(0, 100), bounds=(0, 100), step=1)
     ud_crop = param.Range(default=(0, 100), bounds=(0, 100), step=1)
+
+    # ROI-related parameters. TODO: clean these parameters up - don't need dups with self.ROI() obj
+    roi_state = param.ObjectSelector(default=ROI_STATE.INACTIVE, objects=ROI_STATE)
+    roi_cmap = param.ObjectSelector(default="Same", objects=VALID_COLORMAPS + ["Same"])
+    roi_mode = param.ObjectSelector(
+        default=ROI_VIEW_MODE.Overlayed, objects=ROI_VIEW_MODE
+    )
 
     def __init__(
         self,
@@ -163,9 +177,7 @@ class NDSlicer(param.Parameterized):
         super().__init__(**params)
 
         with param.parameterized.discard_events(self):
-
             self.data = data
-
             self.cat_dims = cat_dims
 
             # all dimensions
@@ -238,7 +250,10 @@ class NDSlicer(param.Parameterized):
             else:
                 self.ColorMapper = ColorMap(self.cmap)
 
-            self.param.trigger("vmin", "vmax", "cmap")
+            # ROI init
+            self.ROI = roi.ROI()
+
+        self.param.trigger("vmin", "vmax", "cmap")
 
     def update_cache(self):
         """
@@ -268,7 +283,6 @@ class NDSlicer(param.Parameterized):
 
         if self.cdim is not None:
             # Collate Case
-
             imgs = []
 
             for img_label in self.display_images:
@@ -281,16 +295,13 @@ class NDSlicer(param.Parameterized):
                 sliced_2d = sliced_2d.reindex(self.vdims)
 
                 # set slice extent
-                sliced_2d = sliced_2d.redim.range(
-                    **{self.vdims[0]: self.lr_crop},
-                    **{self.vdims[1]: self.ud_crop},
-                )
+                l, r = self.lr_crop
+                u, d = self.ud_crop
+                sliced_2d = sliced_2d[l:r, u:d]
 
                 imgs.append(hv.Image(sliced_2d, label=img_label))
         else:
             # Single image case
-
-            # Select slice indices for each dimension
             sliced_2d = (
                 self.data.select(**sdim_dict)
                 .reduce(self.sdims, np.mean)
@@ -298,10 +309,9 @@ class NDSlicer(param.Parameterized):
             )
 
             # set slice extent
-            sliced_2d = sliced_2d.redim.range(
-                **{self.vdims[0]: self.lr_crop},
-                **{self.vdims[1]: self.ud_crop},
-            )
+            l, r = self.lr_crop
+            u, d = self.ud_crop
+            sliced_2d = sliced_2d[l:r, u:d]
 
             imgs = [hv.Image(sliced_2d)]
 
@@ -320,6 +330,7 @@ class NDSlicer(param.Parameterized):
         "display_images",
         "colorbar_on",
         "colorbar_label",
+        "roi_state",
     )
     @error.error_handler_decorator()
     def view(self) -> hv.Layout:
@@ -331,10 +342,19 @@ class NDSlicer(param.Parameterized):
 
         imgs = self.slice()
 
+        # To start
+        Ncols = len(imgs)
+
         new_im_size = (
             self.lr_crop[1] - self.lr_crop[0],
             self.ud_crop[1] - self.ud_crop[0],
         )
+
+        if (
+            self.roi_mode == ROI_VIEW_MODE.Separate
+            and self.roi_state == ROI_STATE.ACTIVE
+        ):
+            roi_row = []
 
         for i in range(len(imgs)):
 
@@ -359,23 +379,106 @@ class NDSlicer(param.Parameterized):
                 hooks=[_format_image],
             )
 
-        # This is a workaround to show the colorbar, since with Layout it is only possible to create a colorbar
-        # per element, and not per Layout. So we create a dummy Image element with the same colorbar settings.
+            # If ROI already defined, compute the ROI and integrate to composite depending on mode
+            if self.roi_state == ROI_STATE.ACTIVE:
+                bounding_box = hv.Bounds(self.ROI.lbrt(), label=imgs[i].label).opts(
+                    color=self.ROI.color,
+                    line_width=self.ROI.line_width,
+                    show_legend=False,
+                )
+
+                # Show ROI in figure
+                if self.roi_mode == ROI_VIEW_MODE.Overlayed:
+                    addnl_opts = dict(
+                        xaxis=None,
+                        yaxis=None,
+                        clim=(self.vmin, self.vmax),
+                    )
+
+                    # Extract bounded region.
+                    roi_fig = self.ROI.get_overlay_roi(imgs[i], addnl_opts=addnl_opts)
+
+                # Show ROI in a row below main images (with equivalent widths)
+                elif self.roi_mode == ROI_VIEW_MODE.Separate:
+                    addnl_opts = dict(
+                        xaxis=None,
+                        yaxis=None,
+                        clim=(self.vmin, self.vmax),
+                        shared_axes=False,
+                        hooks=[_format_image],
+                    )
+
+                    # Get ROI in separate view
+                    roi_fig = self.ROI.get_separate_roi(imgs[i], addnl_opts=addnl_opts)
+
+                    roi_row.append(roi_fig)
+
+                imgs[i] = imgs[i] * bounding_box
+
+                # Put bounding box on final layer
+                if self.roi_mode == ROI_VIEW_MODE.Overlayed:
+                    imgs[i] = imgs[i] * roi_fig
+
+        row = hv.Layout(imgs)
+
+        """
+        Building Overlay for ROI
+        """
+
+        if self.roi_state == ROI_STATE.FIRST_SELECTION:
+            pointer = streams.SingleTap(x=-1, y=-1, source=imgs[0])
+
+            def first_selection_callback(x, y):
+                if x < 0 or y < 0:
+                    return hv.HLine(0) * hv.VLine(0)
+
+                self.ROI.point1 = roi.Point(x, y)
+                self.update_roi_state(ROI_STATE.SECOND_SELECTION)
+                return hv.HLine(y) * hv.VLine(x)
+
+            row = row * hv.DynamicMap(first_selection_callback, streams=[pointer])
+
+        elif self.roi_state == ROI_STATE.SECOND_SELECTION:
+            pointer = streams.SingleTap(x=-1, y=-1, source=imgs[0])
+
+            def second_selection_callback(x, y):
+                if x < 0 or y < 0:
+                    return hv.HLine(0) * hv.VLine(0)
+
+                self.ROI.point2 = roi.Point(x, y)
+                self.update_roi_state(ROI_STATE.ACTIVE)
+                return hv.HLine(y) * hv.VLine(x)
+
+            row = row * hv.DynamicMap(second_selection_callback, streams=[pointer])
+            row = row * hv.HLine(self.ROI.point1.y) * hv.VLine(self.ROI.point1.x)
+
+        """
+        Add Colorbar elements (via dummy Image element)
+        """
+
         if self.colorbar_on:
-            cbar_fig = hv.Image(np.zeros((2, 2))).opts(
-                cmap=self.ColorMapper.get_cmap(),
+            Ncols += 1
+
+            cb_h = int(self.size_scale * new_im_size[1] / np.max(new_im_size))
+
+            # Add constant width for cbar
+            cbar_const_w = 35 + 18 * int(
+                self.colorbar_label is not None and len(self.colorbar_label) > 0
+            )
+
+            cbar_const_opts = dict(
                 clim=(self.vmin, self.vmax),
                 colorbar=True,
                 colorbar_opts={
                     "title": self.colorbar_label,
                 },
+                width=int(
+                    self.size_scale * (new_im_size[1] / np.max(new_im_size)) * 0.15
+                    + cbar_const_w
+                ),  # 5% maintained aspect
                 colorbar_position="right",
                 xaxis=None,
                 yaxis=None,
-                width=int(
-                    self.size_scale * (new_im_size[1] / np.max(new_im_size)) * 0.20 + 30
-                ),  # 5% maintained aspect
-                height=int(self.size_scale * new_im_size[1] / np.max(new_im_size)),
                 shared_axes=False,  # Unlink from holoviews shared toolbar
                 hooks=[
                     _format_image,
@@ -384,11 +487,37 @@ class NDSlicer(param.Parameterized):
                 ],  # Hide the dummy glyph
             )
 
-            imgs.append(cbar_fig)
+            main_cbar_fig = hv.Image(np.zeros((2, 2))).opts(
+                cmap=self.ColorMapper.get_cmap(),
+                height=cb_h,
+                **cbar_const_opts,
+            )
 
-        return hv.Layout(imgs).opts(
-            shared_axes=True,
-        )
+            row += main_cbar_fig
+
+        # Add another row for ROI
+        if (
+            self.roi_state == ROI_STATE.ACTIVE
+            and self.roi_mode == ROI_VIEW_MODE.Separate
+        ):
+
+            for roi_img in roi_row:
+                row += roi_img
+
+            if self.colorbar_on:
+
+                roi_cbar_fig = hv.Image(np.zeros((2, 2))).opts(
+                    cmap=self.ROI.cmap.get_cmap(),
+                    height=roi_row[0].Image.ROI.opts["height"],
+                    **cbar_const_opts,
+                )
+
+                row += roi_cbar_fig
+
+        # set number of columns
+        row = row.cols(Ncols)
+
+        return pn.Row(row)
 
     def _infer_quantitative_maptype(self) -> Union[str, None]:
         """
@@ -406,8 +535,6 @@ class NDSlicer(param.Parameterized):
         """
 
         with param.parameterized.discard_events(self):
-
-            # do this without triggering parameters
             vdims = list(vdims)
 
             self.vdims = vdims
@@ -467,22 +594,10 @@ class NDSlicer(param.Parameterized):
             cmap = self.cmap
 
             # Compute max color limits
-            mn = np.min(
-                np.stack(
-                    [
-                        CPLX_VIEW_MAP[self.cplx_view](self.data[v.name])
-                        for v in self.data.vdims
-                    ]
-                )
-            )
-            mx = np.max(
-                np.stack(
-                    [
-                        CPLX_VIEW_MAP[self.cplx_view](self.data[v.name])
-                        for v in self.data.vdims
-                    ]
-                )
-            )
+            cplx_callable = CPLX_VIEW_MAP[self.cplx_view]
+            d = np.stack([cplx_callable(self.data[v.name]) for v in self.data.vdims])
+            mn = np.min(d)
+            mx = np.max(d)
 
             vmind = mn
             vminb = (mn, mx)
@@ -503,7 +618,6 @@ class NDSlicer(param.Parameterized):
 
         # Update color limits
         with param.parameterized.discard_events(self):
-
             self.param.vmin.default = vmind
             self.param.vmin.bounds = vminb
             self.param.vmin.step = vmins
@@ -511,10 +625,10 @@ class NDSlicer(param.Parameterized):
             self.param.vmax.bounds = vmaxb
             self.param.vmax.step = vmaxs
             self.param.cmap.default = cmap
-
             self.vmin = vmind
             self.vmax = vmaxd
             self.cmap = cmap
+
         self.param.trigger("vmin", "vmax", "cmap")
 
     def autoscale_clim(self):
@@ -547,7 +661,6 @@ class NDSlicer(param.Parameterized):
         """
 
         if self.cmap.capitalize() == "Quantitative":
-
             qmaptype = self._infer_quantitative_maptype()
 
             if qmaptype is not None:
@@ -562,4 +675,137 @@ class NDSlicer(param.Parameterized):
         else:
             self.ColorMapper = ColorMap(self.cmap)
 
+        # Ensure roi tracks with colormap updates if paired
+        if self.roi_cmap.capitalize() == "Same":
+            with param.parameterized.discard_events(self):
+                self.update_roi_colormap(self.roi_cmap)
+
         self.param.trigger("vmin", "vmax")
+
+    def update_roi_colormap(self, new_cmap: str):
+
+        self.roi_cmap = new_cmap
+
+        if self.roi_cmap.capitalize() == "Same":
+            self.ROI.cmap = self.ColorMapper
+
+        elif self.roi_cmap.capitalize() == "Quantitative":
+            qmaptype = self._infer_quantitative_maptype()
+
+            if qmaptype is not None:
+                self.ROI.cmap = QuantitativeColorMap(qmaptype, self.vmin, self.vmax)
+
+            else:
+                self.ROI.cmap = self.ColorMapper
+
+        else:
+            self.ROI.cmap = ColorMap(self.roi_cmap)
+
+        self.param.trigger("roi_state")
+
+    def update_roi_zoom_scale(self, new_zoom: float):
+
+        self.ROI.zoom_scale = new_zoom
+        self.param.trigger("roi_state")
+
+    def update_roi_loc(self, new_loc: str):
+
+        self.ROI.roi_loc = ROI_LOCATION(new_loc)
+        self.param.trigger("roi_state")
+
+    def update_roi_lr_crop(self, new_lr_crop: Tuple[int, int]):
+
+        self.ROI.set_xrange(*new_lr_crop)
+        self.param.trigger("roi_state")
+
+    def update_roi_ud_crop(self, new_ud_crop: Tuple[int, int]):
+
+        self.ROI.set_yrange(*new_ud_crop)
+        self.param.trigger("roi_state")
+
+    def update_roi_line_color(self, new_color: str):
+
+        self.ROI.color = new_color
+        self.param.trigger("roi_state")
+
+    def update_roi_line_width(self, new_width: int):
+
+        self.ROI.line_width = new_width
+        self.param.trigger("roi_state")
+
+    def update_roi_zoom_order(self, new_order: int):
+
+        self.ROI.zoom_order = new_order
+        self.param.trigger("roi_state")
+
+    def update_roi_mode(self, new_mode: int):
+
+        self.roi_mode = ROI_VIEW_MODE(new_mode)
+        self.param.trigger("roi_state")
+
+    def update_roi_state(self, new_state: ROI_STATE):
+        """
+        Enforce setting ROI based on interactive state.
+        """
+
+        prev_state = self.roi_state
+
+        # State-based update and display corresponding message
+        if prev_state == ROI_STATE.INACTIVE and new_state == ROI_STATE.INACTIVE:
+            pn.state.notifications.clear()
+            pn.state.notifications.info(
+                "No ROI active. Click 'Add ROI' to start adding an ROI.",
+                duration=0,
+            )
+
+        elif prev_state > ROI_STATE.INACTIVE and new_state == ROI_STATE.INACTIVE:
+            pn.state.notifications.clear()
+            pn.state.notifications.info(
+                "ROI cleared. Click 'Add ROI' to start adding an ROI.",
+                duration=3000,
+            )
+
+        elif prev_state > ROI_STATE.INACTIVE and new_state == ROI_STATE.FIRST_SELECTION:
+            pn.state.notifications.clear()
+            pn.state.notifications.info(
+                "Resetting ROI. Click the first corner of the new ROI in the left-most plot.",
+                duration=0,
+            )
+
+        elif (
+            prev_state == ROI_STATE.INACTIVE and new_state == ROI_STATE.FIRST_SELECTION
+        ):
+            pn.state.notifications.clear()
+            pn.state.notifications.info(
+                "Click the first corner of the ROI in the left-most plot.",
+                duration=0,
+            )
+
+        elif (
+            prev_state == ROI_STATE.FIRST_SELECTION
+            and new_state == ROI_STATE.SECOND_SELECTION
+        ):
+            pn.state.notifications.clear()
+            pn.state.notifications.info(
+                "Click the second corner of the ROI in the left-most plot.",
+                duration=0,
+            )
+
+        elif prev_state == ROI_STATE.SECOND_SELECTION and new_state == ROI_STATE.ACTIVE:
+            pn.state.notifications.clear()
+            pn.state.notifications.info(
+                "ROI added. Click 'View ROI in-figure' to see the ROI in the main plot.",
+                duration=5000,
+            )
+
+            with param.parameterized.discard_events(self):
+                self.update_roi_colormap(self.roi_cmap)
+
+        else:
+
+            raise ValueError(
+                f"Invalid ROI state transition: {prev_state} -> {new_state}"
+            )
+
+        # Trigger
+        self.roi_state = new_state

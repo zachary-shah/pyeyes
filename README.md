@@ -36,10 +36,16 @@ pre-commit install
 - [ ] toggle difference maps
     - [ ] select reference for difference map
     - [ ] select difference maps
-- [ ] toggle ROI selection
-    - [ ] select ROI center
-    - [ ] select ROI height, width
+- [x] toggle ROI selection
+    - [x] select ROI center
+    - [x] select ROI height, width
+    - [x] allow ROI to be displayed out of figure pane instead
 - [x] Add MRF color maps
 - [ ] Export figure
 - [ ] Export figure-generating config
-
+- [ ] Image Masking
+- [ ] "Auto-crop" to crop out all white-space from image
+- [ ] Allow renaming of image labels
+- [ ] Add option to add borders for gridspec layout
+- [ ] Replace ROI 2-click selection with BoundsXY (first attempt at this failed... will revisit later)
+- [ ] Speed up rendering
