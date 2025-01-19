@@ -11,6 +11,7 @@ import param
 from holoviews import streams
 
 from . import error, roi, themes
+from .enums import ROI_STATE, ROI_VIEW_MODE
 from .q_cmap.cmap import (
     QUANTITATIVE_MAPTYPES,
     VALID_COLORMAPS,
@@ -148,14 +149,16 @@ class NDSlicer(param.Parameterized):
     ud_crop = param.Range(default=(0, 100), bounds=(0, 100), step=1)
 
     # ROI-related parameters. TODO: clean these parameters up - don't need dups with self.ROI() obj
-    roi_state = param.Integer(default=-1)
+    roi_state = param.ObjectSelector(default=ROI_STATE.INACTIVE, objects=ROI_STATE)
     roi_cmap = param.ObjectSelector(default="Same", objects=VALID_COLORMAPS + ["Same"])
     roi_loc = param.ObjectSelector(default="top_right", objects=roi.ROI_LOCATIONS)
     roi_zoom_scale = param.Number(default=2.0, bounds=(1.0, 10.0), step=0.1)
     roi_line_color = param.Color(default="red")
     roi_line_width = param.Integer(default=2)
     roi_zoom_order = param.Integer(default=1)
-    roi_mode = param.ObjectSelector(default="inview", objects=["inview", "separate"])
+    roi_mode = param.ObjectSelector(
+        default=ROI_VIEW_MODE.Overlayed, objects=ROI_VIEW_MODE
+    )
 
     def __init__(
         self,
@@ -357,7 +360,10 @@ class NDSlicer(param.Parameterized):
             self.ud_crop[1] - self.ud_crop[0],
         )
 
-        if self.roi_mode == "separate" and self.roi_state == 2:
+        if (
+            self.roi_mode == ROI_VIEW_MODE.Separate
+            and self.roi_state == ROI_STATE.ACTIVE
+        ):
 
             roi_row = []
 
@@ -385,7 +391,7 @@ class NDSlicer(param.Parameterized):
             )
 
             # If ROI already defined, compute the ROI and integrate to composite depending on mode
-            if self.roi_state == 2:
+            if self.roi_state == ROI_STATE.ACTIVE:
 
                 x1, x2, y1, y2 = self.ROI.x1, self.ROI.x2, self.ROI.y1, self.ROI.y2
 
@@ -402,7 +408,7 @@ class NDSlicer(param.Parameterized):
                 )
 
                 # Show ROI in figure
-                if self.roi_mode == "inview":
+                if self.roi_mode == ROI_VIEW_MODE.Overlayed:
 
                     addnl_opts = dict(
                         xaxis=None,
@@ -414,7 +420,7 @@ class NDSlicer(param.Parameterized):
                     roi = self.ROI.get_inview_roi(imgs[i], addnl_opts=addnl_opts)
 
                 # Show ROI in a row below main images (with equivalent widths)
-                elif self.roi_mode == "separate":
+                elif self.roi_mode == ROI_VIEW_MODE.Separate:
 
                     addnl_opts = dict(
                         xaxis=None,
@@ -432,7 +438,7 @@ class NDSlicer(param.Parameterized):
                 imgs[i] = imgs[i] * bounding_box
 
                 # Put bounding box on final layer
-                if self.roi_mode == "inview":
+                if self.roi_mode == ROI_VIEW_MODE.Overlayed:
                     imgs[i] = imgs[i] * roi
 
         row = hv.Layout(imgs)
@@ -441,11 +447,11 @@ class NDSlicer(param.Parameterized):
         Building Overlay for ROI
         """
 
-        if self.roi_state == 0:
+        if self.roi_state == ROI_STATE.FIRST_SELECTION:
 
             pointer = streams.SingleTap(x=-1, y=-1, source=imgs[0])
 
-            def roi_state_1_callback(x, y):
+            def first_selection_callback(x, y):
 
                 if x < 0 or y < 0:
                     return hv.HLine(0) * hv.VLine(0)
@@ -455,17 +461,17 @@ class NDSlicer(param.Parameterized):
                 self.ROI.y1 = y
 
                 # ROI State --> 1
-                self.update_roi(1)
+                self.update_roi(ROI_STATE.SECOND_SELECTION)
 
                 return hv.HLine(y) * hv.VLine(x)
 
-            row = row * hv.DynamicMap(roi_state_1_callback, streams=[pointer])
+            row = row * hv.DynamicMap(first_selection_callback, streams=[pointer])
 
-        elif self.roi_state == 1:
+        elif self.roi_state == ROI_STATE.SECOND_SELECTION:
 
             pointer = streams.SingleTap(x=-1, y=-1, source=imgs[0])
 
-            def roi_state_2_callback(x, y):
+            def second_selection_callback(x, y):
 
                 if x < 0 or y < 0:
                     return hv.HLine(0) * hv.VLine(0)
@@ -475,11 +481,11 @@ class NDSlicer(param.Parameterized):
                 self.ROI.y2 = y
 
                 # ROI State --> 2
-                self.update_roi(2)
+                self.update_roi(ROI_STATE.ACTIVE)
 
                 return hv.HLine(y) * hv.VLine(x)
 
-            row = row * hv.DynamicMap(roi_state_2_callback, streams=[pointer])
+            row = row * hv.DynamicMap(second_selection_callback, streams=[pointer])
             row = row * hv.HLine(self.ROI.y1) * hv.VLine(self.ROI.x1)
 
         """
@@ -527,7 +533,10 @@ class NDSlicer(param.Parameterized):
             row += main_cbar_fig
 
         # Add another row for ROI
-        if self.roi_state == 2 and self.roi_mode == "separate":
+        if (
+            self.roi_state == ROI_STATE.ACTIVE
+            and self.roi_mode == ROI_VIEW_MODE.Separate
+        ):
 
             for roi_img in roi_row:
                 row += roi_img
@@ -806,30 +815,27 @@ class NDSlicer(param.Parameterized):
 
     def update_roi_mode(self, new_mode: int):
 
-        if new_mode == 0:
-            self.roi_mode = "separate"
-        elif new_mode == 1:
-            self.roi_mode = "inview"
-        else:
-            raise ValueError("Invalid ROI mode")
+        self.roi_mode = ROI_VIEW_MODE(new_mode)
+
+        print(f"New ROI mode: {self.roi_mode}")
 
         self.param.trigger("roi_state")
 
-    def update_roi(self, new_state):
+    def update_roi(self, new_state: ROI_STATE):
         """
         ROI interactivity based on state.
 
-        State -1:
+        ROI_STATE.INACTIVE: No ROI active
         - No ROI active
-        State 0:
+        ROI_STATE.FIRST_SELECTION: First corner of ROI selected
         - User has clicked "Add ROI" button, popup for "Select Point 1" appears
         - SingleTap stream active, looking for point 1 to be added
-        State 1:
+        ROI_STATE.SECOND_SELECTION: Second corner of ROI selected
         - Triggered after point 1 selected (some value is returned from SingleTap)
         - Vline1/Hline1 are locked in place
         - Popup for "Select Point 2" appears
         - SingleTap stream active, looking for point 2 to be added
-        State 2:
+        ROI_STATE.ACTIVE: ROI added
         - Triggered after point 2 selected (some value is returned from SingleTap)
         - Bounding box over ROI locked in place
         - Widgets for ROI modification appear
@@ -839,7 +845,7 @@ class NDSlicer(param.Parameterized):
         prev_state = self.roi_state
 
         # State-based update and display corresponding message
-        if prev_state == -1 and new_state == -1:
+        if prev_state == ROI_STATE.INACTIVE and new_state == ROI_STATE.INACTIVE:
 
             pn.state.notifications.clear()
             pn.state.notifications.info(
@@ -847,15 +853,15 @@ class NDSlicer(param.Parameterized):
                 duration=0,
             )
 
-        elif prev_state >= 0 and new_state == -1:
+        elif prev_state > ROI_STATE.INACTIVE and new_state == ROI_STATE.INACTIVE:
 
             pn.state.notifications.clear()
             pn.state.notifications.info(
                 "ROI cleared. Click 'Add ROI' to start adding an ROI.",
-                duration=0,
+                duration=3000,
             )
 
-        elif prev_state >= 0 and new_state == 0:
+        elif prev_state > ROI_STATE.INACTIVE and new_state == ROI_STATE.FIRST_SELECTION:
 
             pn.state.notifications.clear()
             pn.state.notifications.info(
@@ -863,7 +869,9 @@ class NDSlicer(param.Parameterized):
                 duration=0,
             )
 
-        elif prev_state == -1 and new_state == 0:
+        elif (
+            prev_state == ROI_STATE.INACTIVE and new_state == ROI_STATE.FIRST_SELECTION
+        ):
 
             pn.state.notifications.clear()
             pn.state.notifications.info(
@@ -871,7 +879,10 @@ class NDSlicer(param.Parameterized):
                 duration=0,
             )
 
-        elif prev_state == 0 and new_state == 1:
+        elif (
+            prev_state == ROI_STATE.FIRST_SELECTION
+            and new_state == ROI_STATE.SECOND_SELECTION
+        ):
 
             pn.state.notifications.clear()
             pn.state.notifications.info(
@@ -879,7 +890,7 @@ class NDSlicer(param.Parameterized):
                 duration=0,
             )
 
-        elif prev_state == 1 and new_state == 2:
+        elif prev_state == ROI_STATE.SECOND_SELECTION and new_state == ROI_STATE.ACTIVE:
 
             pn.state.notifications.clear()
             pn.state.notifications.info(
