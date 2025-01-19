@@ -921,7 +921,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
     def _roi_state_watcher(self, event):
 
-        print(f"VIEWER CAPTURING ROI UPDATE: State {event.old}->{event.new}")
+        # print(f"VIEWER CAPTURING ROI UPDATE: State {event.old}->{event.new}")
 
         new_state = event.new
 
@@ -934,29 +934,28 @@ class ComparativeViewer(Viewer, param.Parameterized):
             # update ranges of sliders upon completion of ROI
             if event.new == ROI_STATE.ACTIVE:
 
-                lr = tuple(sorted([self.slicer.ROI.x1, self.slicer.ROI.x2]))
+                roi_l, roi_b, roi_r, roi_t = self.slicer.ROI.lbrt()
+
                 lr_max = self.slicer.lr_crop
+                ud_max = self.slicer.ud_crop
 
                 self._set_app_widget_attr("ROI", "roi_lr_crop", "start", lr_max[0])
                 self._set_app_widget_attr("ROI", "roi_lr_crop", "end", lr_max[1])
-                self._set_app_widget_attr("ROI", "roi_lr_crop", "value", lr)
+                self._set_app_widget_attr("ROI", "roi_lr_crop", "value", (roi_l, roi_r))
                 self._set_app_widget_attr(
                     "ROI", "roi_lr_crop", "step", self.slicer.param.lr_crop.step
                 )
 
-                ud = tuple(sorted([self.slicer.ROI.y1, self.slicer.ROI.y2]))
-                ud_max = self.slicer.ud_crop
-
                 self._set_app_widget_attr("ROI", "roi_ud_crop", "start", ud_max[0])
                 self._set_app_widget_attr("ROI", "roi_ud_crop", "end", ud_max[1])
-                self._set_app_widget_attr("ROI", "roi_ud_crop", "value", ud)
+                self._set_app_widget_attr("ROI", "roi_ud_crop", "value", (roi_b, roi_t))
                 self._set_app_widget_attr(
                     "ROI", "roi_ud_crop", "step", self.slicer.param.ud_crop.step
                 )
 
                 # Constrain Zoom scale
-                max_lr_zoom = abs(lr_max[1] - lr_max[0]) / abs(lr[1] - lr[0])
-                max_ud_zoom = abs(ud_max[1] - ud_max[0]) / abs(ud[1] - ud[0])
+                max_lr_zoom = abs(lr_max[1] - lr_max[0]) / abs(roi_r - roi_l)
+                max_ud_zoom = abs(ud_max[1] - ud_max[0]) / abs(roi_t - roi_b)
                 max_zoom = round(min(max_lr_zoom, max_ud_zoom), 1)
 
                 self._set_app_widget_attr("ROI", "zoom_scale", "start", 1.0)

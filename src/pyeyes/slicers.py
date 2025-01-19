@@ -393,13 +393,7 @@ class NDSlicer(param.Parameterized):
             # If ROI already defined, compute the ROI and integrate to composite depending on mode
             if self.roi_state == ROI_STATE.ACTIVE:
 
-                x1, x2, y1, y2 = self.ROI.x1, self.ROI.x2, self.ROI.y1, self.ROI.y2
-
-                # Get bounded region
-                x1, x2 = sorted([x1, x2])
-                y1, y2 = sorted([y1, y2])
-
-                bounding_box = hv.Bounds((x1, y1, x2, y2), label=imgs[i].label)
+                bounding_box = hv.Bounds(self.ROI.lbrt(), label=imgs[i].label)
 
                 bounding_box.opts(
                     color=self.roi_line_color,
@@ -417,7 +411,7 @@ class NDSlicer(param.Parameterized):
                     )
 
                     # Extract bounded region.
-                    roi = self.ROI.get_inview_roi(imgs[i], addnl_opts=addnl_opts)
+                    roi_fig = self.ROI.get_overlay_roi(imgs[i], addnl_opts=addnl_opts)
 
                 # Show ROI in a row below main images (with equivalent widths)
                 elif self.roi_mode == ROI_VIEW_MODE.Separate:
@@ -431,15 +425,15 @@ class NDSlicer(param.Parameterized):
                     )
 
                     # Get ROI in separate view
-                    roi = self.ROI.get_separate_roi(imgs[i], addnl_opts=addnl_opts)
+                    roi_fig = self.ROI.get_separate_roi(imgs[i], addnl_opts=addnl_opts)
 
-                    roi_row.append(roi)
+                    roi_row.append(roi_fig)
 
                 imgs[i] = imgs[i] * bounding_box
 
                 # Put bounding box on final layer
                 if self.roi_mode == ROI_VIEW_MODE.Overlayed:
-                    imgs[i] = imgs[i] * roi
+                    imgs[i] = imgs[i] * roi_fig
 
         row = hv.Layout(imgs)
 
@@ -456,9 +450,7 @@ class NDSlicer(param.Parameterized):
                 if x < 0 or y < 0:
                     return hv.HLine(0) * hv.VLine(0)
 
-                # Update ROI variables
-                self.ROI.x1 = x
-                self.ROI.y1 = y
+                self.ROI.point1 = roi.Point(x, y)
 
                 # ROI State --> 1
                 self.update_roi(ROI_STATE.SECOND_SELECTION)
@@ -476,9 +468,7 @@ class NDSlicer(param.Parameterized):
                 if x < 0 or y < 0:
                     return hv.HLine(0) * hv.VLine(0)
 
-                # Update ROI variables
-                self.ROI.x2 = x
-                self.ROI.y2 = y
+                self.ROI.point2 = roi.Point(x, y)
 
                 # ROI State --> 2
                 self.update_roi(ROI_STATE.ACTIVE)
@@ -486,7 +476,7 @@ class NDSlicer(param.Parameterized):
                 return hv.HLine(y) * hv.VLine(x)
 
             row = row * hv.DynamicMap(second_selection_callback, streams=[pointer])
-            row = row * hv.HLine(self.ROI.y1) * hv.VLine(self.ROI.x1)
+            row = row * hv.HLine(self.ROI.point1.y) * hv.VLine(self.ROI.point1.x)
 
         """
         Add Colorbar elements (via dummy Image element)
@@ -777,15 +767,13 @@ class NDSlicer(param.Parameterized):
 
     def update_roi_lr_crop(self, new_lr_crop: Tuple[int, int]):
 
-        self.ROI.x1 = new_lr_crop[0]
-        self.ROI.x2 = new_lr_crop[1]
+        self.ROI.set_xrange(*new_lr_crop)
 
         self.param.trigger("roi_state")
 
     def update_roi_ud_crop(self, new_ud_crop: Tuple[int, int]):
 
-        self.ROI.y1 = new_ud_crop[0]
-        self.ROI.y2 = new_ud_crop[1]
+        self.ROI.set_yrange(*new_ud_crop)
 
         self.param.trigger("roi_state")
 
@@ -816,8 +804,6 @@ class NDSlicer(param.Parameterized):
     def update_roi_mode(self, new_mode: int):
 
         self.roi_mode = ROI_VIEW_MODE(new_mode)
-
-        print(f"New ROI mode: {self.roi_mode}")
 
         self.param.trigger("roi_state")
 
