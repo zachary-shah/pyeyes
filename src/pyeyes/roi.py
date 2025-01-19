@@ -4,14 +4,8 @@ import holoviews as hv
 import numpy as np
 from scipy.ndimage import zoom
 
+from .enums import ROI_LOCATION
 from .q_cmap.cmap import ColorMap
-
-ROI_LOCATIONS = [
-    "top_left",
-    "top_right",
-    "bottom_left",
-    "bottom_right",
-]
 
 
 class ROI:
@@ -21,7 +15,7 @@ class ROI:
         x2: Optional[int] = None,
         y1: Optional[int] = None,
         y2: Optional[int] = None,
-        roi_loc: Optional[str] = "top_right",
+        roi_loc: Optional[ROI_LOCATION] = ROI_LOCATION.TOP_RIGHT,
         zoom_scale: Optional[float] = 2.0,
         cmap: Optional[ColorMap] = ColorMap("jet"),
         color: Optional[str] = "red",
@@ -38,7 +32,6 @@ class ROI:
         self.y1 = y1
         self.y2 = y2
 
-        assert roi_loc in ROI_LOCATIONS
         self.roi_loc = roi_loc
         self.zoom_scale = zoom_scale
         self.cmap = cmap
@@ -86,22 +79,22 @@ class ROI:
         padding_x = self.padding_pct * (main_x_max - main_x_min)
         padding_y = self.padding_pct * (main_y_max - main_y_min)
 
-        if self.roi_loc == "top_left":
+        if self.roi_loc == ROI_LOCATION.TOP_LEFT:
             new_x_min = main_x_min + padding_x
             new_x_max = new_x_min + scaled_width
             new_y_max = main_y_max - padding_y
             new_y_min = new_y_max - scaled_height
-        elif self.roi_loc == "top_right":
+        elif self.roi_loc == ROI_LOCATION.TOP_RIGHT:
             new_x_max = main_x_max - padding_x
             new_x_min = new_x_max - scaled_width
             new_y_max = main_y_max - padding_y
             new_y_min = new_y_max - scaled_height
-        elif self.roi_loc == "bottom_left":
+        elif self.roi_loc == ROI_LOCATION.BOTTOM_LEFT:
             new_x_min = main_x_min + padding_x
             new_y_min = main_y_min + padding_y
             new_x_max = new_x_min + scaled_width
             new_y_max = new_y_min + scaled_height
-        elif self.roi_loc == "bottom_right":
+        elif self.roi_loc == ROI_LOCATION.BOTTOM_RIGHT:
             new_x_max = main_x_max - padding_x
             new_x_min = new_x_max - scaled_width
             new_y_min = main_y_min + padding_y

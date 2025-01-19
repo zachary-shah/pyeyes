@@ -11,7 +11,7 @@ import param
 from holoviews import streams
 
 from . import error, roi, themes
-from .enums import ROI_STATE, ROI_VIEW_MODE
+from .enums import ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
 from .q_cmap.cmap import (
     QUANTITATIVE_MAPTYPES,
     VALID_COLORMAPS,
@@ -151,7 +151,7 @@ class NDSlicer(param.Parameterized):
     # ROI-related parameters. TODO: clean these parameters up - don't need dups with self.ROI() obj
     roi_state = param.ObjectSelector(default=ROI_STATE.INACTIVE, objects=ROI_STATE)
     roi_cmap = param.ObjectSelector(default="Same", objects=VALID_COLORMAPS + ["Same"])
-    roi_loc = param.ObjectSelector(default="top_right", objects=roi.ROI_LOCATIONS)
+    roi_loc = param.ObjectSelector(default=ROI_LOCATION.TOP_RIGHT, objects=ROI_LOCATION)
     roi_zoom_scale = param.Number(default=2.0, bounds=(1.0, 10.0), step=0.1)
     roi_line_color = param.Color(default="red")
     roi_line_width = param.Integer(default=2)
@@ -769,7 +769,7 @@ class NDSlicer(param.Parameterized):
 
     def update_roi_loc(self, new_loc: str):
 
-        self.roi_loc = new_loc
+        self.roi_loc = ROI_LOCATION(new_loc)
 
         self.ROI.roi_loc = self.roi_loc
 

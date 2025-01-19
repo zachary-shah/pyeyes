@@ -34,3 +34,10 @@ class ROI_STATE(Enum):
 class ROI_VIEW_MODE(Enum):
     Separate = 0
     Overlayed = 1
+
+
+class ROI_LOCATION(Enum):
+    TOP_LEFT = "Top Left"
+    TOP_RIGHT = "Top Right"
+    BOTTOM_LEFT = "Bottom Left"
+    BOTTOM_RIGHT = "Bottom Right"

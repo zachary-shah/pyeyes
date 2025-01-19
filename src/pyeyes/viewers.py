@@ -8,7 +8,7 @@ import param
 from holoviews import opts
 
 from . import error, roi, themes
-from .enums import ROI_STATE, ROI_VIEW_MODE
+from .enums import ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
 from .q_cmap.cmap import VALID_COLORMAPS
 from .slicers import NDSlicer
 from .utils import normalize, tonp
@@ -833,8 +833,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
         # Location
         roi_loc_widget = pn.widgets.Select(
             name="ROI Location",
-            options=roi.ROI_LOCATIONS,
-            value="top_right",
+            options=[loc.value for loc in ROI_LOCATION],
+            value=ROI_LOCATION.TOP_RIGHT.value,
         )
 
         def _update_roi_loc(event):
