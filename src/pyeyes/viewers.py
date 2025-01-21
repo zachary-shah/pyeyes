@@ -143,7 +143,12 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # Instantiate slicer
         self.slicer = NDSlicer(
-            self.dataset, self.vdims, cdim="ImgName", clabs=img_names, cat_dims=cat_dims
+            self.dataset,
+            self.vdims,
+            cdim="ImgName",
+            clabs=img_names,
+            cat_dims=cat_dims,
+            viewer=self,
         )
 
         # Attach watcher variables to slicer attributes that need GUI updates
@@ -438,6 +443,11 @@ class ComparativeViewer(Viewer, param.Parameterized):
             sliders[f"sdim{i}"] = s
 
         return sliders
+
+    @error.error_handler_decorator()
+    def mouse_wheel_update_slicer(self, dim, new_dim_val):
+        self._set_app_widget_attr("View", f"sdim{dim}", "value", new_dim_val)
+        self._update_sdim(dim, new_dim_val)
 
     @error.error_handler_decorator()
     def _update_sdim(self, sdim, new_dim_val):

@@ -8,6 +8,7 @@ import holoviews as hv
 import numpy as np
 import panel as pn
 import param
+from bokeh.events import MouseWheel
 from holoviews import streams
 
 from . import error, roi, themes
@@ -162,6 +163,7 @@ class NDSlicer(param.Parameterized):
         cdim: Optional[str] = None,
         clabs: Optional[Sequence[str]] = None,
         cat_dims: Optional[Dict[str, List]] = None,
+        viewer=None,
         **params,
     ):
         """
@@ -175,6 +177,8 @@ class NDSlicer(param.Parameterized):
         """
 
         super().__init__(**params)
+
+        self.viewer = viewer
 
         with param.parameterized.discard_events(self):
             self.data = data
@@ -317,6 +321,39 @@ class NDSlicer(param.Parameterized):
 
         return imgs
 
+    def attach_mousewheel(self, plot, element):
+        """
+        Holoviews hook that:
+          - Finds the actual Bokeh figure in the 'plot.handles' dictionary
+          - Registers a mouse‐wheel callback on that figure
+        """
+        bokeh_figure = plot.handles.get("plot")
+        if bokeh_figure is None:
+            return  # If not found, do nothing
+
+        def wheel_callback(event):
+            # If you have multiple sliceable dimensions, pick which you want to scroll
+            if not self.sdims:
+                return
+            scroll_dim = self.sdims[0]
+
+            current_slice = self.dim_indices[scroll_dim]
+            if event.delta > 0:
+                # Wheel up: decrement slice index
+                new_slice = min(
+                    self.dim_sizes[scroll_dim] - 1, current_slice + event.delta
+                )
+            else:
+                # Wheel down: increment slice index
+                new_slice = max(0, current_slice + event.delta)
+
+            # Updating self.dim_indices[scroll_dim] automatically re‐triggers self.view
+            # self.dim_indices[scroll_dim] = new_slice
+            self.viewer.mouse_wheel_update_slicer(0, new_slice)
+
+        # Attach the mouse‐wheel event to the underlying Bokeh figure
+        bokeh_figure.on_event(MouseWheel, wheel_callback)
+
     @param.depends(
         "dim_indices",
         "vmin",
@@ -376,7 +413,9 @@ class NDSlicer(param.Parameterized):
                 height=int(self.size_scale * new_im_size[1] / np.max(new_im_size)),
                 invert_yaxis=self.flip_ud,
                 invert_xaxis=self.flip_lr,
-                hooks=[_format_image],
+                tools=["pan", "box_zoom", "reset"],  # Omit "wheel_zoom" entirely
+                active_tools=["pan"],
+                hooks=[_format_image, self.attach_mousewheel],
             )
 
             # If ROI already defined, compute the ROI and integrate to composite depending on mode
@@ -546,6 +585,16 @@ class NDSlicer(param.Parameterized):
 
             # sliceable dimensions
             self.sdims = [d for d in self.ndims if d not in self.non_sdims]
+            self.sdims_noncat = [
+                d
+                for d in self.ndims
+                if d not in self.non_sdims and d not in self.cat_dims.keys()
+            ]
+            self.sdims_cat = [
+                d
+                for d in self.ndims
+                if d not in self.non_sdims and d in self.cat_dims.keys()
+            ]
 
             # Update scaling for height and width ranges
             self.img_dims = np.array([self.dim_sizes[vd] for vd in self.vdims])
