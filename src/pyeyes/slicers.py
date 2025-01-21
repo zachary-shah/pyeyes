@@ -332,10 +332,10 @@ class NDSlicer(param.Parameterized):
             return  # If not found, do nothing
 
         def wheel_callback(event):
-            # If you have multiple sliceable dimensions, pick which you want to scroll
             if not self.sdims:
                 return
-            scroll_dim = self.sdims[0]
+            scrollable_dims = [dim for dim in self.sdims if dim not in self.cat_dims]
+            scroll_dim = scrollable_dims[0]
 
             current_slice = self.dim_indices[scroll_dim]
             if event.delta > 0:
