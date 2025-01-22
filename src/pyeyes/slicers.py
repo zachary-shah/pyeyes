@@ -615,11 +615,10 @@ class NDSlicer(param.Parameterized):
         """
         Clear figure and rebuild if needed
         """
-        print("REBUILDING FIGURE...")
         self.Figure = None
         self.rebuild_figure_flag = True
 
-    @param.depends("dim_indices", "rebuild_figure_flag", watch=True)
+    @param.depends("dim_indices", "rebuild_figure_flag")
     @error.error_handler_decorator()
     def view(self) -> hv.Layout:
         """
@@ -651,7 +650,9 @@ class NDSlicer(param.Parameterized):
         layout = self.view()
 
         # pr.disable()
-        # pr.dump_stats(f'profs/viewer_profile_call_{self.profile_count}.prof')  # Save the profiling data
+        # pr.dump_stats(
+        #     f"profs/viewer_profile_call_{self.profile_count}.prof"
+        # )  # Save the profiling data
 
         view_time = perf_counter() - start
         self.view_time_avg = (self.view_time_avg * self.profile_count + view_time) / (

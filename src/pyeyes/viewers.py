@@ -406,7 +406,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             self._set_app_widget_attr("View", "lr_crop", "value", self.slicer.lr_crop)
             self._set_app_widget_attr("View", "ud_crop", "value", self.slicer.ud_crop)
 
-        self.slicer.rebuild_figure_flag = True
+        self.slicer.param.trigger("lr_crop", "ud_crop")
 
     def _build_sdim_widgets(self) -> dict:
         """
