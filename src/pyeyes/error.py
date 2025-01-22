@@ -37,6 +37,7 @@ def global_error_handler(exc_type, exc_value, exc_traceback):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
     pn.state.notifications.error(f"An error occurred: {exc_value}", duration=0)
+    raise exc_value
 
 
 sys.excepthook = global_error_handler
