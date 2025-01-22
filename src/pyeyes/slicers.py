@@ -2,8 +2,6 @@
 Slicers: Defined as classes that take N-dimensional data and can return a 2D view of that data given some input
 """
 
-import cProfile
-from time import perf_counter
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import holoviews as hv
@@ -12,7 +10,7 @@ import panel as pn
 import param
 from holoviews import streams
 
-from . import error, roi, themes
+from . import error, profilers, roi, themes
 from .enums import ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
 from .q_cmap.cmap import (
     QUANTITATIVE_MAPTYPES,
@@ -249,16 +247,8 @@ class NDSlicer(param.Parameterized):
             # ROI init
             self.ROI = roi.ROI()
 
-        """
-        Initialize static instances. Will generate:
-        - self.Figure
-        - self.ROIImages: ROI images. TODO
-        """
+        # Initialize static instance of plot through self.Figure
         self.build_figure_objects(self.slice())
-
-        # For profiling
-        self.profile_count = 0
-        self.view_time_avg = 0
 
     def update_cache(self):
         """
@@ -587,7 +577,7 @@ class NDSlicer(param.Parameterized):
         """
         assert self._image_pipes is not None, "Figure not initialized"
 
-        # Send image data through pipe]
+        # Send image data through pipes
         for i in range(len(imgs_arr)):
             self._image_pipes[self.display_images[i]].send(imgs_arr[i])
 
@@ -620,10 +610,21 @@ class NDSlicer(param.Parameterized):
 
     @param.depends("dim_indices", "rebuild_figure_flag")
     @error.error_handler_decorator()
+    @profilers.profile_decorator(
+        enable=False
+    )  # Print call information or log to file for debugging
     def view(self) -> hv.Layout:
         """
         Return the formatted view of the data given the current slice indices.
         """
+
+        # Hold/unhold is necessary for making figure update "atomized". Not the best solution because
+        # there can be confusion between document state if multiple view calls are made before rendering
+        # is updated.
+        atomize = pn.state.curdoc and not self.rebuild_figure_flag
+
+        if atomize:
+            pn.state.curdoc.hold()
 
         # New data to display
         imgs_arr = self.slice()
@@ -637,32 +638,10 @@ class NDSlicer(param.Parameterized):
         else:
             self.update_figure(imgs_arr)
 
+        if atomize:
+            pn.state.curdoc.unhold()
+
         return self.Figure
-
-    def view_and_profile(self) -> hv.Layout:
-        """Profiles the view method and returns the view."""
-
-        # pr = cProfile.Profile()
-        # pr.enable()
-
-        start = perf_counter()
-
-        layout = self.view()
-
-        # pr.disable()
-        # pr.dump_stats(
-        #     f"profs/viewer_profile_call_{self.profile_count}.prof"
-        # )  # Save the profiling data
-
-        view_time = perf_counter() - start
-        self.view_time_avg = (self.view_time_avg * self.profile_count + view_time) / (
-            self.profile_count + 1
-        )
-        self.profile_count += 1
-
-        print(f"Time taken: {view_time:0.3f} (avg = {self.view_time_avg:0.3f})")
-
-        return layout
 
     def _infer_quantitative_maptype(self) -> Union[str, None]:
         """
