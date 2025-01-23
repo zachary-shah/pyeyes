@@ -10,7 +10,7 @@ import panel as pn
 import param
 from holoviews import streams
 
-from . import error, roi, themes
+from . import error, profilers, roi, themes
 from .enums import ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
 from .q_cmap.cmap import (
     QUANTITATIVE_MAPTYPES,
@@ -38,15 +38,6 @@ def _format_image(plot, element):
     # Enforce theme
     plot.state.background_fill_color = themes.VIEW_THEME.background_color
     plot.state.border_fill_color = themes.VIEW_THEME.background_color
-
-    # decrease border size
-    min_border = 3
-    plot.state.min_border_bottom = min_border
-    plot.state.min_border_left = min_border
-    plot.state.min_border_right = min_border
-    plot.state.min_border_top = min_border
-    plot.state.min_border = min_border
-    plot.border = min_border
 
     # Constant height for the figure title
     if plot.state.title.text_font_size[-2:] == "px":
@@ -148,12 +139,15 @@ class NDSlicer(param.Parameterized):
     lr_crop = param.Range(default=(0, 100), bounds=(0, 100), step=1)
     ud_crop = param.Range(default=(0, 100), bounds=(0, 100), step=1)
 
-    # ROI-related parameters. TODO: clean these parameters up - don't need dups with self.ROI() obj
+    # ROI-related parameters.
     roi_state = param.ObjectSelector(default=ROI_STATE.INACTIVE, objects=ROI_STATE)
     roi_cmap = param.ObjectSelector(default="Same", objects=VALID_COLORMAPS + ["Same"])
     roi_mode = param.ObjectSelector(
         default=ROI_VIEW_MODE.Overlayed, objects=ROI_VIEW_MODE
     )
+
+    # Rebuilding figure
+    rebuild_figure_flag = param.Boolean(default=False)
 
     def __init__(
         self,
@@ -219,7 +213,7 @@ class NDSlicer(param.Parameterized):
                 self.cdim = cdim
                 self.Nc = self.dim_sizes[cdim]
             else:
-                self.clabs = None
+                self.clabs = ["Image"]
                 self.cdim = None
                 self.Nc = 1
 
@@ -253,7 +247,8 @@ class NDSlicer(param.Parameterized):
             # ROI init
             self.ROI = roi.ROI()
 
-        self.param.trigger("vmin", "vmax", "cmap")
+        # Initialize static instance of plot through self.Figure
+        self.build_figure_objects(self.slice())
 
     def update_cache(self):
         """
@@ -273,7 +268,7 @@ class NDSlicer(param.Parameterized):
         for dim in self.sdims:
             self.slice_cache[dim] = self.dim_indices[dim]
 
-    def slice(self) -> List[hv.Image]:
+    def slice(self) -> List[hv.Dataset]:
         """
         Return the slice of the hv.Dataset given the current slice indices.
         """
@@ -281,10 +276,10 @@ class NDSlicer(param.Parameterized):
         # Dimensions to select
         sdim_dict = {dim: self.dim_indices[dim] for dim in self.sdims}
 
+        imgs = []
+
         if self.cdim is not None:
             # Collate Case
-            imgs = []
-
             for img_label in self.display_images:
 
                 sliced_2d = self.data.select(
@@ -299,7 +294,7 @@ class NDSlicer(param.Parameterized):
                 u, d = self.ud_crop
                 sliced_2d = sliced_2d[l:r, u:d]
 
-                imgs.append(hv.Image(sliced_2d, label=img_label))
+                imgs.append(sliced_2d)
         else:
             # Single image case
             sliced_2d = (
@@ -313,49 +308,9 @@ class NDSlicer(param.Parameterized):
             u, d = self.ud_crop
             sliced_2d = sliced_2d[l:r, u:d]
 
-            imgs = [hv.Image(sliced_2d)]
+            imgs.append(sliced_2d)
 
-        return imgs
-
-    @param.depends(
-        "dim_indices",
-        "vmin",
-        "vmax",
-        "cmap",
-        "size_scale",
-        "flip_ud",
-        "flip_lr",
-        "lr_crop",
-        "ud_crop",
-        "display_images",
-        "colorbar_on",
-        "colorbar_label",
-        "roi_state",
-    )
-    @error.error_handler_decorator()
-    def view(self) -> hv.Layout:
-        """
-        Return the formatted view of the data given the current slice indices.
-        """
-
-        self.update_cache()
-
-        imgs = self.slice()
-
-        # To start
-        Ncols = len(imgs)
-
-        new_im_size = (
-            self.lr_crop[1] - self.lr_crop[0],
-            self.ud_crop[1] - self.ud_crop[0],
-        )
-
-        if (
-            self.roi_mode == ROI_VIEW_MODE.Separate
-            and self.roi_state == ROI_STATE.ACTIVE
-        ):
-            roi_row = []
-
+        # Preprocess data
         for i in range(len(imgs)):
 
             # Potential colormap pre-processing
@@ -366,50 +321,166 @@ class NDSlicer(param.Parameterized):
             # Apply complex view
             imgs[i].data["Value"] = CPLX_VIEW_MAP[self.cplx_view](imgs[i].data["Value"])
 
-            # parameterized view options
-            imgs[i] = imgs[i].opts(
-                cmap=self.ColorMapper.get_cmap(),
-                xaxis=None,
-                yaxis=None,
-                clim=(self.vmin, self.vmax),
-                width=int(self.size_scale * new_im_size[0] / np.max(new_im_size)),
-                height=int(self.size_scale * new_im_size[1] / np.max(new_im_size)),
-                invert_yaxis=self.flip_ud,
-                invert_xaxis=self.flip_lr,
-                hooks=[_format_image],
+        return imgs
+
+    def _build_figure_opts(self):
+        """
+        Hiding a bunch of building opts for figure here. This gets messy...
+        """
+
+        # TODO: move these constants
+        BORDER_SIZE = 3  # a.u.
+        CBAR_CONST_WIDTH = 35  # pix
+        CBAR_TEXT_WIDTH = 18  # pix
+        CBAR_SCALE_RATIO = 0.15  # fraction [0, 1]
+
+        # Determine sizes
+        new_im_size = (
+            self.lr_crop[1] - self.lr_crop[0],
+            self.ud_crop[1] - self.ud_crop[0],
+        )
+        main_width = self.size_scale * new_im_size[0] / np.max(new_im_size)
+        main_height = self.size_scale * new_im_size[1] / np.max(new_im_size)
+
+        # Options shared across all renderables
+        shared_opts = dict(
+            clim=(self.vmin, self.vmax),
+            xaxis=None,
+            yaxis=None,
+            border=BORDER_SIZE,
+        )
+
+        # Image options
+        im_opts = dict(
+            cmap=self.ColorMapper.get_cmap(),
+            width=int(main_width),
+            height=int(main_height),
+            invert_yaxis=self.flip_ud,
+            invert_xaxis=self.flip_lr,
+            hooks=[_format_image],
+            **shared_opts,
+        )
+
+        # Any rendered line object (border, hv.VLine, etc)
+        line_opts = dict(
+            color=self.ROI.color,
+            line_width=self.ROI.line_width,
+            show_legend=False,
+        )
+
+        # Opts to pass to ROI
+        roi_opts = dict(
+            **shared_opts,
+        )
+        if self.roi_mode == ROI_VIEW_MODE.Separate:
+            roi_opts.update(
+                dict(
+                    shared_axes=False,
+                    hooks=[_format_image],
+                )
             )
 
-            # If ROI already defined, compute the ROI and integrate to composite depending on mode
-            if self.roi_state == ROI_STATE.ACTIVE:
+        # Colorbar opts
+        cbar_const_w = CBAR_CONST_WIDTH
+        if self.colorbar_label is not None and len(self.colorbar_label) > 0:
+            cbar_const_w += CBAR_TEXT_WIDTH
+        cbar_width = int(main_height * CBAR_SCALE_RATIO + cbar_const_w)
+
+        cbar_opts = dict(
+            colorbar=True,
+            colorbar_opts={
+                "title": self.colorbar_label,
+            },
+            width=cbar_width,
+            colorbar_position="right",
+            shared_axes=False,  # Unlink from holoviews shared toolbar
+            hooks=[
+                _format_image,
+                _hide_image,
+                _format_colorbar,
+            ],  # Hide the dummy glyph
+            **shared_opts,
+        )
+
+        opts = dict(
+            height=main_height,
+            width=main_width,
+            im_opts=im_opts,
+            line_opts=line_opts,
+            roi_opts=roi_opts,
+            cbar_opts=cbar_opts,
+        )
+
+        return opts
+
+    def build_figure_objects(self, imgs_arr: Sequence[hv.Dataset]):
+        """
+        Build the figure objects for the current slice indices.
+        """
+
+        self.update_cache()
+
+        opts = self._build_figure_opts()
+
+        # build images and pipes
+        self._image_pipes = {}
+        imgs = []
+        for i in range(len(imgs_arr)):
+            image_name = self.display_images[i]
+            pipe = streams.Pipe(data=imgs_arr[i])
+
+            self._image_pipes[image_name] = pipe
+
+            def _img_callback(data, image_name=image_name):
+                return hv.Image(data, label=image_name).opts(**opts["im_opts"])
+
+            imgs.append(
+                hv.DynamicMap(
+                    _img_callback,
+                    streams=[pipe],
+                ).opts(
+                    title=image_name,
+                )
+            )
+            # send data
+            self._image_pipes[image_name].send(imgs_arr[i])
+
+        # To start
+        Ncols = len(imgs)
+
+        self._roi_pipes = {}
+
+        if (
+            self.roi_mode == ROI_VIEW_MODE.Separate
+            and self.roi_state == ROI_STATE.ACTIVE
+        ):
+            roi_row = []
+
+        # If ROI already defined, compute the ROI and integrate to composite depending on mode
+        if self.roi_state == ROI_STATE.ACTIVE:
+            for i in range(len(imgs)):
                 bounding_box = hv.Bounds(self.ROI.lbrt(), label=imgs[i].label).opts(
-                    color=self.ROI.color,
-                    line_width=self.ROI.line_width,
-                    show_legend=False,
+                    **opts["line_opts"],
                 )
 
                 # Show ROI in figure
                 if self.roi_mode == ROI_VIEW_MODE.Overlayed:
-                    addnl_opts = dict(
-                        xaxis=None,
-                        yaxis=None,
-                        clim=(self.vmin, self.vmax),
-                    )
-
                     # Extract bounded region.
-                    roi_fig = self.ROI.get_overlay_roi(imgs[i], addnl_opts=addnl_opts)
+                    roi_fig, roi_pipe = self.ROI.get_overlay_roi(
+                        imgs_arr[i],
+                        self.display_images[i],
+                        addnl_opts=opts["roi_opts"],
+                    )
 
                 # Show ROI in a row below main images (with equivalent widths)
                 elif self.roi_mode == ROI_VIEW_MODE.Separate:
-                    addnl_opts = dict(
-                        xaxis=None,
-                        yaxis=None,
-                        clim=(self.vmin, self.vmax),
-                        shared_axes=False,
-                        hooks=[_format_image],
-                    )
-
                     # Get ROI in separate view
-                    roi_fig = self.ROI.get_separate_roi(imgs[i], addnl_opts=addnl_opts)
+                    roi_fig, roi_pipe = self.ROI.get_separate_roi(
+                        imgs_arr[i],
+                        self.display_images[i],
+                        width=int(opts["width"]),
+                        addnl_opts=opts["roi_opts"],
+                    )
 
                     roi_row.append(roi_fig)
 
@@ -419,38 +490,47 @@ class NDSlicer(param.Parameterized):
                 if self.roi_mode == ROI_VIEW_MODE.Overlayed:
                     imgs[i] = imgs[i] * roi_fig
 
+                self._roi_pipes[self.display_images[i]] = roi_pipe
+
         row = hv.Layout(imgs)
 
         """
         Building Overlay for ROI
         """
 
+        def gen_hline(y):
+            return hv.HLine(y).opts(**opts["line_opts"])
+
+        def gen_vline(x):
+            return hv.VLine(x).opts(**opts["line_opts"])
+
         if self.roi_state == ROI_STATE.FIRST_SELECTION:
-            pointer = streams.SingleTap(x=-1, y=-1, source=imgs[0])
+            pointer = streams.SingleTap(x=-1, y=-1)
 
             def first_selection_callback(x, y):
                 if x < 0 or y < 0:
-                    return hv.HLine(0) * hv.VLine(0)
-
+                    return gen_hline(0) * gen_vline(0)
                 self.ROI.point1 = roi.Point(x, y)
+
                 self.update_roi_state(ROI_STATE.SECOND_SELECTION)
-                return hv.HLine(y) * hv.VLine(x)
+                return gen_hline(y) * gen_vline(x)
 
             row = row * hv.DynamicMap(first_selection_callback, streams=[pointer])
 
         elif self.roi_state == ROI_STATE.SECOND_SELECTION:
-            pointer = streams.SingleTap(x=-1, y=-1, source=imgs[0])
+            pointer = streams.SingleTap(x=-1, y=-1)
 
             def second_selection_callback(x, y):
                 if x < 0 or y < 0:
-                    return hv.HLine(0) * hv.VLine(0)
+                    return gen_hline(0) * gen_vline(0)
 
                 self.ROI.point2 = roi.Point(x, y)
                 self.update_roi_state(ROI_STATE.ACTIVE)
-                return hv.HLine(y) * hv.VLine(x)
+                return gen_hline(y) * gen_vline(x)
 
+            # Prevent dynamic map from adjusting size of figure
+            row = row * gen_hline(self.ROI.point1.y) * gen_vline(self.ROI.point1.x)
             row = row * hv.DynamicMap(second_selection_callback, streams=[pointer])
-            row = row * hv.HLine(self.ROI.point1.y) * hv.VLine(self.ROI.point1.x)
 
         """
         Add Colorbar elements (via dummy Image element)
@@ -459,38 +539,10 @@ class NDSlicer(param.Parameterized):
         if self.colorbar_on:
             Ncols += 1
 
-            cb_h = int(self.size_scale * new_im_size[1] / np.max(new_im_size))
-
-            # Add constant width for cbar
-            cbar_const_w = 35 + 18 * int(
-                self.colorbar_label is not None and len(self.colorbar_label) > 0
-            )
-
-            cbar_const_opts = dict(
-                clim=(self.vmin, self.vmax),
-                colorbar=True,
-                colorbar_opts={
-                    "title": self.colorbar_label,
-                },
-                width=int(
-                    self.size_scale * (new_im_size[1] / np.max(new_im_size)) * 0.15
-                    + cbar_const_w
-                ),  # 5% maintained aspect
-                colorbar_position="right",
-                xaxis=None,
-                yaxis=None,
-                shared_axes=False,  # Unlink from holoviews shared toolbar
-                hooks=[
-                    _format_image,
-                    _hide_image,
-                    _format_colorbar,
-                ],  # Hide the dummy glyph
-            )
-
             main_cbar_fig = hv.Image(np.zeros((2, 2))).opts(
                 cmap=self.ColorMapper.get_cmap(),
-                height=cb_h,
-                **cbar_const_opts,
+                height=int(opts["height"]),
+                **opts["cbar_opts"],
             )
 
             row += main_cbar_fig
@@ -505,11 +557,10 @@ class NDSlicer(param.Parameterized):
                 row += roi_img
 
             if self.colorbar_on:
-
                 roi_cbar_fig = hv.Image(np.zeros((2, 2))).opts(
                     cmap=self.ROI.cmap.get_cmap(),
-                    height=roi_row[0].Image.ROI.opts["height"],
-                    **cbar_const_opts,
+                    height=int(opts["width"] * self.ROI.height() / self.ROI.width()),
+                    **opts["cbar_opts"],
                 )
 
                 row += roi_cbar_fig
@@ -517,7 +568,80 @@ class NDSlicer(param.Parameterized):
         # set number of columns
         row = row.cols(Ncols)
 
-        return pn.Row(row)
+        # Set attributes
+        self.Figure = pn.Row(row)
+
+    def update_figure(self, imgs_arr: hv.Dataset):
+        """
+        Update the figure data in-place given the current slice indices.
+        """
+        assert self._image_pipes is not None, "Figure not initialized"
+
+        # Send image data through pipes
+        for i in range(len(imgs_arr)):
+            self._image_pipes[self.display_images[i]].send(imgs_arr[i])
+
+            # Send ROI data
+            if self.roi_state == ROI_STATE.ACTIVE:
+                self._roi_pipes[self.display_images[i]].send(imgs_arr[i])
+
+    @param.depends(
+        "vmin",
+        "vmax",
+        "cmap",
+        "size_scale",
+        "flip_ud",
+        "flip_lr",
+        "lr_crop",
+        "ud_crop",
+        "display_images",
+        "colorbar_on",
+        "colorbar_label",
+        "roi_state",
+        watch=True,
+    )
+    @error.error_handler_decorator()
+    def rebuild_figure(self):
+        """
+        Clear figure and rebuild if needed
+        """
+        self.Figure = None
+        self.rebuild_figure_flag = True
+
+    @param.depends("dim_indices", "rebuild_figure_flag")
+    @error.error_handler_decorator()
+    @profilers.profile_decorator(
+        enable=False
+    )  # Print call information or log to file for debugging
+    def view(self) -> hv.Layout:
+        """
+        Return the formatted view of the data given the current slice indices.
+        """
+
+        # Hold/unhold is necessary for making figure update "atomized". Not the best solution because
+        # there can be confusion between document state if multiple view calls are made before rendering
+        # is updated.
+        atomize = pn.state.curdoc and not self.rebuild_figure_flag
+
+        if atomize:
+            pn.state.curdoc.hold()
+
+        # New data to display
+        imgs_arr = self.slice()
+
+        if self.rebuild_figure_flag:
+            with param.parameterized.discard_events(self):
+                self.rebuild_figure_flag = False
+
+            self.build_figure_objects(imgs_arr)
+
+        else:
+            self.update_figure(imgs_arr)
+
+        if atomize:
+            pn.state.curdoc.unhold()
+
+        return self.Figure
 
     def _infer_quantitative_maptype(self) -> Union[str, None]:
         """
@@ -566,7 +690,7 @@ class NDSlicer(param.Parameterized):
             self.dim_indices = slice_dim_names
 
         # trigger callbacks now
-        self.param.trigger("dim_indices", "lr_crop", "ud_crop")
+        self.param.trigger("lr_crop", "ud_crop")
 
     def update_cplx_view(self, new_cplx_view: str):
 
@@ -629,6 +753,7 @@ class NDSlicer(param.Parameterized):
             self.vmax = vmaxd
             self.cmap = cmap
 
+        # Trigger
         self.param.trigger("vmin", "vmax", "cmap")
 
     def autoscale_clim(self):
@@ -649,11 +774,7 @@ class NDSlicer(param.Parameterized):
         self.param.trigger("vmin", "vmax")
 
     def update_display_image_list(self, display_images: Sequence[str]):
-
-        with param.parameterized.discard_events(self):
-            self.display_images = display_images
-
-        self.param.trigger("display_images")
+        self.display_images = display_images
 
     def update_colormap(self):
         """
@@ -680,7 +801,7 @@ class NDSlicer(param.Parameterized):
             with param.parameterized.discard_events(self):
                 self.update_roi_colormap(self.roi_cmap)
 
-        self.param.trigger("vmin", "vmax")
+        self.param.trigger("cmap")
 
     def update_roi_colormap(self, new_cmap: str):
 

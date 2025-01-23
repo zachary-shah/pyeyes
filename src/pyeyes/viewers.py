@@ -406,7 +406,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             self._set_app_widget_attr("View", "lr_crop", "value", self.slicer.lr_crop)
             self._set_app_widget_attr("View", "ud_crop", "value", self.slicer.ud_crop)
 
-        self.slicer.param.trigger("dim_indices")
+        self.slicer.param.trigger("lr_crop", "ud_crop")
 
     def _build_sdim_widgets(self) -> dict:
         """
@@ -455,7 +455,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
                 self._autoscale_clim(event=None)
 
         # Trigger
-        self.slicer.param.trigger("dim_indices", "cmap")
+        if sdim in self.cat_dims.keys():
+            self.slicer.param.trigger("cmap")
+        else:
+            self.slicer.param.trigger("dim_indices")
 
     def _build_viewing_widgets(self):
         """
@@ -470,9 +473,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         @error.error_handler_decorator()
         def flip_ud_callback(event):
             if event.new != event.old:
-                with param.parameterized.discard_events(self.slicer):
-                    self.slicer.flip_ud = event.new
-                self.slicer.param.trigger("flip_ud")
+                self.slicer.flip_ud = event.new
 
         ud_w.param.watch(flip_ud_callback, "value")
         sliders["flip_ud"] = ud_w
@@ -482,9 +483,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         @error.error_handler_decorator()
         def flip_lr_callback(event):
             if event.new != event.old:
-                with param.parameterized.discard_events(self.slicer):
-                    self.slicer.flip_lr = event.new
-                self.slicer.param.trigger("flip_lr")
+                self.slicer.flip_lr = event.new
 
         lr_w.param.watch(flip_lr_callback, "value")
         sliders["flip_lr"] = lr_w
@@ -499,9 +498,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         @error.error_handler_decorator()
         def size_scale_callback(event):
-            with param.parameterized.discard_events(self.slicer):
-                self.slicer.size_scale = event.new
-            self.slicer.param.trigger("size_scale")
+            self.slicer.size_scale = event.new
 
         size_scale_widget.param.watch(size_scale_callback, "value")
         sliders["size_scale"] = size_scale_widget
@@ -516,10 +513,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         )
 
         def _update_lr_slider(event):
-            crop_lower, crop_upper = event.new
-            with param.parameterized.discard_events(self.slicer):
-                self.slicer.lr_crop = (crop_lower, crop_upper)
-            self.slicer.param.trigger("lr_crop")
+            self.slicer.lr_crop = event.new
 
         lr_crop_slider.param.watch(_update_lr_slider, "value")
         sliders["lr_crop"] = lr_crop_slider
@@ -533,10 +527,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         )
 
         def _update_ud_slider(event):
-            crop_lower, crop_upper = event.new
-            with param.parameterized.discard_events(self.slicer):
-                self.slicer.ud_crop = (crop_lower, crop_upper)
-            self.slicer.param.trigger("ud_crop")
+            self.slicer.ud_crop = event.new
 
         ud_crop_slider.param.watch(_update_ud_slider, "value")
         sliders["ud_crop"] = ud_crop_slider
@@ -720,9 +711,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         )
 
         def _update_colorbar(event):
-            with param.parameterized.discard_events(self.slicer):
-                self.slicer.colorbar_on = event.new
-            self.slicer.param.trigger("colorbar_on")
+            self.slicer.colorbar_on = event.new
 
         colorbar_widget.param.watch(_update_colorbar, "value")
         widgets["colorbar"] = colorbar_widget
@@ -733,9 +722,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         )
 
         def _update_colorbar_label(event):
-            with param.parameterized.discard_events(self.slicer):
-                self.slicer.colorbar_label = event.new
-            self.slicer.param.trigger("colorbar_label")
+            self.slicer.colorbar_label = event.new
 
         colorbar_label_widget.param.watch(_update_colorbar_label, "value")
 
@@ -854,9 +841,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         def _update_roi_lr_crop(event):
             crop_lower, crop_upper = event.new
-            with param.parameterized.discard_events(self.slicer):
-                self.slicer.update_roi_lr_crop((crop_lower, crop_upper))
-            self.slicer.param.trigger("roi_state")
+            self.slicer.update_roi_lr_crop((crop_lower, crop_upper))
 
         roi_lr_crop_slider.param.watch(_update_roi_lr_crop, "value")
         widgets["roi_lr_crop"] = roi_lr_crop_slider
@@ -871,9 +856,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         def _update_roi_ud_crop(event):
             crop_lower, crop_upper = event.new
-            with param.parameterized.discard_events(self.slicer):
-                self.slicer.update_roi_ud_crop((crop_lower, crop_upper))
-            self.slicer.param.trigger("roi_state")
+            self.slicer.update_roi_ud_crop((crop_lower, crop_upper))
 
         roi_ud_crop_slider.param.watch(_update_roi_ud_crop, "value")
         widgets["roi_ud_crop"] = roi_ud_crop_slider
