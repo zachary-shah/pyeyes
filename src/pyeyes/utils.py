@@ -1,7 +1,11 @@
-from typing import Union
+from typing import Dict, Union
 
+import holoviews as hv
 import numpy as np
+import panel as pn
 import torch
+
+from .enums import ROI_LOCATION
 
 
 def rescale01(image):
@@ -23,22 +27,6 @@ def tonp(x: Union[np.ndarray, torch.tensor]):
         return np.array(x)
     else:
         return x
-
-
-def RMSE(recon: np.ndarray, true: np.ndarray, normalized: float = True) -> float:
-    """
-    Given 2 complex arrays of the same shape, recon (g) and true (f), compute the RMSE between arrays
-    If normalized --> compute NRMSE, else compute RMSE
-        RMSE = SQRT(|f-g|^2)
-        NRMSE = SQRT(|f-g|^2 / |f|^2)
-    """
-
-    assert recon.shape == true.shape, "Input array dimensions mismatch."
-
-    mse = np.mean(np.abs(recon - true) ** 2)
-    if normalized:
-        mse /= np.mean(np.abs(true) ** 2)
-    return np.sqrt(mse)
 
 
 def normalize(shifted, target, ofs=True, mag=False, eps=1e-12):
@@ -101,3 +89,87 @@ def normalize(shifted, target, ofs=True, mag=False, eps=1e-12):
         out = shifted
 
     return out
+
+
+def get_effective_location(
+    loc: ROI_LOCATION, flip_lr: bool, flip_ud: bool
+) -> ROI_LOCATION:
+    """
+    Given plot window flips, determine the real location of the plot.
+    """
+
+    effective_loc = loc
+    if flip_lr:
+        if loc == ROI_LOCATION.TOP_LEFT:
+            effective_loc = ROI_LOCATION.TOP_RIGHT
+        elif loc == ROI_LOCATION.TOP_RIGHT:
+            effective_loc = ROI_LOCATION.TOP_LEFT
+        elif loc == ROI_LOCATION.BOTTOM_LEFT:
+            effective_loc = ROI_LOCATION.BOTTOM_RIGHT
+        elif loc == ROI_LOCATION.BOTTOM_RIGHT:
+            effective_loc = ROI_LOCATION.BOTTOM_LEFT
+    if flip_ud:
+        if loc == ROI_LOCATION.TOP_LEFT:
+            effective_loc = ROI_LOCATION.BOTTOM_LEFT
+        elif loc == ROI_LOCATION.TOP_RIGHT:
+            effective_loc = ROI_LOCATION.BOTTOM_RIGHT
+        elif loc == ROI_LOCATION.BOTTOM_LEFT:
+            effective_loc = ROI_LOCATION.TOP_LEFT
+        elif loc == ROI_LOCATION.BOTTOM_RIGHT:
+            effective_loc = ROI_LOCATION.TOP_RIGHT
+    return effective_loc
+
+
+def clone_dataset(
+    original_dataset: hv.Dataset,
+    new_value: np.ndarray,
+    link=False,
+):
+    """
+    Clones an existing hv.Dataset, replacing its data with new_data.
+
+    Parameters:
+    - original_dataset (hv.Dataset): The original dataset to clone.
+    - new_value (np.ndarray or similar): The new "Value" data to replace the original data.
+    - link: Link streams / pipes to original dataset (probably don't want this).
+
+    Returns:
+    - hv.Dataset: A new dataset with the same properties as original_dataset but with new_data.
+    """
+
+    assert new_value.shape == original_dataset.data["Value"].shape
+
+    ddims = [k for k in list(original_dataset.data.keys()) if k != "Value"]
+    new_data_dict = {k: original_dataset.data[k] for k in ddims}
+    new_data_dict["Value"] = new_value
+
+    return original_dataset.clone(data=new_data_dict, link=link)
+
+
+def debug_imshow(data_dict: Dict[str, hv.Dataset]):
+    """
+    Given a dictionary of hv.Datasets with Value as vdim,, display them in a grid for debugging purposes.
+    """
+
+    img_keys = list(data_dict.keys())
+    vdims = list(data_dict[img_keys[0]].vdims)
+    kdims_all = list(data_dict[img_keys[0]].kdims)[:2]
+
+    # Create a grid of images
+    layout = []
+
+    # make a holoview
+    for key in img_keys:
+        layout.append(
+            hv.Image(
+                data_dict[key],
+                label=key,
+                vdims=vdims,
+                kdims=kdims_all,
+            )
+        )
+
+    layout = hv.Layout(layout).opts(shared_axes=True)
+
+    # show
+    pn.serve(pn.Column(layout), show=True)

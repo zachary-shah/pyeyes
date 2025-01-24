@@ -10,8 +10,8 @@ import panel as pn
 import param
 from holoviews import streams
 
-from . import error, profilers, roi, themes
-from .enums import ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
+from . import error, metrics, profilers, roi, themes, utils
+from .enums import CPLX_VIEW_MAP, METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
 from .q_cmap.cmap import (
     QUANTITATIVE_MAPTYPES,
     VALID_COLORMAPS,
@@ -20,14 +20,6 @@ from .q_cmap.cmap import (
 )
 
 hv.extension("bokeh")
-
-# Complex view mapping
-CPLX_VIEW_MAP = {
-    "mag": np.abs,
-    "phase": np.angle,
-    "real": np.real,
-    "imag": np.imag,
-}
 
 
 def _format_image(plot, element):
@@ -122,11 +114,13 @@ class NDSlicer(param.Parameterized):
     size_scale = param.Number(default=400, bounds=(200, 1000), step=10)
     flip_ud = param.Boolean(default=False)
     flip_lr = param.Boolean(default=False)
-    cplx_view = param.Selector(default="mag", objects=["mag", "phase", "real", "imag"])
+    cplx_view = param.ObjectSelector(
+        default="mag", objects=["mag", "phase", "real", "imag"]
+    )
     display_images = param.ListSelector(default=[], objects=[])
 
     # Color mapping
-    cmap = param.Selector(default="gray", objects=VALID_COLORMAPS)
+    cmap = param.ObjectSelector(default="gray", objects=VALID_COLORMAPS)
     colorbar_on = param.Boolean(default=True)
     colorbar_label = param.String(default="")
 
@@ -145,6 +139,20 @@ class NDSlicer(param.Parameterized):
     roi_mode = param.ObjectSelector(
         default=ROI_VIEW_MODE.Overlayed, objects=ROI_VIEW_MODE
     )
+
+    # Difference Map Related Parameters
+    metrics_reference = param.ObjectSelector(default="", objects=[])
+    metrics_state = param.ObjectSelector(
+        default=METRICS_STATE.INACTIVE, objects=METRICS_STATE
+    )
+    error_map_scale = param.Number(default=1.0)
+    error_map_type = param.Selector(default="L1Diff", objects=metrics.MAPPABLE_METRICS)
+    error_map_cmap = param.ObjectSelector(default="inferno", objects=VALID_COLORMAPS)
+    metrics_text_types = param.ListSelector(default=[], objects=metrics.FULL_METRICS)
+    metrics_text_location = param.ObjectSelector(
+        default=ROI_LOCATION.TOP_LEFT, objects=ROI_LOCATION
+    )
+    metrics_text_font_size = param.Number(default=12, bounds=(5, 24), step=1)
 
     # Rebuilding figure
     rebuild_figure_flag = param.Boolean(default=False)
@@ -247,6 +255,11 @@ class NDSlicer(param.Parameterized):
             # ROI init
             self.ROI = roi.ROI()
 
+            # Diff map and metrics init
+            self.param.metrics_reference.objects = self.clabs
+            self.metrics_reference = self.clabs[0]  # Default to the first one
+            self.DifferenceColorMapper = ColorMap(self.error_map_cmap)
+
         # Initialize static instance of plot through self.Figure
         self.build_figure_objects(self.slice())
 
@@ -268,19 +281,36 @@ class NDSlicer(param.Parameterized):
         for dim in self.sdims:
             self.slice_cache[dim] = self.dim_indices[dim]
 
-    def slice(self) -> List[hv.Dataset]:
+    def slice(self) -> Dict:
         """
         Return the slice of the hv.Dataset given the current slice indices.
+
+        Output is a dictionary, where keys are:
+
+        - "img": Dict[hv.Dataset] for each main image
+        - "error_map": Dict[hv.Dataset] for each error map, if applicable
+        - "metrics": Dict[Dict[float]] for each dataset, if applicable
+
         """
 
         # Dimensions to select
         sdim_dict = {dim: self.dim_indices[dim] for dim in self.sdims}
 
-        imgs = []
+        out_dict = {}
+
+        imgs = {}
+
+        # edge case where user has selected metrics but not the reference image for display
+        slice_imgs = self.display_images
+        if (
+            self.metrics_state is not METRICS_STATE.INACTIVE
+            and self.metrics_reference not in self.display_images
+        ):
+            slice_imgs = [self.metrics_reference] + self.display_images
 
         if self.cdim is not None:
             # Collate Case
-            for img_label in self.display_images:
+            for img_label in slice_imgs:
 
                 sliced_2d = self.data.select(
                     **{self.cdim: img_label}, **sdim_dict
@@ -294,7 +324,7 @@ class NDSlicer(param.Parameterized):
                 u, d = self.ud_crop
                 sliced_2d = sliced_2d[l:r, u:d]
 
-                imgs.append(sliced_2d)
+                imgs[img_label] = sliced_2d
         else:
             # Single image case
             sliced_2d = (
@@ -308,20 +338,76 @@ class NDSlicer(param.Parameterized):
             u, d = self.ud_crop
             sliced_2d = sliced_2d[l:r, u:d]
 
-            imgs.append(sliced_2d)
+            imgs[img_label] = sliced_2d
 
-        # Preprocess data
-        for i in range(len(imgs)):
+        # Complex reduction
+        for k in imgs.keys():
+            imgs[k].data["Value"] = CPLX_VIEW_MAP[self.cplx_view](imgs[k].data["Value"])
 
-            # Potential colormap pre-processing
-            imgs[i].data["Value"] = self.ColorMapper.preprocess_data(
-                imgs[i].data["Value"]
+        """
+        Gather metrics and difference maps of slice
+        """
+        # TODO: integrate caching
+        if self.metrics_state is not METRICS_STATE.INACTIVE:
+            # Gather arrays
+            ref_img = np.copy(imgs[self.metrics_reference].data["Value"])
+
+            tar_keys = [k for k in imgs.keys() if k != self.metrics_reference]
+
+            metrics_dict = {}
+            error_maps = {}
+
+            for k in tar_keys:
+
+                tar_img = np.copy(imgs[k].data["Value"])
+
+                # Don't normalize with quantitative maps - we care about absolute
+                if self._infer_quantitative_maptype() is None:
+                    tar_img = utils.normalize(
+                        tar_img, ref_img, ofs=True, mag=np.iscomplexobj(tar_img)
+                    )
+
+                if self.metrics_state in [METRICS_STATE.TEXT, METRICS_STATE.ALL]:
+                    metrics_dict[k] = {}
+                    for metric in self.metrics_text_types:
+                        metrics_dict[k][metric] = metrics.METRIC_CALLABLES[metric](
+                            tar_img,
+                            ref_img,
+                        )
+
+                if self.metrics_state in [METRICS_STATE.MAP, METRICS_STATE.ALL]:
+                    error_map = metrics.METRIC_CALLABLES[self.error_map_type](
+                        tar_img,
+                        ref_img,
+                        return_map=True,
+                    )
+                    error_map = self.DifferenceColorMapper.preprocess_data(error_map)
+                    error_maps[k] = utils.clone_dataset(imgs[k], error_map, link=False)
+
+            # Ref
+            error_maps[self.metrics_reference] = utils.clone_dataset(
+                imgs[self.metrics_reference], np.zeros_like(ref_img), link=False
             )
 
-            # Apply complex view
-            imgs[i].data["Value"] = CPLX_VIEW_MAP[self.cplx_view](imgs[i].data["Value"])
+            out_dict["metrics"] = metrics_dict
+            out_dict["error_map"] = error_maps
 
-        return imgs
+        # don't want to display metrics reference
+        if (
+            self.metrics_state is not METRICS_STATE.INACTIVE
+            and self.metrics_reference not in self.display_images
+        ):
+            imgs.pop(self.metrics_reference)
+
+        # Preprocessing for color map data
+        for k in imgs.keys():
+            imgs[k].data["Value"] = self.ColorMapper.preprocess_data(
+                imgs[k].data["Value"]
+            )
+
+        out_dict["img"] = imgs
+
+        return out_dict
 
     def _build_figure_opts(self):
         """
@@ -402,6 +488,28 @@ class NDSlicer(param.Parameterized):
             **shared_opts,
         )
 
+        # Difference map
+        diff_opts = im_opts.copy()
+        diff_opts["cmap"] = self.DifferenceColorMapper.get_cmap()
+
+        if self.error_map_type == "SSIM":
+            diff_opts["clim"] = (0, 1)
+        else:
+            diff_opts["clim"] = (0, self.vmax / self.error_map_scale)
+
+        # Diff map colorbar
+        diff_cbar_opts = cbar_opts.copy()
+        diff_cbar_opts["clim"] = diff_opts["clim"]
+        diff_cbar_opts.pop("colorbar_opts")
+
+        if self.colorbar_label is not None and len(self.colorbar_label) > 0:
+            if self.error_map_type == "SSIM":
+                diff_cbar_opts["colorbar_opts"] = dict(title="SSIM")
+            else:
+                diff_cbar_opts["colorbar_opts"] = dict(
+                    title=f"Difference ({self.error_map_scale}x)"
+                )
+
         opts = dict(
             height=main_height,
             width=main_width,
@@ -409,11 +517,13 @@ class NDSlicer(param.Parameterized):
             line_opts=line_opts,
             roi_opts=roi_opts,
             cbar_opts=cbar_opts,
+            diff_opts=diff_opts,
+            diff_cbar_opts=diff_cbar_opts,
         )
 
         return opts
 
-    def build_figure_objects(self, imgs_arr: Sequence[hv.Dataset]):
+    def build_figure_objects(self, input_data: dict):
         """
         Build the figure objects for the current slice indices.
         """
@@ -422,14 +532,51 @@ class NDSlicer(param.Parameterized):
 
         opts = self._build_figure_opts()
 
+        # re-order so ref is always on the left or right
+        img_dict = input_data["img"]
+        fig_image_names = list(img_dict.keys())
+
+        # lbrt bounds
+        main_lbrt = (
+            hv.Image(img_dict[fig_image_names[0]]).opts(**opts["im_opts"]).bounds.lbrt()
+        )
+
+        # Reorder images. TODO: maybe put ref at end instead of beginning? or parameterize?
+        if self.metrics_reference is not None and (
+            self.metrics_reference in fig_image_names
+        ):
+            ref_idx = fig_image_names.index(self.metrics_reference)
+            fig_image_names.pop(ref_idx)
+            fig_image_names = [self.metrics_reference] + fig_image_names
+
+        metrics_dict = None
+        if self.metrics_state in [METRICS_STATE.TEXT, METRICS_STATE.ALL]:
+            metrics_dict = input_data["metrics"]
+
+        error_dict = None
+        if self.metrics_state in [METRICS_STATE.MAP, METRICS_STATE.ALL]:
+            error_dict = input_data["error_map"]
+
         # build images and pipes
         self._image_pipes = {}
+        self._metrics_pipe = {}
         imgs = []
-        for i in range(len(imgs_arr)):
-            image_name = self.display_images[i]
-            pipe = streams.Pipe(data=imgs_arr[i])
+        img_labels = {}
+        for k in fig_image_names:
 
-            self._image_pipes[image_name] = pipe
+            # Extract metrics
+            image_name = k
+
+            if (
+                self.metrics_state != METRICS_STATE.INACTIVE
+            ) and k == self.metrics_reference:
+                image_name = f"{k} (Ref)"
+
+            img_labels[k] = image_name
+
+            pipe = streams.Pipe(data=img_dict[k])
+
+            self._image_pipes[k] = pipe
 
             def _img_callback(data, image_name=image_name):
                 return hv.Image(data, label=image_name).opts(**opts["im_opts"])
@@ -443,7 +590,66 @@ class NDSlicer(param.Parameterized):
                 )
             )
             # send data
-            self._image_pipes[image_name].send(imgs_arr[i])
+            self._image_pipes[k].send(img_dict[k])
+
+            if metrics_dict and k in metrics_dict.keys():
+                # to get locations
+                tx_pad = 3
+
+                # determine loc
+                effective_location = utils.get_effective_location(
+                    self.metrics_text_location,
+                    self.flip_lr,
+                    self.flip_ud,
+                )
+
+                if effective_location == ROI_LOCATION.TOP_LEFT:
+                    tx = main_lbrt[0] + tx_pad
+                    ty = main_lbrt[3] - tx_pad
+                elif effective_location == ROI_LOCATION.TOP_RIGHT:
+                    tx = main_lbrt[2] - tx_pad
+                    ty = main_lbrt[3] - tx_pad
+                elif effective_location == ROI_LOCATION.BOTTOM_LEFT:
+                    tx = main_lbrt[0] + tx_pad
+                    ty = main_lbrt[1] + tx_pad
+                elif effective_location == ROI_LOCATION.BOTTOM_RIGHT:
+                    tx = main_lbrt[2] - tx_pad
+                    ty = main_lbrt[1] + tx_pad
+
+                t_halign = self.metrics_text_location.value.split(" ")[1].lower()
+                t_valign = self.metrics_text_location.value.split(" ")[0].lower()
+
+                # set up dynamicmap for text
+                self._metrics_pipe[k] = streams.Pipe(data=metrics_dict[k])
+
+                def _met_text_callback(
+                    data, tx=tx, ty=ty, t_halign=t_halign, t_valign=t_valign
+                ):
+
+                    txt = ""
+                    for j, (mk, mv) in enumerate(data.items()):
+                        txt += f"{mk}: {mv:.2f}"
+                        if j < len(data) - 1:
+                            txt += "\n"
+
+                    return hv.Text(
+                        tx,
+                        ty,
+                        txt,
+                        halign=t_halign,
+                        valign=t_valign,
+                        fontsize=self.metrics_text_font_size,
+                    ).opts(
+                        text_font=themes.VIEW_THEME.text_font,
+                        text_color=themes.VIEW_THEME.text_color,
+                    )
+
+                MetricsText = hv.DynamicMap(
+                    _met_text_callback,
+                    streams=[self._metrics_pipe[k]],
+                )
+
+                imgs[-1] = imgs[-1] * MetricsText
 
         # To start
         Ncols = len(imgs)
@@ -458,8 +664,9 @@ class NDSlicer(param.Parameterized):
 
         # If ROI already defined, compute the ROI and integrate to composite depending on mode
         if self.roi_state == ROI_STATE.ACTIVE:
-            for i in range(len(imgs)):
-                bounding_box = hv.Bounds(self.ROI.lbrt(), label=imgs[i].label).opts(
+            for i, k in enumerate(fig_image_names):
+
+                bounding_box = hv.Bounds(self.ROI.lbrt(), label=img_labels[k]).opts(
                     **opts["line_opts"],
                 )
 
@@ -467,8 +674,10 @@ class NDSlicer(param.Parameterized):
                 if self.roi_mode == ROI_VIEW_MODE.Overlayed:
                     # Extract bounded region.
                     roi_fig, roi_pipe = self.ROI.get_overlay_roi(
-                        imgs_arr[i],
-                        self.display_images[i],
+                        img_dict[k],
+                        img_labels[k],
+                        flip_lr=self.flip_lr,
+                        flip_ud=self.flip_ud,
                         addnl_opts=opts["roi_opts"],
                     )
 
@@ -476,8 +685,8 @@ class NDSlicer(param.Parameterized):
                 elif self.roi_mode == ROI_VIEW_MODE.Separate:
                     # Get ROI in separate view
                     roi_fig, roi_pipe = self.ROI.get_separate_roi(
-                        imgs_arr[i],
-                        self.display_images[i],
+                        img_dict[k],
+                        img_labels[k],
                         width=int(opts["width"]),
                         addnl_opts=opts["roi_opts"],
                     )
@@ -490,7 +699,7 @@ class NDSlicer(param.Parameterized):
                 if self.roi_mode == ROI_VIEW_MODE.Overlayed:
                     imgs[i] = imgs[i] * roi_fig
 
-                self._roi_pipes[self.display_images[i]] = roi_pipe
+                self._roi_pipes[k] = roi_pipe
 
         row = hv.Layout(imgs)
 
@@ -539,7 +748,7 @@ class NDSlicer(param.Parameterized):
         if self.colorbar_on:
             Ncols += 1
 
-            main_cbar_fig = hv.Image(np.zeros((2, 2))).opts(
+            main_cbar_fig = hv.Image(np.zeros((2, 2)), bounds=main_lbrt).opts(
                 cmap=self.ColorMapper.get_cmap(),
                 height=int(opts["height"]),
                 **opts["cbar_opts"],
@@ -565,25 +774,95 @@ class NDSlicer(param.Parameterized):
 
                 row += roi_cbar_fig
 
+        # Add row for difference maps
+        if self.metrics_state in [METRICS_STATE.MAP, METRICS_STATE.ALL]:
+
+            # Build difference map
+            diff_imgs = []
+            self._diffmap_pipes = {}
+            for k in fig_image_names:
+                diff_pipe = streams.Pipe(data=error_dict[k])
+
+                # No pipe for reference
+                if k == self.metrics_reference:
+
+                    ref_diff_img = hv.Image(
+                        error_dict[k],
+                    ).opts(
+                        visible=False,
+                        shared_axes=False,
+                        **opts["diff_opts"],
+                    )
+
+                    diff_imgs.append(ref_diff_img)
+
+                else:
+                    self._diffmap_pipes[k] = diff_pipe
+
+                    if self.error_map_type == "SSIM":
+                        label = f"{k} (SSIM)"
+                    else:
+                        label = f"Diff ({self.error_map_scale}x)"
+
+                    def _diff_callback(data):
+                        return hv.Image(data, label=label).opts(**opts["diff_opts"])
+
+                    diff_imgs.append(
+                        hv.DynamicMap(
+                            _diff_callback,
+                            streams=[diff_pipe],
+                        )
+                    )
+
+                    # send data
+                    self._diffmap_pipes[k].send(error_dict[k])
+
+            diff_row = hv.Layout(diff_imgs)
+
+            # Add colorbar for difference map
+            if self.colorbar_on:
+                diff_cbar_fig = hv.Image(np.zeros((2, 2))).opts(
+                    cmap=self.DifferenceColorMapper.get_cmap(),
+                    height=int(opts["height"]),
+                    **opts["diff_cbar_opts"],
+                )
+
+                diff_row += diff_cbar_fig
+
+            row += diff_row
+
         # set number of columns
         row = row.cols(Ncols)
 
         # Set attributes
         self.Figure = pn.Row(row)
 
-    def update_figure(self, imgs_arr: hv.Dataset):
+    def update_figure(self, input_data: Dict[str, dict]):
         """
         Update the figure data in-place given the current slice indices.
         """
         assert self._image_pipes is not None, "Figure not initialized"
 
         # Send image data through pipes
-        for i in range(len(imgs_arr)):
-            self._image_pipes[self.display_images[i]].send(imgs_arr[i])
+        imgs_dict = input_data["img"]
+        for k in imgs_dict.keys():
+            self._image_pipes[k].send(imgs_dict[k])
 
             # Send ROI data
             if self.roi_state == ROI_STATE.ACTIVE:
-                self._roi_pipes[self.display_images[i]].send(imgs_arr[i])
+                self._roi_pipes[k].send(imgs_dict[k])
+
+            # Send metrics computations and error maps
+            if (
+                self.metrics_state in [METRICS_STATE.MAP, METRICS_STATE.ALL]
+                and k != self.metrics_reference
+            ):
+                self._diffmap_pipes[k].send(input_data["error_map"][k])
+            if (
+                self.metrics_state in [METRICS_STATE.TEXT, METRICS_STATE.ALL]
+                and k != self.metrics_reference
+            ):
+                self._metrics_pipe[k].send(input_data["metrics"][k])
 
     @param.depends(
         "vmin",
@@ -598,6 +877,8 @@ class NDSlicer(param.Parameterized):
         "colorbar_on",
         "colorbar_label",
         "roi_state",
+        "error_map_scale",
+        "metrics_state",
         watch=True,
     )
     @error.error_handler_decorator()
@@ -627,16 +908,16 @@ class NDSlicer(param.Parameterized):
             pn.state.curdoc.hold()
 
         # New data to display
-        imgs_arr = self.slice()
+        slice_dict = self.slice()
 
         if self.rebuild_figure_flag:
             with param.parameterized.discard_events(self):
                 self.rebuild_figure_flag = False
 
-            self.build_figure_objects(imgs_arr)
+            self.build_figure_objects(slice_dict)
 
         else:
-            self.update_figure(imgs_arr)
+            self.update_figure(slice_dict)
 
         if atomize:
             pn.state.curdoc.unhold()
@@ -761,15 +1042,11 @@ class NDSlicer(param.Parameterized):
         For given slice, automatically set vmin and vmax to min and max of data
         """
 
-        imgs = self.slice()
-
-        data = np.concatenate(
-            [CPLX_VIEW_MAP[self.cplx_view](img.data["Value"]) for img in imgs]
-        )
+        data = np.stack([d.data["Value"] for d in self.slice()["img"].values()])
 
         with param.parameterized.discard_events(self):
-            self.vmin = np.percentile(data, 0.1)
-            self.vmax = np.percentile(data, 99.9)
+            self.vmin = max(self.param.vmin.bounds[0], np.percentile(data, 0.1))
+            self.vmax = min(self.param.vmin.bounds[1], np.percentile(data, 99.9))
 
         self.param.trigger("vmin", "vmax")
 
@@ -889,7 +1166,7 @@ class NDSlicer(param.Parameterized):
         elif prev_state > ROI_STATE.INACTIVE and new_state == ROI_STATE.FIRST_SELECTION:
             pn.state.notifications.clear()
             pn.state.notifications.info(
-                "Resetting ROI. Click the first corner of the new ROI in the left-most plot.",
+                "Resetting ROI. Click the first corner of the new ROI in any image.",
                 duration=0,
             )
 
@@ -898,7 +1175,7 @@ class NDSlicer(param.Parameterized):
         ):
             pn.state.notifications.clear()
             pn.state.notifications.info(
-                "Click the first corner of the ROI in the left-most plot.",
+                "Click the first corner of the ROI in any image.",
                 duration=0,
             )
 
@@ -908,14 +1185,14 @@ class NDSlicer(param.Parameterized):
         ):
             pn.state.notifications.clear()
             pn.state.notifications.info(
-                "Click the second corner of the ROI in the left-most plot.",
+                "Click the second corner of the ROI in any image.",
                 duration=0,
             )
 
         elif prev_state == ROI_STATE.SECOND_SELECTION and new_state == ROI_STATE.ACTIVE:
             pn.state.notifications.clear()
             pn.state.notifications.info(
-                "ROI added. Click 'View ROI in-figure' to see the ROI in the main plot.",
+                "ROI added. Remove ROI with 'Clear ROI' button, or remove from overlay by un-checcking 'ROI Overlay Enabled'.",  # noqa E501
                 duration=5000,
             )
 
@@ -930,3 +1207,76 @@ class NDSlicer(param.Parameterized):
 
         # Trigger
         self.roi_state = new_state
+
+    def update_reference_dataset(self, new_ref: str):
+        self.metrics_reference = new_ref
+        if self.metrics_state != METRICS_STATE.INACTIVE:
+            self.param.trigger("metrics_state")
+
+    def update_error_map_type(self, new_type: str):
+        self.error_map_type = new_type
+        if self.metrics_state in [METRICS_STATE.MAP, METRICS_STATE.ALL]:
+            self.param.trigger("metrics_state")
+
+    def update_metrics_text_types(self, new_metrics: List[str]):
+        self.metrics_text_types = new_metrics
+        if self.metrics_state in [METRICS_STATE.TEXT, METRICS_STATE.ALL]:
+            self.param.trigger("metrics_state")
+
+    def update_metrics_state(self, new_metrics_state: METRICS_STATE):
+        """
+        Update metrics and error map state.
+        """
+        self.metrics_state = new_metrics_state
+
+    def update_error_map_scale(self, new_scale: float):
+        with param.parameterized.discard_events(self):
+            self.error_map_scale = new_scale
+        if self.metrics_state in [METRICS_STATE.MAP, METRICS_STATE.ALL]:
+            self.param.trigger("error_map_scale")
+
+    def update_error_map_cmap(self, new_cmap: str):
+        self.error_map_cmap = new_cmap
+        self.DifferenceColorMapper = ColorMap(new_cmap)
+        if self.metrics_state in [METRICS_STATE.MAP, METRICS_STATE.ALL]:
+            self.param.trigger("error_map_scale")
+
+    def update_metrics_text_font_size(self, new_size: int):
+        self.metrics_text_font_size = new_size
+        if self.metrics_state in [METRICS_STATE.TEXT, METRICS_STATE.ALL]:
+            self.param.trigger("metrics_state")
+
+    def update_metrics_text_location(self, new_loc: ROI_LOCATION):
+        self.metrics_text_location = new_loc
+        if self.metrics_state in [METRICS_STATE.TEXT, METRICS_STATE.ALL]:
+            self.param.trigger("metrics_state")
+
+    def autoformat_error_map(self):
+        """
+        Automatically infer the best format to view error maps in
+        """
+
+        if self.metrics_state not in [METRICS_STATE.MAP, METRICS_STATE.ALL]:
+            error.warning("Error maps are not enabled.")
+            return
+
+        if self.error_map_type == "SSIM":
+            self.DifferenceColorMapper = ColorMap("Grays")
+
+        elif self.error_map_type in ["L1Diff", "L2Diff"]:
+
+            if self.DifferenceColorMapper.cmap == "Grays":
+                self.DifferenceColorMapper = ColorMap("inferno")
+
+            error_data = self.slice()["error_map"]
+
+            if self.metrics_reference in error_data:
+                error_data.pop(self.metrics_reference)
+
+            error_np = np.stack([d.data["Value"] for d in error_data.values()])
+            error_np[np.isnan(error_np)] = 0
+
+            error_max = np.percentile(error_np, 99.9)
+
+            if error_max > 1e-10:
+                self.error_map_scale = round(self.vmax / error_max, 1)

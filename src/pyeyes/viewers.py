@@ -7,9 +7,9 @@ import panel as pn
 import param
 from holoviews import opts
 
-from . import error, roi, themes
-from .enums import ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
-from .q_cmap.cmap import VALID_COLORMAPS
+from . import error, metrics, themes
+from .enums import CPLX_VIEW_MAP, METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
+from .q_cmap.cmap import VALID_COLORMAPS, VALID_ERROR_COLORMAPS
 from .slicers import NDSlicer
 from .utils import normalize, tonp
 
@@ -136,7 +136,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         self.noncat_dims = [dim for dim in named_dims if dim not in cat_dims.keys()]
 
         # Aggregate data, stacking image type to first axis
-        self.raw_data = np.stack(img_list, axis=0)
+        self.raw_data = data
 
         # Instantiate dataset for intial view dims
         self.dataset = self._build_dataset(self.vdims)
@@ -305,12 +305,14 @@ class ComparativeViewer(Viewer, param.Parameterized):
         """
         Build the dataset for a specific set of viewing dimensions.
 
-        NOTE: Anything that depends on the viewing dimensions (e.g. normalization) should be done here.
+        Convert from dictionary of np arrays to a HoloViews Dataset.
         """
 
-        proc_data = self._normalize(self.raw_data)
+        img_list = list(self.raw_data.values())
 
-        dim_ranges = [self.img_names]
+        proc_data = np.stack(img_list, axis=0)
+
+        dim_ranges = [list(self.raw_data.keys())]
         for i in range(1, proc_data.ndim):
             if self.ndims[i - 1] in self.cat_dims:
                 dim_ranges.append(self.cat_dims[self.ndims[i - 1]])
@@ -321,18 +323,6 @@ class ComparativeViewer(Viewer, param.Parameterized):
         proc_data = proc_data.transpose(*list(range(proc_data.ndim - 1, -1, -1)))
 
         return hv.Dataset((*dim_ranges, proc_data), ["ImgName"] + self.ndims, "Value")
-
-    def _normalize(self, data, target_index=0):
-        """
-        Normalize raw data.
-
-        FIXME: normalize in view dimensions only.
-            For example, what if we have PD/T2/T1 as one dimension? These are not the same scale.
-            Also should normalize per z slice.
-        FIXME: Parameterize target index somewhere.
-        """
-        return data
-        # return normalize(data, data[target_index], ofs=True, mag=np.iscomplexobj(data))
 
     def _build_vdim_widgets(self) -> Dict[str, pn.widgets.Widget]:
         """
@@ -962,19 +952,175 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         widgets = {}
 
-        # Analysis Widgets
-        analysis_button = pn.widgets.Button(
-            name="Run Analysis (TODO)", button_type="primary"
+        # Difference Map and Metrics Widgets
+        reference_widget = pn.widgets.Select(
+            name="Reference Dataset", options=self.img_names, value=self.img_names[0]
         )
 
-        @error.error_handler_decorator()
-        def _run_analysis(event):
-            raise NotImplementedError("Run Analysis not yet implemented.")
+        def _update_reference(event):
+            self.slicer.update_reference_dataset(event.new)
 
-        analysis_button.on_click(_run_analysis)
-        widgets["run_analysis"] = analysis_button
+        reference_widget.param.watch(_update_reference, "value")
+        widgets["reference"] = reference_widget
+
+        diff_map_type_widget = pn.widgets.Select(
+            name="Error Map Type",
+            options=metrics.MAPPABLE_METRICS,
+            value=metrics.MAPPABLE_METRICS[0],
+        )
+        diff_map_type_widget.param.watch(self._update_error_map_type, "value")
+        widgets["diff_map_type"] = diff_map_type_widget
+
+        text_description_widget = pn.widgets.StaticText(
+            name="Metrics", value="Select metrics to display in text."
+        )
+        widgets["text_description"] = text_description_widget
+
+        text_metrics_widget = pn.widgets.CheckBoxGroup(
+            name="Metrics",
+            options=metrics.FULL_METRICS,
+            value=[],
+        )
+
+        def _update_text_metrics(event):
+            self.slicer.update_metrics_text_types(event.new)
+
+        text_metrics_widget.param.watch(_update_text_metrics, "value")
+        widgets["text_metrics"] = text_metrics_widget
+
+        text_description_widget = pn.widgets.StaticText(
+            name="Enable", value="Click to add 'Error map' or 'text metrics'."
+        )
+        widgets["button_description"] = text_description_widget
+
+        display_options = pn.widgets.CheckButtonGroup(
+            name="Display Metrics",
+            button_type="primary",
+            button_style="outline",
+            value=[],
+            options=["Error Map", "Text"],
+        )
+
+        def _update_displayed_metrics(event):
+            pn.state.notifications.clear()
+            pn.state.notifications.info("Building...", duration=0)
+
+            if ("Error Map" in event.new) and ("Text" in event.new):
+                new_state = METRICS_STATE.ALL
+            elif "Error Map" in event.new:
+                new_state = METRICS_STATE.MAP
+            elif "Text" in event.new:
+                new_state = METRICS_STATE.TEXT
+            else:
+                new_state = METRICS_STATE.INACTIVE
+
+            self.slicer.update_metrics_state(new_state)
+
+            pn.state.notifications.clear()
+            pn.state.notifications.info("Done!", duration=1000)
+
+        display_options.param.watch(_update_displayed_metrics, "value")
+        widgets["display_options"] = display_options
+
+        error_scale_widget = pn.widgets.EditableFloatSlider(
+            name="Error Scale",
+            start=1.0,
+            end=50.0,
+            value=1.0,
+            step=0.1,
+        )
+
+        def _update_error_scale(event):
+            self.slicer.update_error_map_scale(event.new)
+
+        error_scale_widget.param.watch(_update_error_scale, "value")
+        widgets["error_scale"] = error_scale_widget
+
+        error_cmap_widget = pn.widgets.Select(
+            name="Error Map Color Map",
+            options=VALID_ERROR_COLORMAPS,
+            value="inferno",
+        )
+
+        def _update_error_cmap(event):
+            self.slicer.update_error_map_cmap(event.new)
+
+        error_cmap_widget.param.watch(_update_error_cmap, "value")
+        widgets["error_cmap"] = error_cmap_widget
+
+        metrics_text_font_size_widget = pn.widgets.EditableIntSlider(
+            name="Text Metrics Font Size",
+            start=5,
+            end=24,
+            value=12,
+            step=1,
+        )
+
+        def _update_metrics_text_font_size(event):
+            self.slicer.update_metrics_text_font_size(event.new)
+
+        metrics_text_font_size_widget.param.watch(
+            _update_metrics_text_font_size, "value"
+        )
+        widgets["metrics_text_font_size"] = metrics_text_font_size_widget
+
+        metrics_text_font_loc_widget = pn.widgets.Select(
+            name="Text Metrics Location",
+            options=[loc.value for loc in ROI_LOCATION],
+            value=ROI_LOCATION.TOP_LEFT.value,
+        )
+
+        def _update_metrics_text_loc(event):
+            self.slicer.update_metrics_text_location(ROI_LOCATION(event.new))
+
+        metrics_text_font_loc_widget.param.watch(_update_metrics_text_loc, "value")
+        widgets["metrics_text_font_loc"] = metrics_text_font_loc_widget
+
+        error_map_autoformat = pn.widgets.Button(
+            name="Autoformat Error Map",
+            button_type="primary",
+        )
+        error_map_autoformat.on_click(self._autoformat_error_map)
+        widgets["error_map_autoformat"] = error_map_autoformat
 
         return widgets
+
+    def _update_error_map_type(self, event):
+        """
+        Make sure error map gets the right formatting.
+        """
+
+        with param.parameterized.discard_events(self.slicer):
+            self.slicer.update_error_map_type(event.new)
+
+        self._set_app_widget_attr(
+            "Analysis", "error_scale", "visible", event.new != "SSIM"
+        )
+
+        if self.slicer.metrics_state != METRICS_STATE.INACTIVE:
+            with param.parameterized.discard_events(self.slicer):
+                self._autoformat_error_map(None)
+            self.slicer.param.trigger("metrics_state")
+
+    def _autoformat_error_map(self, event):
+        """
+        Autoformat the error map.
+        """
+
+        # Update Slicer
+        with param.parameterized.discard_events(self.slicer):
+            self.slicer.autoformat_error_map()
+
+            # Update gui
+            self._set_app_widget_attr(
+                "Analysis", "error_cmap", "value", (self.slicer.error_map_cmap)
+            )
+
+            self._set_app_widget_attr(
+                "Analysis", "error_scale", "value", (self.slicer.error_map_scale)
+            )
+
+        self.slicer.param.trigger("error_map_scale")
 
     def _build_export_widgets(self) -> Dict[str, pn.widgets.Widget]:
 

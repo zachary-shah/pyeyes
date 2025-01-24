@@ -14,6 +14,17 @@ VALID_COLORMAPS = [
     "Quantitative",
 ]
 
+# No need for the 'Quantitative' colormap for error maps
+VALID_ERROR_COLORMAPS = [
+    "gray",
+    "jet",
+    "viridis",
+    "inferno",
+    "RdBu",
+    "Magma",
+    "Grays",  # this is good for SSIM
+]
+
 QUANTITATIVE_MAPTYPES = [
     "T1",
     "T2",
