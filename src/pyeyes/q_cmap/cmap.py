@@ -3,6 +3,8 @@ from typing import Union
 
 import numpy as np
 from matplotlib import colors as mcolors
+from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.pyplot import cm
 
 VALID_COLORMAPS = [
     "gray",
@@ -187,3 +189,30 @@ def color_log_remap(ori_cmap, loLev, upLev):
         log_cmap[g, :] = ori_cmap[min(map_length - 1, int(np.floor(f))), :]
 
     return log_cmap
+
+
+# Unused: will use in the future
+def get_jet_black_cmp(ap=1.2):
+    jet = cm.get_cmap("jet", 256)
+    jet_colors = jet(np.linspace(0, 1, 256))
+    jet_colors[0] = np.array([0.1, 0.1, 1, 1])
+    jet_colors[255] = np.array([1, 0.1, 0.1, 1])
+    blue_to_black_idx = 0
+    black_idx = 128
+    black_to_red_idx = 255
+    blue = jet_colors[blue_to_black_idx]
+    red = jet_colors[black_to_red_idx]
+    ap = 1.2
+    black = np.array([0, 0, 0, 1])
+    for i in range(blue_to_black_idx, black_idx):
+        alpha = ((i - blue_to_black_idx) / (black_idx - blue_to_black_idx)) ** ap
+        jet_colors[i, :] = alpha * black + (1 - alpha) * blue
+    for i in range(black_idx, black_to_red_idx):
+        alpha = (1 - (i - black_idx) / (black_to_red_idx - black_idx)) ** ap
+        jet_colors[i, :] = alpha * black + (1 - alpha) * red
+    custom_jet_black = LinearSegmentedColormap.from_list("custom_jet_black", jet_colors)
+    return custom_jet_black
+
+
+# Get list of colors for plotting
+JET_ERROR_CMAP = get_jet_black_cmp()

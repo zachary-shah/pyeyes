@@ -1,6 +1,9 @@
 import numpy as np
 
+from pyeyes import set_theme
 from pyeyes.viewers import ComparativeViewer
+
+set_theme("dark")
 
 # Data
 festive_pth = (

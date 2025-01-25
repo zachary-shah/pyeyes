@@ -16,11 +16,6 @@ from .utils import normalize, tonp
 hv.extension("bokeh")
 pn.extension(notifications=True)
 
-# NOTE: api to set theme. can be done by user outside of this api;
-# (can't be updated live easily because panels html page style will be static)
-themes.set_theme("dark")
-
-
 # message should regexp. FIXME: not ignoring ...
 warnings.filterwarnings(
     "ignore",
@@ -86,6 +81,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
         view_dims : Optional[Sequence[str]]
             Initial dimensions to view, should be a subset of dimension_names.
             Default is ['x', 'y'] if in dimension_names else first 2 dimensions.
+        cat_dims : Optional[Dict[str, List]]
+            Dictionary of categorical dimensions. Keys should be strings which name each
+            categorical dimension, and values should be lists of strings which name each
+            category for that dimension. Must be a subset of dimension_names.
         """
 
         super().__init__(data)
@@ -189,6 +188,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
         self._autoscale_clim(event=None)
 
     def launch(self):
+        """
+        Launch the viewer.
+        """
+
         pn.serve(self.app, title="MRI Viewer", show=True)
 
     """

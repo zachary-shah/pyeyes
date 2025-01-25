@@ -49,8 +49,9 @@ def RMSE(recon: np.ndarray, true: np.ndarray, return_map=False) -> float:
     mse = np.abs(recon - true) ** 2
 
     if return_map:
+        mse = np.sqrt(mse)
         mse[mse < TOL] = np.nan
-        return np.sqrt(mse)
+        return mse
 
     return np.sqrt(np.mean(mse))
 

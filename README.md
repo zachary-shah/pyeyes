@@ -40,13 +40,17 @@ pre-commit install
     - [x] select ROI center
     - [x] select ROI height, width
     - [x] allow ROI to be displayed out of figure pane instead
-- [ ] toggle difference maps
-    - [ ] select reference for difference map
-    - [ ] select difference maps
+- [x] toggle difference maps
+    - [x] select reference for difference map
+    - [x] select difference maps
 - [ ] Export figure
 - [ ] Export figure-generating config
 - [ ] Image Masking
 - [ ] "Auto-crop" to crop out all white-space from image
+- [ ] Mouse wheel scrolling through slices
+- [ ] Ortho 3D Viewer
+- [ ] Multiple sliceable views
+- [ ] Click and popup point value
 
 ### Formatting
 - [ ] Allow renaming of image labels
