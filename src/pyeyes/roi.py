@@ -5,8 +5,9 @@ import numpy as np
 from holoviews import streams
 from scipy.ndimage import zoom
 
+from .cmap.cmap import ColorMap
 from .enums import ROI_LOCATION
-from .q_cmap.cmap import ColorMap
+from .utils import get_effective_location
 
 
 class Point:
@@ -48,6 +49,8 @@ class ROI:
         img_arr: hv.Dataset,
         label: str,
         addnl_opts: Optional[dict] = {},
+        flip_lr: Optional[bool] = False,
+        flip_ud: Optional[bool] = False,
     ) -> hv.Image:
         """
         Return the overlay layer for the ROI inside the main image.
@@ -66,22 +69,24 @@ class ROI:
         padding_x = self.padding_pct * (r_im - l_im)
         padding_y = self.padding_pct * (t_im - b_im)
 
-        if self.roi_loc == ROI_LOCATION.TOP_LEFT:
+        effective_loc = get_effective_location(self.roi_loc, flip_lr, flip_ud)
+
+        if effective_loc == ROI_LOCATION.TOP_LEFT:
             new_x_min = l_im + padding_x
             new_x_max = new_x_min + scaled_width
             new_y_max = t_im - padding_y
             new_y_min = new_y_max - scaled_height
-        elif self.roi_loc == ROI_LOCATION.TOP_RIGHT:
+        elif effective_loc == ROI_LOCATION.TOP_RIGHT:
             new_x_max = r_im - padding_x
             new_x_min = new_x_max - scaled_width
             new_y_max = t_im - padding_y
             new_y_min = new_y_max - scaled_height
-        elif self.roi_loc == ROI_LOCATION.BOTTOM_LEFT:
+        elif effective_loc == ROI_LOCATION.BOTTOM_LEFT:
             new_x_min = l_im + padding_x
             new_y_min = b_im + padding_y
             new_x_max = new_x_min + scaled_width
             new_y_max = new_y_min + scaled_height
-        elif self.roi_loc == ROI_LOCATION.BOTTOM_RIGHT:
+        elif effective_loc == ROI_LOCATION.BOTTOM_RIGHT:
             new_x_max = r_im - padding_x
             new_x_min = new_x_max - scaled_width
             new_y_min = b_im + padding_y

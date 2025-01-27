@@ -1,6 +1,9 @@
 import numpy as np
 
+from pyeyes import set_theme
 from pyeyes.viewers import ComparativeViewer
+
+set_theme("dark")
 
 # Data
 mrf_folder = "/local_mount/space/mayday/data/users/zachs/zachplotlib/data/mrf"
@@ -39,6 +42,9 @@ llr_30sec_t2 = llr_1min_t2 + np.random.normal(
 mrf_30sec = np.stack([llr_30sec_pd, llr_30sec_t1, llr_30sec_t2], axis=0)
 mrf_45sec = np.stack([llr_45sec_pd, llr_45sec_t1, llr_45sec_t2], axis=0)
 
+# mask
+mrf_30sec = mrf_30sec * (np.abs(mrf_2min) > 0)
+mrf_45sec = mrf_45sec * (np.abs(mrf_2min) > 0)
 
 img_dict = {
     "30sec": mrf_30sec,

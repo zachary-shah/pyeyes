@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 import holoviews as hv
 import panel as pn
-from bokeh import themes as bkthemes
 
 hv.extension("bokeh")
 
@@ -44,7 +43,11 @@ def set_theme(theme_str: str) -> None:
     Update internal viewing theme across the package.
 
     Parameters:
-        theme (str): The theme to set. Must be one of SUPPORTED_THEMES.
+        theme (str): The theme to set. Currently supported themes are:
+            - "dark": A dark theme with white text.
+            - "soft_dark": A dark theme with light gray text.
+            - "light": A light theme with black text.
+        Default: "dark"
 
     """
     global VIEW_THEME

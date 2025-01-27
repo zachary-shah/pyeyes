@@ -14,7 +14,7 @@ from matplotlib import use as backend_use
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 from ..utils import tonp
-from .mpl import PlotConfig, dark_mode
+from .mpl_config import PlotConfig, dark_mode
 
 
 def load_dti(dti_path):

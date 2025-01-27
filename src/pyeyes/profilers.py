@@ -1,6 +1,5 @@
 import cProfile
 import os
-import sys
 import warnings
 from functools import wraps
 from time import perf_counter

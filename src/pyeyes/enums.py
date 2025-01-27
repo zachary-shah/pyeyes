@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Callable, List
 
 import numpy as np
 
@@ -31,6 +30,21 @@ class ROI_STATE(Enum):
         return self.value >= other.value
 
 
+class METRICS_STATE(Enum):
+
+    # No text or diff maps shown
+    INACTIVE = 0
+
+    # Compute difference map but no text metrics shown
+    MAP = 1
+
+    # Compute text metrics but no difference map shown
+    TEXT = 2
+
+    # show both
+    ALL = 3
+
+
 class ROI_VIEW_MODE(Enum):
     Separate = 0
     Overlayed = 1
@@ -41,3 +55,12 @@ class ROI_LOCATION(Enum):
     TOP_RIGHT = "Top Right"
     BOTTOM_LEFT = "Bottom Left"
     BOTTOM_RIGHT = "Bottom Right"
+
+
+# Complex view mapping
+CPLX_VIEW_MAP = {
+    "mag": np.abs,
+    "phase": np.angle,
+    "real": np.real,
+    "imag": np.imag,
+}

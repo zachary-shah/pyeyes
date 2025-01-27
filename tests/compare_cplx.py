@@ -1,6 +1,9 @@
 import numpy as np
 
+from pyeyes import set_theme
 from pyeyes.viewers import ComparativeViewer
+
+set_theme("dark")
 
 # Data
 se_folder = "/local_mount/space/mayday/data/users/zachs/zachplotlib/data/se"

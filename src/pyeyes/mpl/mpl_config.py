@@ -1,7 +1,9 @@
 import os
 from dataclasses import dataclass, field
+from typing import Optional, Sequence, Union
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 # Plotting dataclass
@@ -71,3 +73,38 @@ def get_line_colors(background_color="black"):
         return high_contrast_colors
     else:
         return default_colors
+
+
+def dark_mode(
+    fig,
+    ax,
+    cbars: Optional[Sequence[plt.colorbar]] = None,
+    background_color="black",
+    secondary_color="white",
+):
+
+    fig.patch.set_facecolor(background_color)
+    if fig._suptitle is not None:
+        fig.suptitle(fig._suptitle.get_text(), color=secondary_color)
+    if isinstance(ax, np.ndarray):
+        for a in ax.ravel():
+            a.set_facecolor(background_color)
+            plt.setp(a.spines.values(), color=secondary_color)
+            a.tick_params(axis="both", colors=secondary_color)
+            a.xaxis.label.set_color(secondary_color)
+            a.yaxis.label.set_color(secondary_color)
+            a.title.set_color(secondary_color)
+    else:
+        ax.set_facecolor(background_color)
+        plt.setp(ax.spines.values(), color=secondary_color)
+        ax.tick_params(axis="both", colors=secondary_color)
+        ax.xaxis.label.set_color(secondary_color)
+        ax.yaxis.label.set_color(secondary_color)
+        ax.title.set_color(secondary_color)
+
+    if cbars is not None:
+        for cbar in cbars:
+            cbar.ax.yaxis.set_tick_params(color=secondary_color)
+            plt.setp(cbar.ax.get_yticklabels(), color=secondary_color)
+
+    return fig, ax
