@@ -11,14 +11,14 @@ import param
 from holoviews import streams
 
 from . import error, metrics, profilers, roi, themes, utils
-from .enums import CPLX_VIEW_MAP, METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
-from .q_cmap.cmap import (
+from .cmap.cmap import (
     QUANTITATIVE_MAPTYPES,
     VALID_COLORMAPS,
     VALID_ERROR_COLORMAPS,
     ColorMap,
     QuantitativeColorMap,
 )
+from .enums import CPLX_VIEW_MAP, METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
 
 hv.extension("bokeh")
 

@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 import holoviews as hv
 import panel as pn
-from bokeh import themes as bkthemes
 
 hv.extension("bokeh")
 

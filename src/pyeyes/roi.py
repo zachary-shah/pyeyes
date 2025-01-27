@@ -5,8 +5,8 @@ import numpy as np
 from holoviews import streams
 from scipy.ndimage import zoom
 
+from .cmap.cmap import ColorMap
 from .enums import ROI_LOCATION
-from .q_cmap.cmap import ColorMap
 from .utils import get_effective_location
 
 

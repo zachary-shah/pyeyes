@@ -8,10 +8,9 @@ import param
 from holoviews import opts
 
 from . import error, metrics, themes
-from .enums import CPLX_VIEW_MAP, METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
-from .q_cmap.cmap import VALID_COLORMAPS, VALID_ERROR_COLORMAPS
+from .cmap.cmap import VALID_COLORMAPS, VALID_ERROR_COLORMAPS
+from .enums import METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
 from .slicers import NDSlicer
-from .utils import normalize, tonp
 
 hv.extension("bokeh")
 pn.extension(notifications=True)

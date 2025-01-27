@@ -1,6 +1,3 @@
-from typing import Optional
-
-import holoviews as hv
 import numpy as np
 from skimage.metrics import structural_similarity as compare_ssim
 
