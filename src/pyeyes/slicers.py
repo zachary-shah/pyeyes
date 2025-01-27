@@ -15,6 +15,7 @@ from .enums import CPLX_VIEW_MAP, METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VI
 from .q_cmap.cmap import (
     QUANTITATIVE_MAPTYPES,
     VALID_COLORMAPS,
+    VALID_ERROR_COLORMAPS,
     ColorMap,
     QuantitativeColorMap,
 )
@@ -147,7 +148,9 @@ class NDSlicer(param.Parameterized):
     )
     error_map_scale = param.Number(default=1.0)
     error_map_type = param.Selector(default="L1Diff", objects=metrics.MAPPABLE_METRICS)
-    error_map_cmap = param.ObjectSelector(default="inferno", objects=VALID_COLORMAPS)
+    error_map_cmap = param.ObjectSelector(
+        default="inferno", objects=VALID_ERROR_COLORMAPS
+    )
     metrics_text_types = param.ListSelector(default=[], objects=metrics.FULL_METRICS)
     metrics_text_location = param.ObjectSelector(
         default=ROI_LOCATION.TOP_LEFT, objects=ROI_LOCATION
@@ -1261,12 +1264,14 @@ class NDSlicer(param.Parameterized):
             return
 
         if self.error_map_type == "SSIM":
-            self.DifferenceColorMapper = ColorMap("Grays")
+            self.error_map_cmap = "Grays"
+            self.DifferenceColorMapper = ColorMap(self.error_map_cmap)
 
         elif self.error_map_type in ["L1Diff", "L2Diff"]:
 
             if self.DifferenceColorMapper.cmap == "Grays":
-                self.DifferenceColorMapper = ColorMap("inferno")
+                self.error_map_cmap = "inferno"
+                self.DifferenceColorMapper = ColorMap(self.error_map_cmap)
 
             error_data = self.slice()["error_map"]
 
@@ -1280,3 +1285,6 @@ class NDSlicer(param.Parameterized):
 
             if error_max > 1e-10:
                 self.error_map_scale = round(self.vmax / error_max, 1)
+
+        else:
+            error.warning("Error map type does not have autoformat.")

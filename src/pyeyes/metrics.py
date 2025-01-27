@@ -39,7 +39,6 @@ def RMSE(recon: np.ndarray, true: np.ndarray, return_map=False) -> float:
     alias for L2Diff
 
     Given 2 complex arrays of the same shape, recon (g) and true (f), compute the RMSE between arrays
-    If normalized --> compute NRMSE, else compute RMSE
         RMSE = SQRT(|f-g|^2)
         NRMSE = SQRT(|f-g|^2 / |f|^2)
     """
@@ -56,35 +55,39 @@ def RMSE(recon: np.ndarray, true: np.ndarray, return_map=False) -> float:
     return np.sqrt(np.mean(mse))
 
 
-def NRMSE(recon: np.ndarray, true: np.ndarray, return_map=False) -> float:
+def NRMSE(recon: np.ndarray, true: np.ndarray, return_map=False, eps=1e-8) -> float:
     """
-    Given 2 complex arrays of the same shape, recon (g) and true (f), compute the RMSE between arrays
-    If normalized --> compute NRMSE, else compute RMSE
-        RMSE = SQRT(|f-g|^2)
+    Given 2 complex arrays of the same shape, recon (g) and true (f), compute the NRMSE between arrays
         NRMSE = SQRT(|f-g|^2 / |f|^2)
     """
 
     assert recon.shape == true.shape, "Input array dimensions mismatch."
 
-    nrmse = np.abs(recon - true) ** 2
+    mse = np.abs(recon - true) ** 2
 
     if return_map:
-        nrmse /= np.sum(np.abs(true) ** 2)
-        nrmse[nrmse < TOL] = np.nan
+        nrmse = mse / ((np.abs(true) ** 2) + eps)
+        nrmse[nrmse < eps] = np.nan
+        nrmse[nrmse > (1 / eps)] = np.nan
         return np.sqrt(nrmse)
 
-    nrmse = np.mean(nrmse) / np.mean(np.abs(true) ** 2)
+    nrmse = np.mean(mse) / np.mean(np.abs(true) ** 2)
     return np.sqrt(nrmse)
 
 
-def SSIM(recon: np.ndarray, true: np.ndarray, return_map=False) -> float:
+def SSIM(
+    recon: np.ndarray, true: np.ndarray, return_map=False, percentiles=[0.5, 99.5]
+) -> float:
     """
     Compute the Structural Similarity Index (SSIM) between two images.
     """
 
     assert recon.shape == true.shape, "Input array dimensions mismatch."
 
-    data_range = np.abs(true).max() - np.abs(true).min()
+    true_abs = np.abs(true)
+    upper_bound = np.percentile(true_abs, percentiles[1])
+    lower_bound = np.percentile(true_abs, percentiles[0])
+    data_range = upper_bound - lower_bound
 
     if return_map:
         ssim_map = compare_ssim(recon, true, full=True, data_range=data_range)[1]
@@ -93,14 +96,14 @@ def SSIM(recon: np.ndarray, true: np.ndarray, return_map=False) -> float:
     return compare_ssim(recon, true, data_range=data_range)
 
 
-def PSNR(recon: np.ndarray, true: np.ndarray) -> float:
+def PSNR(recon: np.ndarray, true: np.ndarray, max_percentile=99.5) -> float:
     """
     Compute the Peak Signal-to-Noise Ratio (PSNR) between two images.
     """
 
-    max_val = np.abs(true).max()
-
     assert recon.shape == true.shape, "Input array dimensions mismatch."
+
+    max_val = np.percentile(np.abs(true), max_percentile)
 
     mse = RMSE(recon, true)
 
