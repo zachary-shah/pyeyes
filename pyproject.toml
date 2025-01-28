@@ -9,6 +9,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyeyes"
+dynamic = ["version"]
 
 authors = [
   { name="Zachary Shah", email="zshah9@stanford.edu" },
