@@ -2,17 +2,33 @@
 
 Pyeyes is a n-dimensional data visualization tool for comparing images. Especially designed as an MRI visualization tool, inspired by FSLEyes. Built on top of [Holoviews](https://holoviews.org/) and [Bokeh](https://bokeh.org/) for interative plotting.
 
-<video width="600" controls>
-  <source src="./doc/demo.mov" type="video/mp4">
-</video>
+
 
 ## Features
 
-- **Interactive Slicing:** Seemlessly navigate through MRI volumes of arbitrary dimensionality.
-- **Dynamic Contrast Adjustment:** Toggle through different color maps, color limits, and more on the fly.
-- **Quantitative Imaging Views:** Support for the standard quantitative MRI colormaps.
-- **Comparative Metrics:** Get quick looks at standard image-processing metrics against your gold-standard datasets.
-- **Export and Repeatability:** Save viewer configurations you like and export static figures with ease.
+**Interactive Slicing:** Seemlessly navigate through MRI volumes of arbitrary dimensionality.
+**Dynamic Contrast Adjustment:** Toggle through different color maps, color limits, and more on the fly.
+**Quantitative Imaging Views:** Support for the standard quantitative MRI colormaps.
+
+![viewer demo](./doc/viewer_gif.gif "Demo")
+
+**ROI Tools**: Add "Region of Interest" to plot views.
+
+![roi demo](./doc/roi.gif "ROI")
+
+
+**Comparative Metrics:** Get quick looks at standard image-processing metrics against your gold-standard datasets.
+
+![analysis demo](./doc/analysis.gif "Analysis")
+
+**Repeatability:** Save viewer configurations you like and export static figures with ease.
+
+![save demo](./doc/save_config.gif "Save")
+
+**Export:** Save figures with built-in Bokeh toolbar.
+
+![save demo](./doc/download.gif "Save")
+
 
 ## Installation
 
