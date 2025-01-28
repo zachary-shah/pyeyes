@@ -8,9 +8,10 @@ import holoviews as hv
 import numpy as np
 import panel as pn
 import param
+from bokeh.core.properties import value as bokeh_value
 from holoviews import streams
 
-from . import error, metrics, profilers, roi, themes, utils
+from . import config, error, metrics, profilers, roi, themes, utils
 from .cmap.cmap import (
     QUANTITATIVE_MAPTYPES,
     VALID_COLORMAPS,
@@ -147,7 +148,9 @@ class NDSlicer(param.Parameterized):
         default=METRICS_STATE.INACTIVE, objects=METRICS_STATE
     )
     error_map_scale = param.Number(default=1.0)
-    error_map_type = param.Selector(default="L1Diff", objects=metrics.MAPPABLE_METRICS)
+    error_map_type = param.ObjectSelector(
+        default="L1Diff", objects=metrics.MAPPABLE_METRICS
+    )
     error_map_cmap = param.ObjectSelector(
         default="inferno", objects=VALID_ERROR_COLORMAPS
     )
@@ -167,6 +170,7 @@ class NDSlicer(param.Parameterized):
         cdim: Optional[str] = None,
         clabs: Optional[Sequence[str]] = None,
         cat_dims: Optional[Dict[str, List]] = None,
+        cfg: Optional[Dict[str, str]] = None,
         **params,
     ):
         """
@@ -178,6 +182,11 @@ class NDSlicer(param.Parameterized):
           image slice.
           Can also provide labels for each collated image.
         """
+
+        # Not the most efficient, but now update from config if supplied. mimics user having manually
+        # set all parameters as desired.
+        # if supplied in config, vdims already taken care of by the viewer
+        from_config = cfg is not None
 
         super().__init__(**params)
 
@@ -239,29 +248,48 @@ class NDSlicer(param.Parameterized):
             # Initialize view cache
             self.CPLX_VIEW_CLIM_CACHE = {}
 
-            # Update color limits with default
-            self.update_cplx_view("mag")
+            # Set parameter attributes
+            if from_config:
+                config.deserialize_parameters(self, cfg["slicer_config"])
 
-            # Initialize display images
-            self.param.display_images.objects = self.clabs
-            self.display_images = self.clabs
+                # Excpeption for display images
+                if not cfg["metadata"]["same_images"]:
+                    self.display_images = self.clabs
+                    self.param.display_images.objects = self.clabs
+                    self.param.metrics_reference.objects = self.clabs
+                    self.metrics_reference = self.clabs[0]
 
-            # Color map object. Auto-select "Quantitative" if inferred from named dimensions.
-            if self._infer_quantitative_maptype() is not None:
-                self.ColorMapper = QuantitativeColorMap(
-                    self._infer_quantitative_maptype(), self.vmin, self.vmax
-                )
-                self.cmap = "Quantitative"
+                self.ROI = roi.ROI(config=cfg["roi_config"])
+                self.update_cplx_view(self.cplx_view, recompute_min_max=False)
+                self.update_colormap()
+                self.update_roi_colormap(self.roi_cmap)
+
+                self.DifferenceColorMapper = ColorMap(self.error_map_cmap)
+
             else:
-                self.ColorMapper = ColorMap(self.cmap)
+                # Update color limits with default
+                self.update_cplx_view(self.cplx_view)
 
-            # ROI init
-            self.ROI = roi.ROI()
+                # Initialize display images
+                self.param.display_images.objects = self.clabs
+                self.display_images = self.clabs
 
-            # Diff map and metrics init
-            self.param.metrics_reference.objects = self.clabs
-            self.metrics_reference = self.clabs[0]  # Default to the first one
-            self.DifferenceColorMapper = ColorMap(self.error_map_cmap)
+                # Color map object. Auto-select "Quantitative" if inferred from named dimensions.
+                if self._infer_quantitative_maptype() is not None:
+                    self.ColorMapper = QuantitativeColorMap(
+                        self._infer_quantitative_maptype(), self.vmin, self.vmax
+                    )
+                    self.cmap = "Quantitative"
+                else:
+                    self.ColorMapper = ColorMap(self.cmap)
+
+                # ROI init
+                self.ROI = roi.ROI()
+
+                # Diff map and metrics init
+                self.param.metrics_reference.objects = self.clabs
+                self.metrics_reference = self.clabs[0]  # Default to the first one
+                self.DifferenceColorMapper = ColorMap(self.error_map_cmap)
 
         # Initialize static instance of plot through self.Figure
         self.build_figure_objects(self.slice())
@@ -643,7 +671,7 @@ class NDSlicer(param.Parameterized):
                         valign=t_valign,
                         fontsize=self.metrics_text_font_size,
                     ).opts(
-                        text_font=themes.VIEW_THEME.text_font,
+                        text_font=bokeh_value(themes.VIEW_THEME.text_font),
                         text_color=themes.VIEW_THEME.text_color,
                     )
 
@@ -784,6 +812,7 @@ class NDSlicer(param.Parameterized):
             diff_imgs = []
             self._diffmap_pipes = {}
             for k in fig_image_names:
+                name = k
                 diff_pipe = streams.Pipe(data=error_dict[k])
 
                 # No pipe for reference
@@ -803,7 +832,7 @@ class NDSlicer(param.Parameterized):
                     self._diffmap_pipes[k] = diff_pipe
 
                     if self.error_map_type == "SSIM":
-                        label = f"{k} (SSIM)"
+                        label = f"{name} (SSIM)"
                     else:
                         label = f"Diff ({self.error_map_scale}x)"
 
@@ -814,6 +843,8 @@ class NDSlicer(param.Parameterized):
                         hv.DynamicMap(
                             _diff_callback,
                             streams=[diff_pipe],
+                        ).opts(
+                            title=label,
                         )
                     )
 
@@ -959,8 +990,8 @@ class NDSlicer(param.Parameterized):
             self.img_dims = np.array([self.dim_sizes[vd] for vd in self.vdims])
 
             # Update crop bounds
-            self.param.lr_crop.bounds = (0, self.img_dims[0])
-            self.param.ud_crop.bounds = (0, self.img_dims[1])
+            self.param.lr_crop.bounds = (0, int(self.img_dims[0]))
+            self.param.ud_crop.bounds = (0, int(self.img_dims[1]))
             self.lr_crop = self.crop_cache[self.vdims[0]]
             self.ud_crop = self.crop_cache[self.vdims[1]]
 
@@ -976,7 +1007,7 @@ class NDSlicer(param.Parameterized):
         # trigger callbacks now
         self.param.trigger("lr_crop", "ud_crop")
 
-    def update_cplx_view(self, new_cplx_view: str):
+    def update_cplx_view(self, new_cplx_view: str, recompute_min_max: bool = True):
 
         # set attribute
         self.cplx_view = new_cplx_view
@@ -1002,17 +1033,30 @@ class NDSlicer(param.Parameterized):
             cmap = self.cmap
 
             # Compute max color limits
-            cplx_callable = CPLX_VIEW_MAP[self.cplx_view]
-            d = np.stack([cplx_callable(self.data[v.name]) for v in self.data.vdims])
-            mn = np.min(d)
-            mx = np.max(d)
+            if recompute_min_max:
+                cplx_callable = CPLX_VIEW_MAP[self.cplx_view]
+                d = np.stack(
+                    [cplx_callable(self.data[v.name]) for v in self.data.vdims]
+                )
+                mn = np.min(d)
+                mx = np.max(d)
 
-            vmind = mn
-            vminb = (mn, mx)
-            vmins = (mx - mn) / VSTEP_INTERVAL
-            vmaxd = mx
-            vmaxb = (mn, mx)
-            vmaxs = (mx - mn) / VSTEP_INTERVAL
+                vmind = mn
+                vminb = (mn, mx)
+                vmins = (mx - mn) / VSTEP_INTERVAL
+                vmaxd = mx
+                vmaxb = (mn, mx)
+                vmaxs = (mx - mn) / VSTEP_INTERVAL
+            else:
+                # for loading from config
+                mn = self.vmin
+                mx = self.vmax
+                vmind = self.vmin
+                vminb = (self.param.vmin.bounds[0], self.param.vmin.bounds[1])
+                vmins = self.param.vmin.step
+                vmaxd = self.vmax
+                vmaxb = (self.param.vmax.bounds[0], self.param.vmax.bounds[1])
+                vmaxs = self.param.vmax.step
 
             self.CPLX_VIEW_CLIM_CACHE[self.cplx_view] = dict(
                 vmin=vmind,

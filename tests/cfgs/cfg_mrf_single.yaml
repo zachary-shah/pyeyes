@@ -1,0 +1,289 @@
+{
+    "viewer_config": {
+        "vdim_horiz": {
+            "type": "ObjectSelector",
+            "value": "x",
+            "default": "x",
+            "objects": [
+                "Map Type",
+                "x",
+                "y",
+                "z"
+            ]
+        },
+        "vdim_vert": {
+            "type": "ObjectSelector",
+            "value": "z",
+            "default": "y",
+            "objects": [
+                "Map Type",
+                "x",
+                "y",
+                "z"
+            ]
+        },
+        "single_image_toggle": {
+            "type": "Boolean",
+            "value": false,
+            "default": false
+        },
+        "display_images": {
+            "type": "ListSelector",
+            "value": [
+                "2-Minute MRF"
+            ],
+            "default": [],
+            "objects": [
+                "2-Minute MRF"
+            ]
+        },
+        "config_path": {
+            "type": "String",
+            "value": "./cfgs/cfg_mrf_single.yaml",
+            "default": "./config.yaml"
+        }
+    },
+    "slicer_config": {
+        "vmin": {
+            "type": "Number",
+            "value": 100,
+            "default": 0.0,
+            "bounds": [
+                0.0,
+                5000.0
+            ],
+            "step": 25.0
+        },
+        "vmax": {
+            "type": "Number",
+            "value": 3000,
+            "default": 5000.0,
+            "bounds": [
+                0.0,
+                5000.0
+            ],
+            "step": 25.0
+        },
+        "size_scale": {
+            "type": "Number",
+            "value": 770,
+            "default": 400,
+            "bounds": [
+                200,
+                1000
+            ],
+            "step": 10
+        },
+        "flip_ud": {
+            "type": "Boolean",
+            "value": false,
+            "default": false
+        },
+        "flip_lr": {
+            "type": "Boolean",
+            "value": false,
+            "default": false
+        },
+        "cplx_view": {
+            "type": "ObjectSelector",
+            "value": "mag",
+            "default": "mag",
+            "objects": [
+                "mag",
+                "phase",
+                "real",
+                "imag"
+            ]
+        },
+        "display_images": {
+            "type": "ListSelector",
+            "value": [
+                "2-Minute MRF"
+            ],
+            "default": [],
+            "objects": [
+                "2-Minute MRF"
+            ]
+        },
+        "cmap": {
+            "type": "ObjectSelector",
+            "value": "Quantitative",
+            "default": "gray",
+            "objects": [
+                "gray",
+                "jet",
+                "viridis",
+                "inferno",
+                "RdBu",
+                "Magma",
+                "Quantitative"
+            ]
+        },
+        "colorbar_on": {
+            "type": "Boolean",
+            "value": true,
+            "default": true
+        },
+        "colorbar_label": {
+            "type": "String",
+            "value": "T1 (ms)",
+            "default": ""
+        },
+        "dim_indices": {
+            "type": "Dict",
+            "value": {
+                "y": 123,
+                "Map Type": "T1"
+            },
+            "default": {
+                "y": 123,
+                "Map Type": "T1"
+            }
+        },
+        "lr_crop": {
+            "type": "Range",
+            "value": [
+                31,
+                193
+            ],
+            "default": [
+                0,
+                100
+            ],
+            "bounds": [
+                0,
+                220
+            ],
+            "step": 1
+        },
+        "ud_crop": {
+            "type": "Range",
+            "value": [
+                45,
+                185
+            ],
+            "default": [
+                0,
+                100
+            ],
+            "bounds": [
+                0,
+                220
+            ],
+            "step": 1
+        },
+        "roi_state": {
+            "value": 0,
+            "enum_class": "ROI_STATE"
+        },
+        "roi_cmap": {
+            "type": "ObjectSelector",
+            "value": "Same",
+            "default": "Same",
+            "objects": [
+                "gray",
+                "jet",
+                "viridis",
+                "inferno",
+                "RdBu",
+                "Magma",
+                "Quantitative",
+                "Same"
+            ]
+        },
+        "roi_mode": {
+            "value": 0,
+            "enum_class": "ROI_VIEW_MODE"
+        },
+        "metrics_reference": {
+            "type": "ObjectSelector",
+            "value": "2-Minute MRF",
+            "default": "",
+            "objects": [
+                "2-Minute MRF"
+            ]
+        },
+        "metrics_state": {
+            "value": 0,
+            "enum_class": "METRICS_STATE"
+        },
+        "error_map_scale": {
+            "type": "Number",
+            "value": 1.0,
+            "default": 1.0,
+            "bounds": null,
+            "step": null
+        },
+        "error_map_type": {
+            "type": "ObjectSelector",
+            "value": "L1Diff",
+            "default": "L1Diff",
+            "objects": [
+                "L1Diff",
+                "L2Diff",
+                "SSIM"
+            ]
+        },
+        "error_map_cmap": {
+            "type": "ObjectSelector",
+            "value": "inferno",
+            "default": "inferno",
+            "objects": [
+                "gray",
+                "jet",
+                "viridis",
+                "inferno",
+                "RdBu",
+                "Magma",
+                "Grays"
+            ]
+        },
+        "metrics_text_types": {
+            "type": "ListSelector",
+            "value": [],
+            "default": [],
+            "objects": [
+                "L1Diff",
+                "RMSE",
+                "NRMSE",
+                "PSNR",
+                "SSIM"
+            ]
+        },
+        "metrics_text_location": {
+            "value": "Top Left",
+            "enum_class": "ROI_LOCATION"
+        },
+        "metrics_text_font_size": {
+            "type": "Number",
+            "value": 12,
+            "default": 12,
+            "bounds": [
+                5,
+                24
+            ],
+            "step": 1
+        },
+        "rebuild_figure_flag": {
+            "type": "Boolean",
+            "value": false,
+            "default": false
+        }
+    },
+    "roi_config": {
+        "point1": {
+            "x": 122.80496805939227,
+            "y": 58.76410486443381
+        },
+        "point2": {
+            "x": 188.25124093577347,
+            "y": 102.29081937799043
+        },
+        "roi_loc": "Top Right",
+        "zoom_scale": 2.0,
+        "color": "red",
+        "line_width": 2,
+        "zoom_order": 1,
+        "padding_pct": 0.001
+    }
+}

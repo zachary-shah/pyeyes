@@ -26,6 +26,12 @@ img_dict = {"skope": skope, "festive": festive, "uncorr": uncorr}
 named_dims = ["Bdir", "x", "y", "z"]
 vdims = ["x", "y"]
 
-Viewer = ComparativeViewer(data=img_dict, named_dims=named_dims, view_dims=vdims)
+config_path = (
+    "/local_mount/space/mayday/data/users/zachs/zachplotlib/tests/cfgs/cfg_diff.yaml"
+)
+
+Viewer = ComparativeViewer(
+    data=img_dict, named_dims=named_dims, view_dims=vdims, config_path=config_path
+)
 
 Viewer.launch()

@@ -1,13 +1,16 @@
+import json
+import os
 import warnings
 from typing import Dict, List, Optional, Sequence, Union
 
+import bokeh
 import holoviews as hv
 import numpy as np
 import panel as pn
 import param
 from holoviews import opts
 
-from . import error, metrics, themes
+from . import config, error, metrics, themes
 from .cmap.cmap import VALID_COLORMAPS, VALID_ERROR_COLORMAPS
 from .enums import METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
 from .slicers import NDSlicer
@@ -15,11 +18,10 @@ from .slicers import NDSlicer
 hv.extension("bokeh")
 pn.extension(notifications=True)
 
-# message should regexp. FIXME: not ignoring ...
-warnings.filterwarnings(
-    "ignore",
-    message=r"Dropping a patch because it contains a previously known reference \(id='p\d+'\).*",
-)
+# Clear bokeh warning "dropping a patch..."
+# tis a known issue, just a marker of slow rendering speed...
+bokeh_root_logger = bokeh.logging.getLogger()
+bokeh_root_logger.manager.disable = bokeh.logging.WARNING
 
 
 class Viewer:
@@ -46,17 +48,15 @@ class Viewer:
 class ComparativeViewer(Viewer, param.Parameterized):
 
     # Viewing Dimensions
-    vdim_horiz = param.Selector(default="x")
-    vdim_vert = param.Selector(default="y")
+    vdim_horiz = param.ObjectSelector(default="x")
+    vdim_vert = param.ObjectSelector(default="y")
 
     # Displayed Images
     single_image_toggle = param.Boolean(default=False)
     display_images = param.ListSelector(default=[], objects=[])
 
-    # Theme selection
-    theme = param.ObjectSelector(
-        default="dark", objects=list(themes.SUPPORTED_THEMES.keys())
-    )
+    # Config
+    config_path = param.String(default="./config.yaml")
 
     def __init__(
         self,
@@ -64,6 +64,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         named_dims: Sequence[str],
         view_dims: Optional[Sequence[str]] = None,
         cat_dims: Optional[Dict[str, List]] = {},
+        config_path: Optional[str] = None,
         **kwargs,
     ):
         """
@@ -86,8 +87,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
             category for that dimension. Must be a subset of dimension_names.
         """
 
+        from_config = config_path is not None and os.path.exists(config_path)
+
         super().__init__(data)
-        param.Parameterized.__init__(self, **kwargs)
+        param.Parameterized.__init__(self)
 
         img_names = list(data.keys())
         img_list = list(data.values())
@@ -124,9 +127,18 @@ class ComparativeViewer(Viewer, param.Parameterized):
         self.vdim_horiz = view_dims[0]
         self.vdim_vert = view_dims[1]
 
-        self.vdims = view_dims
         self.ndims = named_dims
         self.img_names = img_names
+
+        # Possibly update parameters from config
+        if from_config:
+            # Initi display images and view dims here
+            print(f"Loading viewer config from {config_path}...")
+            cfg = self.load_from_config(config_path)
+        else:
+            cfg = None
+
+        self.vdims = (self.vdim_horiz, self.vdim_vert)
         self.N_img = N_img
         self.N_dim = N_dim
 
@@ -141,7 +153,12 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # Instantiate slicer
         self.slicer = NDSlicer(
-            self.dataset, self.vdims, cdim="ImgName", clabs=img_names, cat_dims=cat_dims
+            self.dataset,
+            self.vdims,
+            cdim="ImgName",
+            clabs=img_names,
+            cat_dims=cat_dims,
+            cfg=cfg,
         )
 
         # Attach watcher variables to slicer attributes that need GUI updates
@@ -184,7 +201,12 @@ class ComparativeViewer(Viewer, param.Parameterized):
         # App
         self.app = pn.Row(control_panel, self.slicer.view)
 
-        self._autoscale_clim(event=None)
+        # make sure roi_state is consistent with widgets
+        if from_config:
+            self._roi_state_watcher(self.slicer.roi_state)
+            self._update_error_map_type(self.slicer.error_map_type)
+        else:
+            self._autoscale_clim(event=None)
 
     def launch(self):
         """
@@ -192,6 +214,53 @@ class ComparativeViewer(Viewer, param.Parameterized):
         """
 
         pn.serve(self.app, title="MRI Viewer", show=True)
+
+    def load_from_config(self, config_path: str):
+        """
+        Load config from json dict.
+
+        TODO: allow config to be useable if different names are used for dimensions.
+        """
+
+        with open(config_path, "r") as f:
+            cfg = json.load(f)
+
+        # add metadata
+        cfg["metadata"] = dict(
+            same_images=True,
+            same_dims=True,
+        )
+
+        # Check that config is compatible with newly supplied data
+        cfg_images = cfg["viewer_config"]["display_images"]["value"]
+        cfg_ndims = cfg["viewer_config"]["vdim_horiz"]["objects"]
+
+        # Will not set display image related parameters if not consistent with config
+        if not (set(cfg_images) == set(self.img_names)):
+            warnings.warn(
+                "Supplied images do not match config - Loading viewer with default image selection.",
+                RuntimeWarning,
+            )
+            cfg["metadata"]["same_images"] = False
+            cfg["viewer_config"].pop("display_images")
+            cfg["viewer_config"].pop("single_image_toggle")
+            cfg["slicer_config"].pop("display_images")
+            cfg["slicer_config"].pop("metrics_reference")
+
+        # Will not set dimension related parameters if not consistent with config
+        if not (set(cfg_ndims) == set(self.ndims)):
+            warnings.warn(
+                "Config dims do not match supplied named dims. Using default settings.",
+                RuntimeWarning,
+            )
+            cfg["metadata"]["same_dims"] = False
+            cfg["viewer_config"].pop("vdim_horiz")
+            cfg["viewer_config"].pop("vdim_vert")
+            cfg["slicer_config"].pop("dim_indices")
+
+        config.deserialize_parameters(self, cfg["viewer_config"])
+
+        return cfg
 
     """
     Widget Management
@@ -411,7 +480,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
                 s = pn.widgets.Select(
                     name=dim,
                     options=self.cat_dims[dim],
-                    value=self.slicer.slice_cache[dim],
+                    value=self.slicer.dim_indices[dim],
                 )
             else:
                 s = pn.widgets.EditableIntSlider(
@@ -460,7 +529,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         sliders = {}
 
         # Flip Widgets
-        ud_w = pn.widgets.Checkbox(name="Flip Image Up/Down", value=False)
+        ud_w = pn.widgets.Checkbox(name="Flip Image Up/Down", value=self.slicer.flip_ud)
 
         @error.error_handler_decorator()
         def flip_ud_callback(event):
@@ -470,7 +539,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
         ud_w.param.watch(flip_ud_callback, "value")
         sliders["flip_ud"] = ud_w
 
-        lr_w = pn.widgets.Checkbox(name="Flip Image Left/Right", value=False)
+        lr_w = pn.widgets.Checkbox(
+            name="Flip Image Left/Right", value=self.slicer.flip_lr
+        )
 
         @error.error_handler_decorator()
         def flip_lr_callback(event):
@@ -528,7 +599,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
     def _build_single_toggle_widget(self):
         # Single toggle view
-        single_toggle = pn.widgets.Checkbox(name="Single View", value=False)
+        single_toggle = pn.widgets.Checkbox(
+            name="Single View", value=self.single_image_toggle
+        )
 
         @error.error_handler_decorator()
         def single_toggle_callback(event):
@@ -611,7 +684,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
                 if self.is_complex_data
                 else ["mag", "real"]
             ),
-            value="mag",
+            value=self.slicer.cplx_view,
             button_type="primary",
             button_style="outline",
         )
@@ -750,8 +823,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # Option for ROI in-figure
         roi_mode = pn.widgets.Checkbox(
-            name="ROI Overlay Enabled",
-            value=True,
+            name="ROI Overlay Enabled", value=bool(self.slicer.roi_mode.value)
         )
 
         def _update_roi_mode(event):
@@ -784,8 +856,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
         # Colormap
         roi_cmap_widget = pn.widgets.Select(
             name="ROI Color Map",
-            options=VALID_COLORMAPS + ["Same"],
-            value="Same",
+            options=self.slicer.param.roi_cmap.objects,
+            value=self.slicer.roi_cmap,
         )
 
         def _update_cmap(event):
@@ -799,7 +871,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="Zoom Scale",
             start=1.0,
             end=10.0,
-            value=2.0,
+            value=self.slicer.ROI.zoom_scale,
             step=0.1,
         )
 
@@ -813,7 +885,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         roi_loc_widget = pn.widgets.Select(
             name="ROI Location",
             options=[loc.value for loc in ROI_LOCATION],
-            value=ROI_LOCATION.TOP_RIGHT.value,
+            value=self.slicer.ROI.roi_loc.value,
         )
 
         def _update_roi_loc(event):
@@ -854,7 +926,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
         widgets["roi_ud_crop"] = roi_ud_crop_slider
 
         # Bounding box details
-        roi_line_color = pn.widgets.ColorPicker(name="ROI Line Color", value="red")
+        roi_line_color = pn.widgets.ColorPicker(
+            name="ROI Line Color",
+            value=self.slicer.ROI.color,
+        )
 
         def _update_roi_line_color(event):
             self.slicer.update_roi_line_color(event.new)
@@ -863,7 +938,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
         widgets["roi_line_color"] = roi_line_color
 
         roi_line_width = pn.widgets.IntSlider(
-            name="ROI Line Width", start=1, end=10, value=2
+            name="ROI Line Width",
+            start=1,
+            end=10,
+            value=self.slicer.ROI.line_width,
         )
 
         def _update_roi_line_width(event):
@@ -873,7 +951,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
         widgets["roi_line_width"] = roi_line_width
 
         roi_zoom_order = pn.widgets.IntInput(
-            name="ROI Zoom Order", value=1, start=0, end=3
+            name="ROI Zoom Order",
+            value=self.slicer.ROI.zoom_order,
+            start=0,
+            end=3,
         )
 
         def _update_roi_zoom_order(event):
@@ -896,9 +977,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
     def _roi_state_watcher(self, event):
 
-        # print(f"VIEWER CAPTURING ROI UPDATE: State {event.old}->{event.new}")
-
-        new_state = event.new
+        try:
+            new_state = event.new
+        except AttributeError:
+            new_state = event
 
         # Clear button enabled or not
         self._set_app_widget_attr(
@@ -907,7 +989,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         with param.parameterized.discard_events(self.slicer):
             # update ranges of sliders upon completion of ROI
-            if event.new == ROI_STATE.ACTIVE:
+            if new_state == ROI_STATE.ACTIVE:
 
                 roi_l, roi_b, roi_r, roi_t = self.slicer.ROI.lbrt()
 
@@ -956,7 +1038,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # Difference Map and Metrics Widgets
         reference_widget = pn.widgets.Select(
-            name="Reference Dataset", options=self.img_names, value=self.img_names[0]
+            name="Reference Dataset",
+            options=self.img_names,
+            value=self.slicer.metrics_reference,
         )
 
         def _update_reference(event):
@@ -968,7 +1052,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         diff_map_type_widget = pn.widgets.Select(
             name="Error Map Type",
             options=metrics.MAPPABLE_METRICS,
-            value=metrics.MAPPABLE_METRICS[0],
+            value=self.slicer.error_map_type,
         )
         diff_map_type_widget.param.watch(self._update_error_map_type, "value")
         widgets["diff_map_type"] = diff_map_type_widget
@@ -981,7 +1065,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         text_metrics_widget = pn.widgets.CheckBoxGroup(
             name="Metrics",
             options=metrics.FULL_METRICS,
-            value=[],
+            value=self.slicer.metrics_text_types,
         )
 
         def _update_text_metrics(event):
@@ -995,11 +1079,21 @@ class ComparativeViewer(Viewer, param.Parameterized):
         )
         widgets["button_description"] = text_description_widget
 
+        # determine value
+        if self.slicer.metrics_state == METRICS_STATE.ALL:
+            display_options_value = ["Error Map", "Text"]
+        elif self.slicer.metrics_state == METRICS_STATE.MAP:
+            display_options_value = ["Error Map"]
+        elif self.slicer.metrics_state == METRICS_STATE.TEXT:
+            display_options_value = ["Text"]
+        else:
+            display_options_value = []
+
         display_options = pn.widgets.CheckButtonGroup(
             name="Display Metrics",
             button_type="primary",
             button_style="outline",
-            value=[],
+            value=display_options_value,
             options=["Error Map", "Text"],
         )
 
@@ -1028,7 +1122,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="Error Scale",
             start=1.0,
             end=50.0,
-            value=1.0,
+            value=self.slicer.error_map_scale,
             step=0.1,
         )
 
@@ -1041,7 +1135,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         error_cmap_widget = pn.widgets.Select(
             name="Error Map Color Map",
             options=VALID_ERROR_COLORMAPS,
-            value="inferno",
+            value=self.slicer.error_map_cmap,
         )
 
         def _update_error_cmap(event):
@@ -1054,7 +1148,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="Text Metrics Font Size",
             start=5,
             end=24,
-            value=12,
+            value=self.slicer.metrics_text_font_size,
             step=1,
         )
 
@@ -1069,7 +1163,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         metrics_text_font_loc_widget = pn.widgets.Select(
             name="Text Metrics Location",
             options=[loc.value for loc in ROI_LOCATION],
-            value=ROI_LOCATION.TOP_LEFT.value,
+            value=self.slicer.metrics_text_location.value,
         )
 
         def _update_metrics_text_loc(event):
@@ -1092,11 +1186,16 @@ class ComparativeViewer(Viewer, param.Parameterized):
         Make sure error map gets the right formatting.
         """
 
+        try:
+            new_type = event.new
+        except AttributeError:
+            new_type = event
+
         with param.parameterized.discard_events(self.slicer):
-            self.slicer.update_error_map_type(event.new)
+            self.slicer.update_error_map_type(new_type)
 
         self._set_app_widget_attr(
-            "Analysis", "error_scale", "visible", event.new != "SSIM"
+            "Analysis", "error_scale", "visible", new_type != "SSIM"
         )
 
         if self.slicer.metrics_state != METRICS_STATE.INACTIVE:
@@ -1128,30 +1227,53 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         widgets = {}
 
-        widgets["export_image_button"] = pn.widgets.FileDownload(
-            label="Export Image (TODO)",
-            filename="export.png",
-            callback=self._export_image,
+        widgets["export_path"] = pn.widgets.TextAreaInput(
+            name="Export Path",
+            value=self.config_path,
+            placeholder="Enter path to export config file",
         )
 
-        widgets["export_config_button"] = pn.widgets.FileDownload(
-            label="Export Config (TODO)",
-            filename="config.json",
-            callback=self._export_config,
+        def _update_export_path(event):
+            self.config_path = event.new
+
+        widgets["export_path"].param.watch(_update_export_path, "value")
+
+        widgets["export_config_button"] = pn.widgets.Button(
+            name="Export Config",
+            button_type="primary",
+            on_click=self._export_config,
         )
 
         return widgets
 
     @error.error_handler_decorator()
-    def _export_image(self):
-        """
-        Export the current image as a PNG.
-        """
-        raise NotImplementedError("Exporting image not yet implemented.")
-
-    @error.error_handler_decorator()
-    def _export_config(self):
+    def _export_config(self, event):
         """
         Export the current configuration as a JSON.
         """
-        raise NotImplementedError("Exporting config not yet implemented.")
+        if self.config_path is None:
+            pn.state.notifications.warning("No path provided to export config.")
+            return
+
+        try:
+            exp_dir = os.path.dirname(self.config_path)
+
+            if len(exp_dir) > 2:
+                os.makedirs(exp_dir, exist_ok=True)
+
+            viewer_config = config.serialize_parameters(self)
+            slicer_config = config.serialize_parameters(self.slicer)
+            roi_config = self.slicer.ROI.serialize()
+            config_dict = {
+                "viewer_config": viewer_config,
+                "slicer_config": slicer_config,
+                "roi_config": roi_config,
+            }
+
+            with open(self.config_path, "w") as f:
+                json.dump(config_dict, f, indent=4)
+
+            pn.state.notifications.success(f"Config saved to {self.config_path}")
+
+        except Exception as e:
+            pn.state.notifications.error(f"Error saving config: {e}")

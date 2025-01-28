@@ -27,11 +27,15 @@ vdims = ["y", "z"]
 # Allow categorial dimensions to be specified
 cat_dims = {"Map Type": ["PD", "T1", "T2"]}
 
+# Allow loading viewer from config
+config_path = "/local_mount/space/mayday/data/users/zachs/zachplotlib/tests/cfgs/cfg_mrf_1min_vs_2min.yaml"
+
 Viewer = ComparativeViewer(
     data=img_dict,
     named_dims=named_dims,
     view_dims=vdims,
     cat_dims=cat_dims,
+    config_path=config_path,
 )
 
 Viewer.launch()
