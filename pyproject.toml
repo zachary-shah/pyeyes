@@ -1,7 +1,8 @@
 [build-system]
 requires = [
    "setuptools",
-   "wheel"
+   "wheel",
+   "build"
 ]
 build-backend = "setuptools.build_meta"
 
@@ -42,3 +43,10 @@ dev = [
     "pre-commit",
     "black",
 ]
+
+[tool.setuptools]
+packages = ["pyeyes"]
+package-dir = {"" = "src"}
+
+[tool.setuptools.package-data]
+pyeyes = ["cmap/*.csv"]
