@@ -3,7 +3,7 @@
 Pyeyes is a n-dimensional data visualization tool for comparing images. Especially designed as an MRI visualization tool, inspired by FSLEyes. Built on top of [Holoviews](https://holoviews.org/) and [Bokeh](https://bokeh.org/) for interative plotting.
 
 <video width="600" controls>
-  <source src="doc/demo.mov" type="video/mp4">
+  <source src="./doc/demo.mov" type="video/mp4">
 </video>
 
 ## Features
