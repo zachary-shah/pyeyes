@@ -17,7 +17,7 @@ authors = [
 ]
 description = "A GUI viewer for high-dimensional image visualization in Python"
 readme = "README.md"
-requires-python = ">=3.10.12"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -25,7 +25,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "numpy",
+    "numpy>=1.23",
     "matplotlib",
     "holoviews>=1.20.0",
     "bokeh>=3.6.2",
@@ -47,6 +47,7 @@ dev = [
 ]
 
 [tool.setuptools]
+include-package-data = true
 packages = ["pyeyes"]
 package-dir = {"" = "src"}
 
