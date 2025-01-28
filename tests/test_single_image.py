@@ -1,3 +1,8 @@
+"""
+Test case:
+- user supplies single image and a config created from the same dataset (same name)
+"""
+
 import numpy as np
 
 from pyeyes import set_theme

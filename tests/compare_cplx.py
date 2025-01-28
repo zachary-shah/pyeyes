@@ -1,3 +1,8 @@
+"""
+Test case:
+- user supplies two complex images (spin echoes) of the same size
+"""
+
 import numpy as np
 
 from pyeyes import set_theme

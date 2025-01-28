@@ -1,3 +1,8 @@
+"""
+Test case:
+- user supplies four images of the same size in the most basic way, with a categorical dimension
+"""
+
 import numpy as np
 
 from pyeyes import set_theme

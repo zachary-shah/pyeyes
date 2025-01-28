@@ -1,3 +1,8 @@
+"""
+Test case:
+- user supplies three images of the same size with large dataset
+"""
+
 import numpy as np
 
 from pyeyes import set_theme

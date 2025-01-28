@@ -1,3 +1,8 @@
+"""
+Test case:
+- user supplies two images of the same size with pre-defined config
+"""
+
 import numpy as np
 
 from pyeyes import set_theme
