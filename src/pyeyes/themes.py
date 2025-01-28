@@ -56,8 +56,6 @@ def set_theme(theme_str: str) -> None:
         theme_str in SUPPORTED_THEMES
     ), f"Unsupported theme: {theme_str}. Must be one of {SUPPORTED_THEMES}."
 
-    print("View theme set to:", theme_str)
-
     # set holoviews and panel theme
     if theme_str in ["dark", "soft_dark"]:
         hv.renderer("bokeh").theme = "dark_minimal"

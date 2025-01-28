@@ -60,24 +60,25 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
     def __init__(
         self,
-        data: Dict[str, np.ndarray],
-        named_dims: Sequence[str],
+        data: Union[Dict[str, np.ndarray], np.ndarray],
+        named_dims: Optional[Sequence[str]] = None,
         view_dims: Optional[Sequence[str]] = None,
         cat_dims: Optional[Dict[str, List]] = {},
         config_path: Optional[str] = None,
-        **kwargs,
     ):
         """
         Viewer for comparing n-dimensional image data.
 
         Parameters:
         -----------
-        data : dict[np.ndarray]
-            dictionary of images. Keys should be strings which name each image,
+        data : Union[Dict[str, np.ndarray], np.ndarray]
+            Single image or dictionary of images.
+            If dictionary, keys should be strings which name each image,
             and values should be numpy arrays of equivalent size.
-        named_dims : Sequence[str]
+        named_dims : Optional[Sequence[str]]
             String name for each dimension of the image data, with the same ordering as
-            the array dimensions.
+            the array dimensions. Highly recommended to provide this for easier use.
+            If not provided, default is ["Dim 0", "Dim 1", ...].
         view_dims : Optional[Sequence[str]]
             Initial dimensions to view, should be a subset of dimension_names.
             Default is ['x', 'y'] if in dimension_names else first 2 dimensions.
@@ -94,6 +95,13 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         from_config = config_path is not None and os.path.exists(config_path)
 
+        # Defaults
+        if isinstance(data, np.ndarray):
+            data = {"Image": data}
+
+        if named_dims is None or len(named_dims) == 0:
+            named_dims = [f"Dim {i}" for i in range(data["Image"].ndim)]
+
         super().__init__(data)
         param.Parameterized.__init__(self)
 
@@ -105,6 +113,15 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         self.is_complex_data = any([np.iscomplexobj(img) for img in img_list])
 
+        if cat_dims is not None and len(cat_dims) > 0:
+            assert all(
+                [dim in named_dims for dim in cat_dims.keys()]
+            ), "Category dimensions must be in dimension_names."
+        else:
+            cat_dims = {}
+        self.cat_dims = cat_dims
+        self.noncat_dims = [dim for dim in named_dims if dim not in cat_dims.keys()]
+
         assert np.array(
             [img.shape == img_list[0].shape for img in img_list]
         ).all(), "All viewed data must have the same input shape."
@@ -114,13 +131,18 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         if view_dims is not None:
             assert all(
-                [dim in named_dims for dim in view_dims]
+                [dim in self.noncat_dims for dim in view_dims]
             ), "All view dimensions must be in dimension_names."
         else:
-            if "x" in named_dims.lower() and "y" in named_dims.lower():
-                view_dims = ["x", "y"]
+            # Default viewing dims
+            dl = [dim.lower() for dim in named_dims]
+            if "x" in dl and "y" in dl:
+                view_dims = [
+                    named_dims[dl.index("x")],
+                    named_dims[dl.index("y")],
+                ]
             else:
-                view_dims = named_dims[:2]
+                view_dims = self.noncat_dims[:2]
 
         # Init display images
         self.param.display_images.objects = img_names
@@ -146,9 +168,6 @@ class ComparativeViewer(Viewer, param.Parameterized):
         self.vdims = (self.vdim_horiz, self.vdim_vert)
         self.N_img = N_img
         self.N_dim = N_dim
-
-        self.cat_dims = cat_dims
-        self.noncat_dims = [dim for dim in named_dims if dim not in cat_dims.keys()]
 
         # Aggregate data, stacking image type to first axis
         self.raw_data = data
