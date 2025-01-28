@@ -28,10 +28,15 @@ class ROI:
         line_width: Optional[int] = 2,
         zoom_order: Optional[int] = 1,
         padding_pct: Optional[float] = 0.001,
+        config: Optional[dict] = None,
     ):
         """
         Basic ROI class responsible for extracting ROIs from images.
         """
+
+        if config is not None:
+            self.init_from_config(config, cmap=cmap)
+            return
 
         self.point1 = point1
         self.point2 = point2
@@ -242,3 +247,36 @@ class ROI:
 
         if self.width() == 0:
             raise ValueError("ROI width cannot be zero")
+
+    def serialize(self) -> dict:
+        """
+        Hard-coded serialization for use in saving config by viewer.
+        FIXME: color-maps do not serialize.
+        """
+        return {
+            "point1": {"x": self.point1.x, "y": self.point1.y},
+            "point2": {"x": self.point2.x, "y": self.point2.y},
+            "roi_loc": self.roi_loc.value,
+            "zoom_scale": self.zoom_scale,
+            "color": self.color,
+            "line_width": self.line_width,
+            "zoom_order": self.zoom_order,
+            "padding_pct": self.padding_pct,
+        }
+
+    def init_from_config(self, cfg: dict, cmap):
+        """
+        Initialize ROI from hard-coded serialized config.
+        For now, assuming that cmap is passed in separately.
+        """
+        self.point1 = Point(cfg["point1"]["x"], cfg["point1"]["y"])
+        self.point2 = Point(cfg["point2"]["x"], cfg["point2"]["y"])
+        self.roi_loc = ROI_LOCATION(cfg["roi_loc"])
+        self.zoom_scale = cfg["zoom_scale"]
+        self.color = cfg["color"]
+        self.line_width = cfg["line_width"]
+        self.zoom_order = cfg["zoom_order"]
+        self.padding_pct = cfg["padding_pct"]
+
+        # cmap not serializeable so handle separately.
+        self.cmap = cmap
