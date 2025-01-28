@@ -8,3 +8,6 @@ __pycache__/
 
 play/
 tests/profs/
+
+# deploy
+dist/

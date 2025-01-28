@@ -60,7 +60,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
     def __init__(
         self,
-        data: dict[np.ndarray],
+        data: Dict[str, np.ndarray],
         named_dims: Sequence[str],
         view_dims: Optional[Sequence[str]] = None,
         cat_dims: Optional[Dict[str, List]] = {},
@@ -85,6 +85,11 @@ class ComparativeViewer(Viewer, param.Parameterized):
             Dictionary of categorical dimensions. Keys should be strings which name each
             categorical dimension, and values should be lists of strings which name each
             category for that dimension. Must be a subset of dimension_names.
+        config_path : Optional[str]
+            Path to a config file to load viewer settings from. If not provided, viewer
+            will be initialized with default settings. Config should be generated from
+            "Export Config" button in Export pane of the Viewer. Limited set of settings
+            are also transferrable to different datasets or different shapes.
         """
 
         from_config = config_path is not None and os.path.exists(config_path)
@@ -218,8 +223,6 @@ class ComparativeViewer(Viewer, param.Parameterized):
     def load_from_config(self, config_path: str):
         """
         Load config from json dict.
-
-        TODO: allow config to be useable if different names are used for dimensions.
         """
 
         with open(config_path, "r") as f:
@@ -315,6 +318,12 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # Single Toggle View widgets
         widgets["single_toggle"] = self._build_single_toggle_widget()
+
+        widgets["im_display_desc"] = pn.widgets.StaticText(
+            name="Displayed Images",
+            value="Click names to toggle visibility.",
+        )
+
         widgets["im_display"] = self._build_display_images_widget()
 
         return widgets
@@ -656,6 +665,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         @error.error_handler_decorator()
         def display_images_callback(event):
+            if not isinstance(event.new, str) and len(event.new) == 0:
+                pn.state.notifications.warning("Must select at least one image.")
+                self._set_app_widget_attr("View", "im_display", "value", event.old)
+                return
             if event.new != event.old:
                 self._update_image_display(event.new)
 

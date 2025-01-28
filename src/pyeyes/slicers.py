@@ -1199,21 +1199,21 @@ class NDSlicer(param.Parameterized):
         if prev_state == ROI_STATE.INACTIVE and new_state == ROI_STATE.INACTIVE:
             pn.state.notifications.clear()
             pn.state.notifications.info(
-                "No ROI active. Click 'Add ROI' to start adding an ROI.",
+                "No ROI active. Click 'Draw ROI' to start adding an ROI.",
                 duration=0,
             )
 
         elif prev_state > ROI_STATE.INACTIVE and new_state == ROI_STATE.INACTIVE:
             pn.state.notifications.clear()
             pn.state.notifications.info(
-                "ROI cleared. Click 'Add ROI' to start adding an ROI.",
+                "ROI cleared. Click 'Draw ROI' to start adding an ROI.",
                 duration=3000,
             )
 
         elif prev_state > ROI_STATE.INACTIVE and new_state == ROI_STATE.FIRST_SELECTION:
             pn.state.notifications.clear()
             pn.state.notifications.info(
-                "Resetting ROI. Click the first corner of the new ROI in any image.",
+                "Resetting ROI. Click the first corner of the new ROI in any top-row image.",
                 duration=0,
             )
 
@@ -1222,7 +1222,7 @@ class NDSlicer(param.Parameterized):
         ):
             pn.state.notifications.clear()
             pn.state.notifications.info(
-                "Click the first corner of the ROI in any image.",
+                "Click the first corner of the ROI in any top-row image.",
                 duration=0,
             )
 

@@ -3,7 +3,13 @@
 Pyeyes is a n-dimensional data visualization tool for comparing images. Especially designed as an MRI visualization tool, inspired by FSLEyes.
 
 ## Installation
-You can create the relevant conda environment using mamba:
+Install the package and all dependences from pip manager:
+```
+pip install pyeyes
+```
+
+### Development
+Alternatively, for contributing, ou can create the relevant conda environment using mamba:
 ```
 mamba env create -n pyeyes --file env.yml
 ```
@@ -15,7 +21,7 @@ mamba activate pyeyes
 
 ## Example scripts
 
-Under `/tests`, run `compare_diffusion.py` to see diffusion weighted image example. Run `compare_mrf.py` to see MRF example (Note: offical MRF colormap implementation still a TODO.)
+Under `/tests`, run `compare_mrf.py` to see an example with quantitative data. Run `compare_cplx.py` to see examples with complex-valued data.
 
 # Contributing
 
@@ -43,8 +49,8 @@ pre-commit install
 - [x] toggle difference maps
     - [x] select reference for difference map
     - [x] select difference maps
-- [ ] Export figure
-- [ ] Export figure-generating config
+- [x] Export figure (using bokeh built-in)
+- [x] Export figure-generating config
 - [ ] Image Masking
 - [ ] "Auto-crop" to crop out all white-space from image
 - [ ] Mouse wheel scrolling through slices
