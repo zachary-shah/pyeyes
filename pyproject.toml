@@ -2,13 +2,14 @@
 requires = [
    "setuptools",
    "wheel",
-   "build"
+   "build",
+   "setuptools_scm"
 ]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyeyes"
-version = "0.1.1"
+
 authors = [
   { name="Zachary Shah", email="zshah9@stanford.edu" },
   { name="Yonatan Urman", email="yurman@stanford.edu" },
@@ -50,3 +51,7 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.package-data]
 pyeyes = ["cmap/*.csv"]
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "node-and-date"
