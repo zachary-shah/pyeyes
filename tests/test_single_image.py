@@ -18,7 +18,7 @@ llr_2min_t2 = np.load(f"{mrf_folder}/llr_2min_t2.npy")
 mrf_2min = np.stack([llr_2min_pd, llr_2min_t1, llr_2min_t2], axis=0)
 
 # Allow loading viewer from config
-config_path = "/local_mount/space/mayday/data/users/zachs/zachplotlib/tests/cfgs/cfg_mrf_single.yaml"
+config_path = "./cfgs/cfg_mrf_single.yaml"
 
 Viewer = ComparativeViewer(
     data={"2-Minute MRF": mrf_2min},

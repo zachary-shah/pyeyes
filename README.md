@@ -1,8 +1,22 @@
 # pyeyes
 
-Pyeyes is a n-dimensional data visualization tool for comparing images. Especially designed as an MRI visualization tool, inspired by FSLEyes.
+Pyeyes is a n-dimensional data visualization tool for comparing images. Especially designed as an MRI visualization tool, inspired by FSLEyes. Built on top of [Holoviews](https://holoviews.org/) and [Bokeh](https://bokeh.org/) for interative plotting.
+
+<video width="600" controls>
+  <source src="doc/demo.mov" type="video/mp4">
+</video>
+
+## Features
+
+- **Interactive Slicing:** Seemlessly navigate through MRI volumes of arbitrary dimensionality.
+- **Dynamic Contrast Adjustment:** Toggle through different color maps, color limits, and more on the fly.
+- **Quantitative Imaging Views:** Support for the standard quantitative MRI colormaps.
+- **Comparative Metrics:** Get quick looks at standard image-processing metrics against your gold-standard datasets.
+- **Export and Repeatability:** Save viewer configurations you like and export static figures with ease.
 
 ## Installation
+
+### Using PyPI
 Install the package and all dependences from pip manager:
 ```
 pip install pyeyes
@@ -19,9 +33,46 @@ Activate the installed environment:
 mamba activate pyeyes
 ```
 
-## Example scripts
+### Example Usage
 
-Under `/tests`, run `compare_mrf.py` to see an example with quantitative data. Run `compare_cplx.py` to see examples with complex-valued data.
+```python
+import numpy as np
+from pyeyes import set_theme, ComparativeViewer
+
+# Choose from 'dark', 'light', and 'soft_dark'
+set_theme('dark')
+
+# Form Dictionary of Datasets to view
+img_dict = {
+    "Dataset 1": np.random.randn((3, 200, 200, 200, 30)),
+    "Dataset 2": np.random.randn((3, 200, 200, 200, 30)),
+}
+
+# Describe the dimensionality of the data
+named_dims = ["Map Type", "x", "y", "z", "Vol"]
+
+# Decide which dimensions to view
+vdims = ["y", "z"]
+
+# Allow categorial dimensions to be specified
+cat_dims = {"Map Type": ["PD", "T1", "T2"]}
+
+# Once launched, viewer config can be saved to config
+# path for repeating view with same or different data
+config_path = "./cfgs/cfg_mrf_1min_vs_2min.yaml"
+
+# Initialize
+Viewer = ComparativeViewer(
+    data=img_dict,
+    named_dims=named_dims,
+    view_dims=vdims,
+    cat_dims=cat_dims,
+    config_path=config_path,
+)
+
+# Launch viewer in web browser!
+Viewer.launch()
+```
 
 # Contributing
 
@@ -29,39 +80,3 @@ Before contributing, run
 ```bash
 pre-commit install
 ```
-
-# To-Do List
-
-### Features
-- [x] select value dimensions (default x, y)
-- [x] slicer dimensions
-- [x] allow for categorical dimensions
-- [x] toggle real, im, mag, phase
-- [x] control contrast (vmin/vmax)
-- [x] select colormap
-- [x] Add MRF color maps
-- [x] select width, height to crop image to
-- [x] toggle select which images to display
-- [x] toggle ROI selection
-    - [x] select ROI center
-    - [x] select ROI height, width
-    - [x] allow ROI to be displayed out of figure pane instead
-- [x] toggle difference maps
-    - [x] select reference for difference map
-    - [x] select difference maps
-- [x] Export figure (using bokeh built-in)
-- [x] Export figure-generating config
-- [ ] Image Masking
-- [ ] "Auto-crop" to crop out all white-space from image
-- [ ] Mouse wheel scrolling through slices
-- [ ] Ortho 3D Viewer
-- [ ] Multiple sliceable views
-- [ ] Click and popup point value
-
-### Formatting
-- [ ] Allow renaming of image labels
-- [ ] Add option to add borders for gridspec layout
-
-### Efficiency
-- [ ] Replace DynamicMap with HoloMap, or integrate LRU cache for slice options
-- [ ] Replace ROI 2-click selection with BoundsXY (first attempt at this failed... will revisit later)
