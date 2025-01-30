@@ -1144,12 +1144,6 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
             self.slicer.update_metrics_state(new_state)
 
-            # FIXME: We'd like to autoformat whenever the error map type is changed, but also on its first
-            # appearnce. The former is handled by ` _update_error_map_type`, but the latter is not. The following
-            # enables this, but there's an annoying flicker at the beginning.
-            if ("Error Map" in event.new) and ("Error Map" not in event.old):
-                self._autoformat_error_map(None)
-
             pn.state.notifications.clear()
             pn.state.notifications.info("Done!", duration=1000)
 
