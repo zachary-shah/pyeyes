@@ -7,6 +7,7 @@ FULL_METRICS = [
     "NRMSE",
     "PSNR",
     "SSIM",
+    "RelativeL1",
 ]
 
 MAPPABLE_METRICS = [
@@ -120,7 +121,9 @@ def RelativeL1(recon: np.ndarray, true: np.ndarray, return_map=False) -> float:
     if return_map:
         return rel_diff
 
-    return np.mean(rel_diff)
+    valid = np.abs(true) > TOL
+
+    return np.mean(rel_diff[valid])
 
 
 def diff(recon: np.ndarray, true: np.ndarray, return_map=False) -> float:
