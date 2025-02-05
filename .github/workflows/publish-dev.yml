@@ -1,0 +1,38 @@
+name: Publish Dev Version to PyPI
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  build-and-publish-dev:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.12'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine setuptools_scm
+
+      - name: Build Package
+        run: python -m build
+
+      # Step 7: Publish the Dev Version to PyPI
+      - name: Publish Dev Version to PyPI
+        # Here, we're publishing to PyPI. We might want to switch to Test PyPI. 
+        # ('--repository-url https://test.pypi.org/legacy/' to publish to Test PyPI)
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_KEY }}
+        run: twine upload --skip-existing dist/*
