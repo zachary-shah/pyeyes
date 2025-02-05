@@ -7,12 +7,15 @@ FULL_METRICS = [
     "NRMSE",
     "PSNR",
     "SSIM",
+    "RelativeL1",
 ]
 
 MAPPABLE_METRICS = [
     "L1Diff",
     "L2Diff",
     "SSIM",
+    "RelativeL1",
+    "Diff",
 ]
 
 TOL = 1e-5
@@ -109,6 +112,32 @@ def PSNR(recon: np.ndarray, true: np.ndarray, max_percentile=99.5) -> float:
     return psnr
 
 
+def RelativeL1(recon: np.ndarray, true: np.ndarray, return_map=False) -> float:
+
+    assert recon.shape == true.shape, "Input array dimensions mismatch."
+
+    rel_diff = np.abs(recon - true) / (np.abs(true) + 1e-9)
+
+    if return_map:
+        return rel_diff
+
+    valid = np.abs(true) > TOL
+
+    return np.mean(rel_diff[valid])
+
+
+def diff(recon: np.ndarray, true: np.ndarray, return_map=False) -> float:
+
+    assert recon.shape == true.shape, "Input array dimensions mismatch."
+
+    diff = recon - true
+
+    if return_map:
+        return diff
+
+    return np.mean(diff)
+
+
 METRIC_CALLABLES = {
     "L1Diff": L1Diff,
     "L2Diff": RMSE,
@@ -116,4 +145,6 @@ METRIC_CALLABLES = {
     "NRMSE": NRMSE,
     "PSNR": PSNR,
     "SSIM": SSIM,
+    "RelativeL1": RelativeL1,
+    "Diff": diff,
 }

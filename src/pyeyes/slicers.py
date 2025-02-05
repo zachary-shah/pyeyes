@@ -525,6 +525,11 @@ class NDSlicer(param.Parameterized):
 
         if self.error_map_type == "SSIM":
             diff_opts["clim"] = (0, 1)
+        elif self.error_map_type == "Diff":
+            diff_opts["clim"] = (
+                -self.vmax / self.error_map_scale,
+                self.vmax / self.error_map_scale,
+            )
         else:
             diff_opts["clim"] = (0, self.vmax / self.error_map_scale)
 
@@ -1317,18 +1322,39 @@ class NDSlicer(param.Parameterized):
                 self.error_map_cmap = "inferno"
                 self.DifferenceColorMapper = ColorMap(self.error_map_cmap)
 
-            error_data = self.slice()["error_map"]
-
-            if self.metrics_reference in error_data:
-                error_data.pop(self.metrics_reference)
-
-            error_np = np.stack([d.data["Value"] for d in error_data.values()])
-            error_np[np.isnan(error_np)] = 0
-
-            error_max = np.percentile(error_np, 99.9)
+            error_max = self._get_max_err()
 
             if error_max > 1e-10:
                 self.error_map_scale = round(self.vmax / error_max, 1)
 
+        elif self.error_map_type == "Diff":
+            self.error_map_cmap = "RdBu"
+            self.DifferenceColorMapper = ColorMap(self.error_map_cmap)
+            error_max = np.abs(self._get_max_err())
+
+            if error_max > 1e-10:
+                error_max = np.abs(self._get_max_err())
+                self.error_map_scale = round(self.vmax / error_max, 1)
+
+        elif self.error_map_type == "RelativeL1":
+            self.error_map_cmap = "inferno"
+            self.DifferenceColorMapper = ColorMap(self.error_map_cmap)
+            self.error_map_scale = round(self.vmax)
+
         else:
             error.warning("Error map type does not have autoformat.")
+
+    def _get_max_err(self):
+        """
+        Get the max error for the current slice
+        """
+
+        error_data = self.slice()["error_map"]
+
+        if self.metrics_reference in error_data:
+            error_data.pop(self.metrics_reference)
+
+        error_np = np.stack([d.data["Value"] for d in error_data.values()])
+        error_np[np.isnan(error_np)] = 0
+
+        return np.percentile(error_np, 99.9)
