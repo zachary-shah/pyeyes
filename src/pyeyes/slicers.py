@@ -36,7 +36,7 @@ def _format_image(plot, element):
     # Constant height for the figure title
     if plot.state.title.text_font_size[-2:] in ["px", "pt"]:
         tfs = int(plot.state.title.text_font_size[:-2]) * 2 + plot.border
-        plot.state.height = plot.state.height + tfs
+        plot.state.height = plot.height + tfs
     elif plot.state.title.text_font_size[-2:] == "em":
         pass  # Child of parent uses relative font size
     else:
