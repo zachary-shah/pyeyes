@@ -19,7 +19,8 @@ from .cmap.cmap import (
     ColorMap,
     QuantitativeColorMap,
 )
-from .enums import CPLX_VIEW_MAP, METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
+from .enums import METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
+from .utils import CPLX_VIEW_MAP
 
 hv.extension("bokeh")
 
@@ -395,7 +396,10 @@ class NDSlicer(param.Parameterized):
                 tar_img = np.copy(imgs[k].data["Value"])
 
                 # Don't normalize with quantitative maps - we care about absolute
-                if self._infer_quantitative_maptype() is None:
+                if (
+                    self._infer_quantitative_maptype() is None
+                    and self.cplx_view != "phase"
+                ):
                     tar_img = utils.normalize(
                         tar_img, ref_img, ofs=True, mag=np.iscomplexobj(tar_img)
                     )
