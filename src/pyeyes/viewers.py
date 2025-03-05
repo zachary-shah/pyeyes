@@ -517,12 +517,16 @@ class ComparativeViewer(Viewer, param.Parameterized):
                     value=self.slicer.dim_indices[dim],
                 )
             else:
-                s = pn.widgets.EditableIntSlider(
-                    name=dim,
-                    start=0,
-                    end=self.slicer.dim_sizes[dim] - 1,
-                    value=self.slicer.dim_indices[dim],
-                )
+                if self.slicer.dim_sizes[dim] - 1 > 0:
+                    s = pn.widgets.EditableIntSlider(
+                        name=dim,
+                        start=0,
+                        end=self.slicer.dim_sizes[dim] - 1,
+                        value=self.slicer.dim_indices[dim],
+                    )
+                else:
+                    print(f"Detected '{dim}' is singleton. Cannot slice.")
+                    continue
 
             def _update_dim_indices(event, this_dim=dim):
 
