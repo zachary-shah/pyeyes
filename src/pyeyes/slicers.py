@@ -406,6 +406,7 @@ class NDSlicer(param.Parameterized):
                         metrics_dict[k][metric] = metrics.METRIC_CALLABLES[metric](
                             tar_img,
                             ref_img,
+                            isphase=self.cplx_view == "phase",
                         )
 
                 if self.metrics_state in [METRICS_STATE.MAP, METRICS_STATE.ALL]:
@@ -413,6 +414,7 @@ class NDSlicer(param.Parameterized):
                         tar_img,
                         ref_img,
                         return_map=True,
+                        isphase=self.cplx_view == "phase",
                     )
                     error_map = self.DifferenceColorMapper.preprocess_data(error_map)
                     error_maps[k] = utils.clone_dataset(imgs[k], error_map, link=False)
