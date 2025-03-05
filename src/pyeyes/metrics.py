@@ -26,14 +26,14 @@ def diff(recon: np.ndarray, true: np.ndarray, return_map=False, isphase=False) -
     assert recon.shape == true.shape, "Input array dimensions mismatch."
 
     if isphase:
-        diff = np.angle(np.exp(1j * recon) / np.exp(1j * true))
+        diff_map = np.angle(np.exp(1j * recon) / np.exp(1j * true))
     else:
-        diff = recon - true
+        diff_map = recon - true
 
     if return_map:
-        return diff
+        return diff_map
 
-    return np.mean(diff)
+    return np.mean(diff_map)
 
 
 def L1Diff(
