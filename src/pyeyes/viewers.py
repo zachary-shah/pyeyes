@@ -14,6 +14,7 @@ from . import config, error, metrics, themes
 from .cmap.cmap import VALID_COLORMAPS, VALID_ERROR_COLORMAPS
 from .enums import METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
 from .slicers import NDSlicer
+from .utils import tonp
 
 hv.extension("bokeh")
 pn.extension(notifications=True)
@@ -96,8 +97,13 @@ class ComparativeViewer(Viewer, param.Parameterized):
         from_config = config_path is not None and os.path.exists(config_path)
 
         # Defaults
+        if not isinstance(data, dict):
+            data = tonp(data)
+
         if isinstance(data, np.ndarray):
             data = {"Image": data}
+
+        data = {k: tonp(v) for k, v in data.items()}
 
         if named_dims is None or len(named_dims) == 0:
             named_dims = [f"Dim {i}" for i in range(data["Image"].ndim)]
