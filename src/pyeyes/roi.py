@@ -253,9 +253,7 @@ class ROI:
         Hard-coded serialization for use in saving config by viewer.
         FIXME: color-maps do not serialize.
         """
-        return {
-            "point1": {"x": self.point1.x, "y": self.point1.y},
-            "point2": {"x": self.point2.x, "y": self.point2.y},
+        out_dict = {
             "roi_loc": self.roi_loc.value,
             "zoom_scale": self.zoom_scale,
             "color": self.color,
@@ -264,19 +262,35 @@ class ROI:
             "padding_pct": self.padding_pct,
         }
 
+        if self.point1 is not None:
+            out_dict["point1"] = {"x": self.point1.x, "y": self.point1.y}
+        if self.point2 is not None:
+            out_dict["point2"] = {"x": self.point2.x, "y": self.point2.y}
+
+        return out_dict
+
     def init_from_config(self, cfg: dict, cmap):
         """
         Initialize ROI from hard-coded serialized config.
         For now, assuming that cmap is passed in separately.
         """
-        self.point1 = Point(cfg["point1"]["x"], cfg["point1"]["y"])
-        self.point2 = Point(cfg["point2"]["x"], cfg["point2"]["y"])
+
         self.roi_loc = ROI_LOCATION(cfg["roi_loc"])
         self.zoom_scale = cfg["zoom_scale"]
         self.color = cfg["color"]
         self.line_width = cfg["line_width"]
         self.zoom_order = cfg["zoom_order"]
         self.padding_pct = cfg["padding_pct"]
+
+        if "point1" in cfg:
+            self.point1 = Point(cfg["point1"]["x"], cfg["point1"]["y"])
+        else:
+            self.point1 = None
+
+        if "point2" in cfg:
+            self.point2 = Point(cfg["point2"]["x"], cfg["point2"]["y"])
+        else:
+            self.point2 = None
 
         # cmap not serializeable so handle separately.
         self.cmap = cmap

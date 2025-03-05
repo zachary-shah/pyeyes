@@ -4,9 +4,27 @@ Initial prototype of config class for current factoring of project.
 
 import enum
 
+import numpy as np
 import param
 
 from .enums import *  # noqa F403
+
+
+def json_serial(obj):
+    if isinstance(obj, (str, int, float, bool)):
+        return obj
+    if isinstance(obj, (np.integer, np.floating)):
+        return obj.item()  # Convert NumPy scalar to Python scalar
+    elif isinstance(obj, np.ndarray):
+        return json_serial(obj.tolist())  # Convert NumPy array to Python list
+    elif isinstance(obj, tuple):
+        return (json_serial(o) for o in obj)
+    elif isinstance(obj, list):
+        return [json_serial(o) for o in obj]
+    elif isinstance(obj, dict):
+        return {k: json_serial(v) for k, v in obj.items()}
+    else:
+        raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 
 def serialize_parameters(obj: param.Parameterized) -> dict:
