@@ -8,7 +8,7 @@ import numpy as np
 from pyeyes.viewers import ComparativeViewer
 
 # Load Data
-mrf_folder = "/local_mount/space/mayday/data/users/zachs/zachplotlib/data/mrf"
+mrf_folder = "/local_mount/space/mayday/data/users/zachs/pyeyes/data/mrf"
 llr_1min_pd = np.load(f"{mrf_folder}/llr_1min_pd.npy")
 llr_1min_t1 = np.load(f"{mrf_folder}/llr_1min_t1.npy")
 llr_1min_t2 = np.load(f"{mrf_folder}/llr_1min_t2.npy")

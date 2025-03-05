@@ -12,13 +12,11 @@ set_theme("dark")
 
 # Data
 festive_pth = (
-    "/local_mount/space/mayday/data/users/zachs/zachplotlib/data/dwi/recon_festive.npy"
+    "/local_mount/space/mayday/data/users/zachs/pyeyes/data/dwi/recon_festive.npy"
 )
-skope_pth = (
-    "/local_mount/space/mayday/data/users/zachs/zachplotlib/data/dwi/recon_skope.npy"
-)
+skope_pth = "/local_mount/space/mayday/data/users/zachs/pyeyes/data/dwi/recon_skope.npy"
 uncorr_pth = (
-    "/local_mount/space/mayday/data/users/zachs/zachplotlib/data/dwi/recon_uncorr.npy"
+    "/local_mount/space/mayday/data/users/zachs/pyeyes/data/dwi/recon_uncorr.npy"
 )
 
 festive = np.load(festive_pth)  # Bdir x X x Y x Z
