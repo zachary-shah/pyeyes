@@ -600,6 +600,21 @@ class ComparativeViewer(Viewer, param.Parameterized):
         size_scale_widget.param.watch(size_scale_callback, "value")
         sliders["size_scale"] = size_scale_widget
 
+        # Title font size
+        title_font_input = pn.widgets.EditableIntSlider(
+            name="Title Font Size",
+            start=self.slicer.param.title_font_size.bounds[0],
+            end=self.slicer.param.title_font_size.bounds[1],
+            value=self.slicer.title_font_size,
+            step=self.slicer.param.title_font_size.step,
+        )
+
+        def _update_title_font_size(event):
+            self.slicer.title_font_size = event.new
+
+        title_font_input.param.watch(_update_title_font_size, "value")
+        sliders["title_font_size"] = title_font_input
+
         # bounding box crop for each L/R/U/D edge
         lr_crop_slider = pn.widgets.IntRangeSlider(
             name="L/R Display Range",

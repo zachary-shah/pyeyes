@@ -34,7 +34,7 @@ def _format_image(plot, element):
     plot.state.border_fill_color = themes.VIEW_THEME.background_color
 
     # Constant height for the figure title
-    if plot.state.title.text_font_size[-2:] == "px":
+    if plot.state.title.text_font_size[-2:] in ["px", "pt"]:
         tfs = int(plot.state.title.text_font_size[:-2]) * 2 + plot.border
         plot.state.height = plot.state.height + tfs
     elif plot.state.title.text_font_size[-2:] == "em":
@@ -80,6 +80,7 @@ def _format_colorbar(plot, element):
 
     # sizes
     p.width = int(plot.state.width * (0.22 - 0.03 * (p.title is not None)))
+
     p.major_label_text_font_size = f"{int(plot.state.width/8)}pt"
     p.title_text_font_size = f"{int(plot.state.width/8)}pt"
 
@@ -111,6 +112,7 @@ def _format_colorbar(plot, element):
 
 class NDSlicer(param.Parameterized):
     # Viewing Parameters
+    title_font_size = param.Number(default=12, bounds=(2, 36), step=1)
     vmin = param.Number(default=0.0)
     vmax = param.Number(default=1.0)
     size_scale = param.Number(default=400, bounds=(200, 1000), step=10)
@@ -474,6 +476,7 @@ class NDSlicer(param.Parameterized):
             height=int(main_height),
             invert_yaxis=self.flip_ud,
             invert_xaxis=self.flip_lr,
+            fontscale=(self.title_font_size / 12),
             hooks=[_format_image],
             **shared_opts,
         )
@@ -511,6 +514,9 @@ class NDSlicer(param.Parameterized):
             width=cbar_width,
             colorbar_position="right",
             shared_axes=False,  # Unlink from holoviews shared toolbar
+            fontscale=(
+                self.title_font_size / 12
+            ),  # div by 12 because fontscale=1 is font=12pt
             hooks=[
                 _format_image,
                 _hide_image,
@@ -918,6 +924,7 @@ class NDSlicer(param.Parameterized):
         "roi_state",
         "error_map_scale",
         "metrics_state",
+        "title_font_size",
         watch=True,
     )
     @error.error_handler_decorator()
