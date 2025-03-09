@@ -14,6 +14,7 @@ from . import config, error, metrics, themes
 from .cmap.cmap import VALID_COLORMAPS, VALID_ERROR_COLORMAPS
 from .enums import METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
 from .slicers import NDSlicer
+from .utils import tonp
 
 hv.extension("bokeh")
 pn.extension(notifications=True)
@@ -96,8 +97,13 @@ class ComparativeViewer(Viewer, param.Parameterized):
         from_config = config_path is not None and os.path.exists(config_path)
 
         # Defaults
+        if not isinstance(data, dict):
+            data = tonp(data)
+
         if isinstance(data, np.ndarray):
             data = {"Image": data}
+
+        data = {k: tonp(v) for k, v in data.items()}
 
         if named_dims is None or len(named_dims) == 0:
             named_dims = [f"Dim {i}" for i in range(data["Image"].ndim)]
@@ -228,7 +234,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         # make sure roi_state is consistent with widgets
         if from_config:
             self._roi_state_watcher(self.slicer.roi_state)
-            self._update_error_map_type(self.slicer.error_map_type)
+            self._update_error_map_type(self.slicer.error_map_type, autoformat=False)
         else:
             self._autoscale_clim(event=None)
 
@@ -511,12 +517,16 @@ class ComparativeViewer(Viewer, param.Parameterized):
                     value=self.slicer.dim_indices[dim],
                 )
             else:
-                s = pn.widgets.EditableIntSlider(
-                    name=dim,
-                    start=0,
-                    end=self.slicer.dim_sizes[dim] - 1,
-                    value=self.slicer.dim_indices[dim],
-                )
+                if self.slicer.dim_sizes[dim] - 1 > 0:
+                    s = pn.widgets.EditableIntSlider(
+                        name=dim,
+                        start=0,
+                        end=self.slicer.dim_sizes[dim] - 1,
+                        value=self.slicer.dim_indices[dim],
+                    )
+                else:
+                    print(f"Detected '{dim}' is singleton. Cannot slice.")
+                    continue
 
             def _update_dim_indices(event, this_dim=dim):
 
@@ -593,6 +603,21 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         size_scale_widget.param.watch(size_scale_callback, "value")
         sliders["size_scale"] = size_scale_widget
+
+        # Title font size
+        title_font_input = pn.widgets.EditableIntSlider(
+            name="Title Font Size",
+            start=self.slicer.param.title_font_size.bounds[0],
+            end=self.slicer.param.title_font_size.bounds[1],
+            value=self.slicer.title_font_size,
+            step=self.slicer.param.title_font_size.step,
+        )
+
+        def _update_title_font_size(event):
+            self.slicer.title_font_size = event.new
+
+        title_font_input.param.watch(_update_title_font_size, "value")
+        sliders["title_font_size"] = title_font_input
 
         # bounding box crop for each L/R/U/D edge
         lr_crop_slider = pn.widgets.IntRangeSlider(
@@ -1009,9 +1034,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
     def _roi_state_watcher(self, event):
 
-        try:
+        if hasattr(event, "new"):
             new_state = event.new
-        except AttributeError:
+        else:
             new_state = event
 
         # Clear button enabled or not
@@ -1213,14 +1238,14 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         return widgets
 
-    def _update_error_map_type(self, event):
+    def _update_error_map_type(self, event, autoformat=True):
         """
         Make sure error map gets the right formatting.
         """
 
-        try:
+        if hasattr(event, "new"):
             new_type = event.new
-        except AttributeError:
+        else:
             new_type = event
 
         with param.parameterized.discard_events(self.slicer):
@@ -1230,7 +1255,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             "Analysis", "error_scale", "visible", new_type != "SSIM"
         )
 
-        if self.slicer.metrics_state != METRICS_STATE.INACTIVE:
+        if self.slicer.metrics_state != METRICS_STATE.INACTIVE and autoformat:
             with param.parameterized.discard_events(self.slicer):
                 self._autoformat_error_map(None)
             self.slicer.param.trigger("metrics_state")
@@ -1287,25 +1312,25 @@ class ComparativeViewer(Viewer, param.Parameterized):
             pn.state.notifications.warning("No path provided to export config.")
             return
 
-        try:
-            exp_dir = os.path.dirname(self.config_path)
+        exp_dir = os.path.dirname(self.config_path)
 
-            if len(exp_dir) > 2:
-                os.makedirs(exp_dir, exist_ok=True)
+        if len(exp_dir) > 2:
+            os.makedirs(exp_dir, exist_ok=True)
 
-            viewer_config = config.serialize_parameters(self)
-            slicer_config = config.serialize_parameters(self.slicer)
+        viewer_config = config.serialize_parameters(self)
+        slicer_config = config.serialize_parameters(self.slicer)
+        if self.slicer.ROI is not None:
             roi_config = self.slicer.ROI.serialize()
-            config_dict = {
-                "viewer_config": viewer_config,
-                "slicer_config": slicer_config,
-                "roi_config": roi_config,
-            }
+        else:
+            roi_config = None
 
-            with open(self.config_path, "w") as f:
-                json.dump(config_dict, f, indent=4)
+        config_dict = {
+            "viewer_config": viewer_config,
+            "slicer_config": slicer_config,
+            "roi_config": roi_config,
+        }
 
-            pn.state.notifications.success(f"Config saved to {self.config_path}")
+        with open(self.config_path, "w") as f:
+            json.dump(config_dict, f, indent=4, default=config.json_serial)
 
-        except Exception as e:
-            pn.state.notifications.error(f"Error saving config: {e}")
+        pn.state.notifications.success(f"Config saved to {self.config_path}")
