@@ -173,3 +173,22 @@ def debug_imshow(data_dict: Dict[str, hv.Dataset]):
 
     # show
     pn.serve(pn.Column(layout), show=True)
+
+
+def masked_angle(x, thresh=1e-2):
+    """
+    Display angle of any array where magnitude is above threshold
+    """
+    mask = np.abs(x) / np.max(np.abs(x)) < thresh
+    x = np.angle(x)
+    x[mask] = 0
+    return x
+
+
+# Complex view mapping
+CPLX_VIEW_MAP = {
+    "mag": np.abs,
+    "phase": masked_angle,
+    "real": np.real,
+    "imag": np.imag,
+}

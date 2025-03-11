@@ -8,6 +8,8 @@ __pycache__/
 
 play/
 tests/profs/
+tests/exports/
 
 # deploy
 dist/
+.vscode

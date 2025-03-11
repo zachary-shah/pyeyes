@@ -10,7 +10,7 @@ mpl_backend("WebAgg")
 dti_type = "festive"  # 'skope', 'uncorr', or 'festive'
 
 # TODO: allow multiple DTI to compare like with ComparativeViewer. This will need to handle color dims tho
-dti_root = "/local_mount/space/mayday/data/users/zachs/zachplotlib/data/dti/dtifit"
+dti_root = "/local_mount/space/mayday/data/users/zachs/pyeyes/data/dti/dtifit"
 dti_folder = f"{dti_root}/{dti_type}/{dti_type}_b1000_DTI"
 
 Viewer = plot_dti(

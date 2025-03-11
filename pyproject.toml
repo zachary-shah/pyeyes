@@ -55,5 +55,5 @@ package-dir = {"" = "src"}
 pyeyes = ["cmap/*.csv"]
 
 [tool.setuptools_scm]
-version_scheme = "post-release"
-local_scheme = "node-and-date"
+version_scheme = "guess-next-dev"
+local_scheme = "no-local-version"

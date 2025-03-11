@@ -55,12 +55,3 @@ class ROI_LOCATION(Enum):
     TOP_RIGHT = "Top Right"
     BOTTOM_LEFT = "Bottom Left"
     BOTTOM_RIGHT = "Bottom Right"
-
-
-# Complex view mapping
-CPLX_VIEW_MAP = {
-    "mag": np.abs,
-    "phase": np.angle,
-    "real": np.real,
-    "imag": np.imag,
-}

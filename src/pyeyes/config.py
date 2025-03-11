@@ -4,9 +4,36 @@ Initial prototype of config class for current factoring of project.
 
 import enum
 
+import numpy as np
 import param
 
 from .enums import *  # noqa F403
+
+# TODO: manage these better
+UNSERIALIZED_OBJECTS_KEYS = [
+    "cmap",
+    "roi_cmap",
+    "error_map_type",
+    "error_map_cmap",
+    "metrics_text_types",
+]
+
+
+def json_serial(obj):
+    if isinstance(obj, (str, int, float, bool)):
+        return obj
+    if isinstance(obj, (np.integer, np.floating)):
+        return obj.item()  # Convert NumPy scalar to Python scalar
+    elif isinstance(obj, np.ndarray):
+        return json_serial(obj.tolist())  # Convert NumPy array to Python list
+    elif isinstance(obj, tuple):
+        return (json_serial(o) for o in obj)
+    elif isinstance(obj, list):
+        return [json_serial(o) for o in obj]
+    elif isinstance(obj, dict):
+        return {k: json_serial(v) for k, v in obj.items()}
+    else:
+        raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 
 def serialize_parameters(obj: param.Parameterized) -> dict:
@@ -45,7 +72,8 @@ def serialize_parameters(obj: param.Parameterized) -> dict:
                 param_info["bounds"] = p.bounds
                 param_info["step"] = p.step
             elif isinstance(p, (param.ObjectSelector, param.ListSelector)):
-                param_info["objects"] = p.objects
+                if name not in UNSERIALIZED_OBJECTS_KEYS:
+                    param_info["objects"] = p.objects
 
         serialized[name] = param_info
 
@@ -79,7 +107,8 @@ def deserialize_parameters(obj: param.Parameterized, serialized: dict):
                 p.bounds = param_info["bounds"]
                 p.step = param_info["step"]
             elif isinstance(p, (param.ObjectSelector, param.ListSelector)):
-                p.objects = param_info["objects"]
+                if name not in UNSERIALIZED_OBJECTS_KEYS:
+                    p.objects = param_info["objects"]
 
             if isinstance(p, (param.Range)):
                 value = tuple(value)

@@ -19,7 +19,8 @@ from .cmap.cmap import (
     ColorMap,
     QuantitativeColorMap,
 )
-from .enums import CPLX_VIEW_MAP, METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
+from .enums import METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
+from .utils import CPLX_VIEW_MAP
 
 hv.extension("bokeh")
 
@@ -34,9 +35,9 @@ def _format_image(plot, element):
     plot.state.border_fill_color = themes.VIEW_THEME.background_color
 
     # Constant height for the figure title
-    if plot.state.title.text_font_size[-2:] == "px":
+    if plot.state.title.text_font_size[-2:] in ["px", "pt"]:
         tfs = int(plot.state.title.text_font_size[:-2]) * 2 + plot.border
-        plot.state.height = plot.state.height + tfs
+        plot.state.height = plot.height + tfs
     elif plot.state.title.text_font_size[-2:] == "em":
         pass  # Child of parent uses relative font size
     else:
@@ -80,6 +81,7 @@ def _format_colorbar(plot, element):
 
     # sizes
     p.width = int(plot.state.width * (0.22 - 0.03 * (p.title is not None)))
+
     p.major_label_text_font_size = f"{int(plot.state.width/8)}pt"
     p.title_text_font_size = f"{int(plot.state.width/8)}pt"
 
@@ -111,6 +113,7 @@ def _format_colorbar(plot, element):
 
 class NDSlicer(param.Parameterized):
     # Viewing Parameters
+    title_font_size = param.Number(default=12, bounds=(2, 36), step=1)
     vmin = param.Number(default=0.0)
     vmax = param.Number(default=1.0)
     size_scale = param.Number(default=400, bounds=(200, 1000), step=10)
@@ -393,7 +396,10 @@ class NDSlicer(param.Parameterized):
                 tar_img = np.copy(imgs[k].data["Value"])
 
                 # Don't normalize with quantitative maps - we care about absolute
-                if self._infer_quantitative_maptype() is None:
+                if (
+                    self._infer_quantitative_maptype() is None
+                    and self.cplx_view != "phase"
+                ):
                     tar_img = utils.normalize(
                         tar_img, ref_img, ofs=True, mag=np.iscomplexobj(tar_img)
                     )
@@ -404,6 +410,7 @@ class NDSlicer(param.Parameterized):
                         metrics_dict[k][metric] = metrics.METRIC_CALLABLES[metric](
                             tar_img,
                             ref_img,
+                            isphase=self.cplx_view == "phase",
                         )
 
                 if self.metrics_state in [METRICS_STATE.MAP, METRICS_STATE.ALL]:
@@ -411,6 +418,7 @@ class NDSlicer(param.Parameterized):
                         tar_img,
                         ref_img,
                         return_map=True,
+                        isphase=self.cplx_view == "phase",
                     )
                     error_map = self.DifferenceColorMapper.preprocess_data(error_map)
                     error_maps[k] = utils.clone_dataset(imgs[k], error_map, link=False)
@@ -474,6 +482,7 @@ class NDSlicer(param.Parameterized):
             height=int(main_height),
             invert_yaxis=self.flip_ud,
             invert_xaxis=self.flip_lr,
+            fontscale=(self.title_font_size / 12),
             hooks=[_format_image],
             **shared_opts,
         )
@@ -511,6 +520,9 @@ class NDSlicer(param.Parameterized):
             width=cbar_width,
             colorbar_position="right",
             shared_axes=False,  # Unlink from holoviews shared toolbar
+            fontscale=(
+                self.title_font_size / 12
+            ),  # div by 12 because fontscale=1 is font=12pt
             hooks=[
                 _format_image,
                 _hide_image,
@@ -525,6 +537,11 @@ class NDSlicer(param.Parameterized):
 
         if self.error_map_type == "SSIM":
             diff_opts["clim"] = (0, 1)
+        elif self.error_map_type == "Diff":
+            diff_opts["clim"] = (
+                -self.vmax / self.error_map_scale,
+                self.vmax / self.error_map_scale,
+            )
         else:
             diff_opts["clim"] = (0, self.vmax / self.error_map_scale)
 
@@ -869,7 +886,7 @@ class NDSlicer(param.Parameterized):
         row = row.cols(Ncols)
 
         # Set attributes
-        self.Figure = pn.Row(row)
+        self.Figure = row
 
     def update_figure(self, input_data: Dict[str, dict]):
         """
@@ -913,6 +930,7 @@ class NDSlicer(param.Parameterized):
         "roi_state",
         "error_map_scale",
         "metrics_state",
+        "title_font_size",
         watch=True,
     )
     @error.error_handler_decorator()
@@ -1317,18 +1335,39 @@ class NDSlicer(param.Parameterized):
                 self.error_map_cmap = "inferno"
                 self.DifferenceColorMapper = ColorMap(self.error_map_cmap)
 
-            error_data = self.slice()["error_map"]
-
-            if self.metrics_reference in error_data:
-                error_data.pop(self.metrics_reference)
-
-            error_np = np.stack([d.data["Value"] for d in error_data.values()])
-            error_np[np.isnan(error_np)] = 0
-
-            error_max = np.percentile(error_np, 99.9)
+            error_max = self._get_max_err()
 
             if error_max > 1e-10:
                 self.error_map_scale = round(self.vmax / error_max, 1)
 
+        elif self.error_map_type == "Diff":
+            self.error_map_cmap = "RdBu"
+            self.DifferenceColorMapper = ColorMap(self.error_map_cmap)
+            error_max = np.abs(self._get_max_err())
+
+            if error_max > 1e-10:
+                error_max = np.abs(self._get_max_err())
+                self.error_map_scale = round(self.vmax / error_max, 1)
+
+        elif self.error_map_type == "RelativeL1":
+            self.error_map_cmap = "inferno"
+            self.DifferenceColorMapper = ColorMap(self.error_map_cmap)
+            self.error_map_scale = round(self.vmax)
+
         else:
             error.warning("Error map type does not have autoformat.")
+
+    def _get_max_err(self):
+        """
+        Get the max error for the current slice
+        """
+
+        error_data = self.slice()["error_map"]
+
+        if self.metrics_reference in error_data:
+            error_data.pop(self.metrics_reference)
+
+        error_np = np.stack([d.data["Value"] for d in error_data.values()])
+        error_np[np.isnan(error_np)] = 0
+
+        return np.percentile(error_np, 99.9)
