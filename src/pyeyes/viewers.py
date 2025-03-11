@@ -1,6 +1,7 @@
 import json
 import os
 import warnings
+from copy import deepcopy
 from typing import Dict, List, Optional, Sequence, Union
 
 import bokeh
@@ -58,6 +59,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
     # Config
     config_path = param.String(default="./config.yaml")
+    html_export_path = param.String(default="./viewer.html")
+    html_export_page_name = param.String(default="MRI Viewer")
 
     def __init__(
         self,
@@ -1301,6 +1304,34 @@ class ComparativeViewer(Viewer, param.Parameterized):
             on_click=self._export_config,
         )
 
+        widgets["export_html"] = pn.widgets.TextAreaInput(
+            name="Exported HTML Save Path",
+            value=self.html_export_path,
+            placeholder="Enter path to export viewer as interactive html",
+        )
+
+        def _update_export_path(event):
+            self.html_export_path = event.new
+
+        widgets["export_html"].param.watch(_update_export_path, "value")
+
+        widgets["export_html_page_name"] = pn.widgets.TextAreaInput(
+            name="Exported HTML Page Name",
+            value=self.html_export_page_name,
+            placeholder="Enter a name for the page of the exported HTML",
+        )
+
+        def _update_export_page(event):
+            self.html_export_page_name = event.new
+
+        widgets["export_html_page_name"].param.watch(_update_export_page, "value")
+
+        widgets["export_html_button"] = pn.widgets.Button(
+            name="Export HTML",
+            button_type="primary",
+            on_click=self._export_html,
+        )
+
         return widgets
 
     @error.error_handler_decorator()
@@ -1334,3 +1365,101 @@ class ComparativeViewer(Viewer, param.Parameterized):
             json.dump(config_dict, f, indent=4, default=config.json_serial)
 
         pn.state.notifications.success(f"Config saved to {self.config_path}")
+
+    def _export_html(self, event):
+        # FIXME: for cat dims. Issue for MRF with changing colormaps.
+        if self.html_export_path is None:
+            pn.state.notifications.warning("No path provided to export html to.")
+            return
+
+        # save current sdims
+        curr_sdims = deepcopy(self.slicer.dim_indices)
+
+        # save each webpage
+        out_dir = os.path.dirname(self.html_export_path)
+        os.makedirs(out_dir, exist_ok=True)
+
+        # ignore cat dims
+        sdims = self.slicer.sdims
+        if len(self.cat_dims) > 0:
+            pn.state.notifications.warning(
+                f"Attempting Save of HTML to {self.html_export_path}. \
+                Categorial export support is limited... Exporting currently selected categories.",
+                duration=5000,
+            )
+            sdims = [dim for dim in sdims if dim not in self.cat_dims.keys()]
+        else:
+            pn.state.notifications.info(
+                f"Saving Static HTML to {self.html_export_path}...", duration=0
+            )
+
+        # Internal class for simple view of export
+        class Exporter(param.Parameterized):
+
+            dim_indices = param.Dict(
+                default={}, doc="Mapping: dim_name -> int or categorical index"
+            )
+
+            def __init__(self, slicer: NDSlicer, dim_indices: dict, **params):
+                super().__init__(**params)
+                self.slicer = slicer
+                self.dim_indices = dim_indices
+
+            @param.depends("dim_indices")
+            def view(self):
+                with param.parameterized.discard_events(self.slicer):
+                    for dim, val in self.dim_indices.items():
+                        self.slicer.dim_indices[dim] = val
+                    # return new view
+                    return self.slicer.view()
+
+        exporter = Exporter(self.slicer, self.slicer.dim_indices)
+
+        export_sliders = {}
+        embed_states = {}
+        max_opts = 0
+        for dim in sdims:
+            curr_dim = dim
+            max_opts = max(max_opts, self.slicer.dim_sizes[curr_dim])
+            slider = pn.widgets.IntSlider(
+                name=curr_dim,
+                start=0,
+                end=self.slicer.dim_sizes[curr_dim] - 1,
+                value=0,
+            )
+            embed_states[slider] = list(range(self.slicer.dim_sizes[curr_dim]))
+
+            def update_export_dim(event, this_dim=curr_dim):
+                exporter.dim_indices[this_dim] = event.new
+                exporter.param.trigger("dim_indices")
+
+            slider.param.watch(update_export_dim, "value")
+            export_sliders[curr_dim] = slider
+
+        export_layout = pn.Row(pn.Column(*export_sliders.values()), exporter.view)
+
+        export_panel = pn.panel(export_layout)
+        export_panel.save(
+            self.html_export_path,
+            title=self.html_export_page_name,
+            embed=True,
+            max_opts=max_opts,
+            resources="inline",
+            embed_states=embed_states,
+        )
+
+        # # edit html to have black background
+        if themes.VIEW_THEME in [themes.dark_theme, themes.dark_soft_theme]:
+            with open(self.html_export_path, "r") as f:
+                lines = f.readlines()
+            lines[1] = '<html lang="en" style="background-color: black;">\n'
+            with open(self.html_export_path, "w") as f:
+                f.writelines(lines)
+
+        # restore slices
+        for dim, val in curr_sdims.items():
+            self.slicer.dim_indices[dim] = val
+        self.slicer.param.trigger("dim_indices")
+
+        pn.state.notifications.clear()
+        pn.state.notifications.success("Static HTML saved!", duration=0)

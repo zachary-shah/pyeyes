@@ -886,7 +886,7 @@ class NDSlicer(param.Parameterized):
         row = row.cols(Ncols)
 
         # Set attributes
-        self.Figure = pn.Row(row)
+        self.Figure = row
 
     def update_figure(self, input_data: Dict[str, dict]):
         """
