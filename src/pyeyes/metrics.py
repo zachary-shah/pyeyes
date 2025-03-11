@@ -18,7 +18,7 @@ MAPPABLE_METRICS = [
     "Diff",
 ]
 
-TOL = 1e-5
+TOL = 1e-8
 
 
 def diff(recon: np.ndarray, true: np.ndarray, return_map=False, isphase=False) -> float:
@@ -47,6 +47,10 @@ def L1Diff(
     l1_diff = np.abs(diff_map)
 
     if return_map:
+        # prevent returning all nans
+        if np.max(l1_diff) < TOL:
+            return np.zeros_like(l1_diff)
+
         l1_diff[l1_diff < TOL] = np.nan
         return l1_diff
 
@@ -54,19 +58,31 @@ def L1Diff(
 
 
 def RelativeL1(
-    recon: np.ndarray, true: np.ndarray, return_map=False, isphase=False
+    recon: np.ndarray,
+    true: np.ndarray,
+    return_map=False,
+    isphase=False,
+    eps=1e-9,
 ) -> float:
 
     assert recon.shape == true.shape, "Input array dimensions mismatch."
 
     diff_map = diff(recon, true, return_map=True, isphase=isphase)
 
-    rel_diff = np.abs(diff_map) / (np.abs(true) + 1e-9)
-
-    if return_map:
-        return rel_diff
+    rel_diff = np.abs(diff_map) / (np.abs(true) + eps)
 
     valid = np.abs(true) > TOL
+
+    if return_map:
+        if np.sum(valid) == 0:
+            return np.zeros_like(rel_diff)
+
+        rel_diff[~valid] = np.nan
+
+        return rel_diff
+
+    if np.sum(valid) == 0:
+        return 0.0
 
     return np.mean(rel_diff[valid])
 
@@ -88,6 +104,11 @@ def RMSE(recon: np.ndarray, true: np.ndarray, return_map=False, isphase=False) -
 
     if return_map:
         mse = np.sqrt(mse)
+
+        # prevent returning all nans
+        if np.max(mse) < TOL:
+            return np.zeros_like(mse)
+
         mse[mse < TOL] = np.nan
         return mse
 
@@ -109,12 +130,16 @@ def NRMSE(
     mse = np.abs(diff_map) ** 2
 
     if return_map:
+        if np.max(np.abs(true)) < TOL:
+            return np.zeros_like(mse)
         nrmse = mse / ((np.abs(true) ** 2) + eps)
-        nrmse[nrmse < eps] = np.nan
+        if np.max(nrmse) < TOL:
+            return np.zeros_like(nrmse)
+        nrmse[nrmse < TOL] = np.nan
         nrmse[nrmse > (1 / eps)] = np.nan
         return np.sqrt(nrmse)
 
-    nrmse = np.mean(mse) / np.mean(np.abs(true) ** 2)
+    nrmse = np.mean(mse) / (np.mean(np.abs(true) ** 2) + eps)
     return np.sqrt(nrmse)
 
 
@@ -139,6 +164,13 @@ def SSIM(
     lower_bound = np.percentile(true_abs, percentiles[0])
     data_range = upper_bound - lower_bound
 
+    # all zeros case
+    if data_range < TOL:
+        if return_map:
+            return np.ones_like(recon)
+        else:
+            return 1.0
+
     if return_map:
         ssim_map = compare_ssim(recon, true, full=True, data_range=data_range)[1]
         return ssim_map
@@ -157,9 +189,15 @@ def PSNR(
 
     max_val = np.percentile(np.abs(true), max_percentile)
 
-    mse = RMSE(recon, true, isphase=isphase)
+    if max_val < TOL:
+        return np.inf
 
-    psnr = 20 * np.log10(max_val / mse)
+    rmse = RMSE(recon, true, isphase=isphase)
+
+    if rmse < TOL:
+        return np.inf
+
+    psnr = 20 * np.log10(max_val / rmse)
 
     return psnr
 

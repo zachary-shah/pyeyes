@@ -9,6 +9,15 @@ import param
 
 from .enums import *  # noqa F403
 
+# TODO: manage these better
+UNSERIALIZED_OBJECTS_KEYS = [
+    "cmap",
+    "roi_cmap",
+    "error_map_type",
+    "error_map_cmap",
+    "metrics_text_types",
+]
+
 
 def json_serial(obj):
     if isinstance(obj, (str, int, float, bool)):
@@ -63,7 +72,8 @@ def serialize_parameters(obj: param.Parameterized) -> dict:
                 param_info["bounds"] = p.bounds
                 param_info["step"] = p.step
             elif isinstance(p, (param.ObjectSelector, param.ListSelector)):
-                param_info["objects"] = p.objects
+                if name not in UNSERIALIZED_OBJECTS_KEYS:
+                    param_info["objects"] = p.objects
 
         serialized[name] = param_info
 
@@ -97,7 +107,8 @@ def deserialize_parameters(obj: param.Parameterized, serialized: dict):
                 p.bounds = param_info["bounds"]
                 p.step = param_info["step"]
             elif isinstance(p, (param.ObjectSelector, param.ListSelector)):
-                p.objects = param_info["objects"]
+                if name not in UNSERIALIZED_OBJECTS_KEYS:
+                    p.objects = param_info["objects"]
 
             if isinstance(p, (param.Range)):
                 value = tuple(value)
