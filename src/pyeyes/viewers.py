@@ -1284,9 +1284,14 @@ class ComparativeViewer(Viewer, param.Parameterized):
         self.slicer.param.trigger("error_map_scale")
 
     def _build_export_widgets(self) -> Dict[str, pn.widgets.Widget]:
+        # Default object width
+        dwidth = pn.widgets.IntInput().width
 
         widgets = {}
 
+        """
+        Export Config
+        """
         widgets["export_path"] = pn.widgets.TextAreaInput(
             name="Export Path",
             value=self.config_path,
@@ -1304,8 +1309,22 @@ class ComparativeViewer(Viewer, param.Parameterized):
             on_click=self._export_config,
         )
 
+        """
+        Export Static HTML
+        """
+        widgets["export_html_line"] = pn.pane.HTML(
+            "<hr>",
+            width=dwidth,
+        )
+
+        widgets["export_html_desc"] = pn.widgets.StaticText(
+            name="Save Static HTML",
+            value="Save the current view as an interactive HTML file. Interactively fast but memory intensive.",
+            width=dwidth,
+        )
+
         widgets["export_html"] = pn.widgets.TextAreaInput(
-            name="Exported HTML Save Path",
+            name="HTML Save Path",
             value=self.html_export_path,
             placeholder="Enter path to export viewer as interactive html",
         )
@@ -1325,6 +1344,23 @@ class ComparativeViewer(Viewer, param.Parameterized):
             self.html_export_page_name = event.new
 
         widgets["export_html_page_name"].param.watch(_update_export_page, "value")
+
+        widgets["export_html_ranges_desc"] = pn.widgets.StaticText(
+            name="Select Ranges",
+        )
+        # Make (start, stop, step) input for each non-cat sdim
+        noncat_sdims = [d for d in self.slicer.sdims if d not in self.cat_dims.keys()]
+        sss_margin = 5
+        s_width = (dwidth - 45) // 3
+        for dim in noncat_sdims:
+            start = pn.widgets.IntInput(name=f"{dim}: start", value=0, width=s_width)
+            stop = pn.widgets.IntInput(
+                name=f"{dim}: stop", value=self.slicer.dim_sizes[dim] - 1, width=s_width
+            )
+            step = pn.widgets.IntInput(name=f"{dim}: step", value=1, width=s_width)
+            widgets[f"{dim}_export_range"] = pn.Row(
+                start, stop, step, margin=sss_margin
+            )
 
         widgets["export_html_button"] = pn.widgets.Button(
             name="Export HTML",
@@ -1367,7 +1403,6 @@ class ComparativeViewer(Viewer, param.Parameterized):
         pn.state.notifications.success(f"Config saved to {self.config_path}")
 
     def _export_html(self, event):
-        # FIXME: for cat dims. Issue for MRF with changing colormaps.
         if self.html_export_path is None:
             pn.state.notifications.warning("No path provided to export html to.")
             return
@@ -1381,11 +1416,12 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # ignore cat dims
         sdims = self.slicer.sdims
+        pn.state.notifications.clear()
         if len(self.cat_dims) > 0:
             pn.state.notifications.warning(
                 f"Attempting Save of HTML to {self.html_export_path}. \
                 Categorial export support is limited... Exporting currently selected categories.",
-                duration=5000,
+                duration=0,
             )
             sdims = [dim for dim in sdims if dim not in self.cat_dims.keys()]
         else:
@@ -1420,14 +1456,33 @@ class ComparativeViewer(Viewer, param.Parameterized):
         max_opts = 0
         for dim in sdims:
             curr_dim = dim
-            max_opts = max(max_opts, self.slicer.dim_sizes[curr_dim])
+
+            dim_range_widget = self._get_app_widget("Export", f"{dim}_export_range")
+            start = dim_range_widget[0].value
+            stop = dim_range_widget[1].value
+            step = dim_range_widget[2].value
+            dim_range = list(range(start, stop + 1, step))
+            max_opts = max(max_opts, len(dim_range))
+            if start > stop:
+                pn.state.notifications.clear()
+                pn.state.notifications.error(
+                    f"Start value must be less than stop value for {dim}."
+                )
+                return
+            if stop > self.slicer.dim_sizes[curr_dim] - 1:
+                pn.state.notifications.clear()
+                pn.state.notifications.error(
+                    f"Stop value must be less than {self.slicer.dim_sizes[curr_dim]} for {dim}."
+                )
+                return
             slider = pn.widgets.IntSlider(
                 name=curr_dim,
-                start=0,
-                end=self.slicer.dim_sizes[curr_dim] - 1,
-                value=0,
+                start=start,
+                end=stop,
+                step=step,
+                value=start,
             )
-            embed_states[slider] = list(range(self.slicer.dim_sizes[curr_dim]))
+            embed_states[slider] = dim_range
 
             def update_export_dim(event, this_dim=curr_dim):
                 exporter.dim_indices[this_dim] = event.new
