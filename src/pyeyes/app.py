@@ -6,7 +6,7 @@ from .viewers import Viewer
 
 
 def launch_viewers(
-    viewer_dict: Union[Viewer, Dict[str, Viewer]], port: Optional[int] = None, **kwargs
+    viewer_dict: Union[Viewer, Dict[str, Viewer]], port: Optional[int] = 0, **kwargs
 ):
     """
     Launches a web page hosting viewer(s).
