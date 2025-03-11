@@ -494,6 +494,14 @@ class ComparativeViewer(Viewer, param.Parameterized):
                 for i, w in enumerate(list(new_sdim_widget_dict.keys())):
                     self._set_app_widget("View", f"sdim{i}", new_sdim_widget_dict[w])
 
+                # update start/stop/step widgets
+                new_export_widget_dict = self._build_export_widgets()
+                range_widgets = [
+                    w for w in new_export_widget_dict.keys() if "_export_range" in w
+                ]
+                for i, w in enumerate(range_widgets):
+                    self._set_app_widget("Export", w, new_export_widget_dict[w])
+
             # Reset crops
             self._set_app_widget_attr(
                 "View", "lr_crop", "bounds", (0, self.slicer.img_dims[0])
@@ -1286,16 +1294,25 @@ class ComparativeViewer(Viewer, param.Parameterized):
     def _build_export_widgets(self) -> Dict[str, pn.widgets.Widget]:
         # Default object width
         dwidth = pn.widgets.IntInput().width
+        box_height = 50
+        noncat_sdims = [d for d in self.slicer.sdims if d not in self.cat_dims.keys()]
 
         widgets = {}
 
         """
         Export Config
         """
+        widgets["export_path_desc"] = pn.widgets.StaticText(
+            name="Save Viewer Config",
+            value="Save config to yaml file. Use: Viewer(..., from_config=path).",
+            width=dwidth,
+        )
+
         widgets["export_path"] = pn.widgets.TextAreaInput(
-            name="Export Path",
+            name="Export Config Path",
             value=self.config_path,
             placeholder="Enter path to export config file",
+            height=box_height,
         )
 
         def _update_export_path(event):
@@ -1310,6 +1327,33 @@ class ComparativeViewer(Viewer, param.Parameterized):
         )
 
         """
+        Select ranges for Viewable
+        """
+        widgets["export_ranges_line"] = pn.pane.HTML(
+            "<hr>",
+            width=dwidth,
+        )
+
+        widgets["export_html_ranges_desc"] = pn.widgets.StaticText(
+            name="Select Ranges",
+            value="range dims for data exports.",
+            height=15,
+            width=dwidth,
+        )
+        # Make (start, stop, step) input for each non-cat sdim
+        sss_margin = 5
+        s_width = (dwidth - 45) // 3
+        for i, dim in enumerate(noncat_sdims):
+            start = pn.widgets.IntInput(name=f"{dim}: start", value=0, width=s_width)
+            stop = pn.widgets.IntInput(
+                name=f"{dim}: stop", value=self.slicer.dim_sizes[dim] - 1, width=s_width
+            )
+            step = pn.widgets.IntInput(name=f"{dim}: step", value=1, width=s_width)
+            widgets[f"dim{i}_export_range"] = pn.Row(
+                start, stop, step, margin=sss_margin
+            )
+
+        """
         Export Static HTML
         """
         widgets["export_html_line"] = pn.pane.HTML(
@@ -1319,7 +1363,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         widgets["export_html_desc"] = pn.widgets.StaticText(
             name="Save Static HTML",
-            value="Save the current view as an interactive HTML file. Interactively fast but memory intensive.",
+            value="Save an interactive HTML. Interactively fast but memory \
+                intensive. Exports for every dim along ranges specified above.",
             width=dwidth,
         )
 
@@ -1327,6 +1372,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="HTML Save Path",
             value=self.html_export_path,
             placeholder="Enter path to export viewer as interactive html",
+            height=box_height,
         )
 
         def _update_export_path(event):
@@ -1338,29 +1384,13 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="Exported HTML Page Name",
             value=self.html_export_page_name,
             placeholder="Enter a name for the page of the exported HTML",
+            height=box_height,
         )
 
         def _update_export_page(event):
             self.html_export_page_name = event.new
 
         widgets["export_html_page_name"].param.watch(_update_export_page, "value")
-
-        widgets["export_html_ranges_desc"] = pn.widgets.StaticText(
-            name="Select Ranges",
-        )
-        # Make (start, stop, step) input for each non-cat sdim
-        noncat_sdims = [d for d in self.slicer.sdims if d not in self.cat_dims.keys()]
-        sss_margin = 5
-        s_width = (dwidth - 45) // 3
-        for dim in noncat_sdims:
-            start = pn.widgets.IntInput(name=f"{dim}: start", value=0, width=s_width)
-            stop = pn.widgets.IntInput(
-                name=f"{dim}: stop", value=self.slicer.dim_sizes[dim] - 1, width=s_width
-            )
-            step = pn.widgets.IntInput(name=f"{dim}: step", value=1, width=s_width)
-            widgets[f"{dim}_export_range"] = pn.Row(
-                start, stop, step, margin=sss_margin
-            )
 
         widgets["export_html_button"] = pn.widgets.Button(
             name="Export HTML",
@@ -1415,7 +1445,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         os.makedirs(out_dir, exist_ok=True)
 
         # ignore cat dims
-        sdims = self.slicer.sdims
+        sdims = [d for d in self.slicer.sdims if d not in self.cat_dims.keys()]
         pn.state.notifications.clear()
         if len(self.cat_dims) > 0:
             pn.state.notifications.warning(
@@ -1423,7 +1453,6 @@ class ComparativeViewer(Viewer, param.Parameterized):
                 Categorial export support is limited... Exporting currently selected categories.",
                 duration=0,
             )
-            sdims = [dim for dim in sdims if dim not in self.cat_dims.keys()]
         else:
             pn.state.notifications.info(
                 f"Saving Static HTML to {self.html_export_path}...", duration=0
@@ -1454,10 +1483,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
         export_sliders = {}
         embed_states = {}
         max_opts = 0
-        for dim in sdims:
+        for i, dim in enumerate(sdims):
             curr_dim = dim
 
-            dim_range_widget = self._get_app_widget("Export", f"{dim}_export_range")
+            dim_range_widget = self._get_app_widget("Export", f"dim{i}_export_range")
             start = dim_range_widget[0].value
             stop = dim_range_widget[1].value
             step = dim_range_widget[2].value
