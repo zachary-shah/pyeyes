@@ -51,6 +51,8 @@ def _format_image(plot, element):
     plot.state.outline_line_alpha = 1.0
     plot.state.title.text_color = themes.VIEW_THEME.text_color
     plot.state.title.text_font = themes.VIEW_THEME.text_font
+    # Center title above image
+    plot.state.title.align = "center"
 
 
 def _hide_image(plot, element):
@@ -919,6 +921,7 @@ class NDSlicer(param.Parameterized):
             if (
                 self.metrics_state in [METRICS_STATE.TEXT, METRICS_STATE.ALL]
                 and k != self.metrics_reference
+                and k in self._metrics_pipe
             ):
                 self._metrics_pipe[k].send(input_data["metrics"][k])
 
