@@ -3,7 +3,16 @@ from typing import Dict, Union
 import holoviews as hv
 import numpy as np
 import panel as pn
-import torch
+
+TORCH_IMPORTED = False
+try:
+    import torch
+
+    TORCH_IMPORTED = True
+except ImportError:
+    print(
+        "Pyeyes Warning: torch install could not be found. Pyeyes may not be able to infer tensor types."
+    )
 
 from .enums import ROI_LOCATION
 
@@ -12,21 +21,27 @@ def rescale01(image):
     return (image - image.min()) / (image.max() - image.min())
 
 
-def tonp(x: Union[np.ndarray, torch.tensor]):
+def tonp(x: Union[np.ndarray, list, tuple]) -> np.ndarray:
     """
     Convert to numpy array
     """
-    if torch.is_tensor(x):
-        # resolve conj if needed
-        if x.is_complex():
-            x = x.detach().cpu().resolve_conj().numpy()
+    if TORCH_IMPORTED:
+        if torch.is_tensor(x):
+            # resolve conj if needed
+            if x.is_complex():
+                x = x.detach().cpu().resolve_conj().numpy()
+            else:
+                x = x.detach().cpu().numpy()
+            return x
+        elif isinstance(x, (list, tuple)):
+            return np.array(x)
         else:
-            x = x.detach().cpu().numpy()
-        return x
-    elif isinstance(x, (list, tuple)):
-        return np.array(x)
+            return x
     else:
-        return x
+        if isinstance(x, (list, tuple)):
+            return np.array(x)
+        else:
+            return x
 
 
 def normalize(shifted, target, ofs=True, mag=False, eps=1e-12):
