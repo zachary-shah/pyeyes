@@ -4,7 +4,6 @@ Test case:
 """
 
 import numpy as np
-import torch
 
 from pyeyes.viewers import ComparativeViewer
 

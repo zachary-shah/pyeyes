@@ -51,6 +51,8 @@ def _format_image(plot, element):
     plot.state.outline_line_alpha = 1.0
     plot.state.title.text_color = themes.VIEW_THEME.text_color
     plot.state.title.text_font = themes.VIEW_THEME.text_font
+    # Center title above image
+    plot.state.title.align = "center"
 
 
 def _hide_image(plot, element):
