@@ -43,7 +43,17 @@ class Viewer:
         """
         Launch the viewer.
         """
+        error.install_pyeyes_error_handler()
+        try:
+            return self._launch()
+        finally:
+            error.uninstall_pyeyes_error_handler()
 
+
+    def _launch(self):
+        """
+        Launch the viewer.
+        """
         raise NotImplementedError
 
 
@@ -241,7 +251,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         else:
             self._autoscale_clim(event=None)
 
-    def launch(self, title="MRI Viewer"):
+    def _launch(self, title="MRI Viewer"):
         """
         Launch the viewer.
         """
