@@ -38,6 +38,7 @@ QUANTITATIVE_MAPTYPES = [
     "R1ρ",
     "T2*",
     "R2*",
+    "T2s",
 ]
 
 
