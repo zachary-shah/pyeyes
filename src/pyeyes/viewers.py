@@ -1437,7 +1437,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         pn.state.notifications.success(f"Config saved to {self.config_path}")
 
-    def _export_html(self, event):
+    def _export_html(self, event, step_override=None):
         if self.html_export_path is None:
             pn.state.notifications.warning("No path provided to export html to.")
             return
@@ -1495,6 +1495,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
             start = dim_range_widget[0].value
             stop = dim_range_widget[1].value
             step = dim_range_widget[2].value
+            if step_override is not None:
+                step = step_override
             dim_range = list(range(start, stop + 1, step))
             max_opts = max(max_opts, len(dim_range))
             if start > stop:
@@ -1539,10 +1541,12 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # # edit html to have black background
         if themes.VIEW_THEME in [themes.dark_theme, themes.dark_soft_theme]:
-            with open(self.html_export_path, "r") as f:
+            with open(
+                self.html_export_path, "r", encoding="utf-8", errors="ignore"
+            ) as f:
                 lines = f.readlines()
             lines[1] = '<html lang="en" style="background-color: black;">\n'
-            with open(self.html_export_path, "w") as f:
+            with open(self.html_export_path, "w", encoding="utf-8") as f:
                 f.writelines(lines)
 
         # restore slices
