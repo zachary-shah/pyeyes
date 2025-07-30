@@ -640,64 +640,15 @@ class NDSlicer(param.Parameterized):
             # send data
             self._image_pipes[k].send(img_dict[k])
 
-            if metrics_dict and k in metrics_dict.keys():
-                # to get locations
-                tx_pad = 3
-
-                # determine loc
-                effective_location = utils.get_effective_location(
-                    self.metrics_text_location,
-                    self.flip_lr,
-                    self.flip_ud,
+            # If we don't have an error map but metrics are requested, add metrics to image
+            if (
+                metrics_dict
+                and k in metrics_dict
+                and self.metrics_state == METRICS_STATE.TEXT
+            ):
+                imgs[-1] = self._add_metrics_overlay(
+                    imgs[-1], metrics_dict[k], main_lbrt
                 )
-
-                if effective_location == ROI_LOCATION.TOP_LEFT:
-                    tx = main_lbrt[0] + tx_pad
-                    ty = main_lbrt[3] - tx_pad
-                elif effective_location == ROI_LOCATION.TOP_RIGHT:
-                    tx = main_lbrt[2] - tx_pad
-                    ty = main_lbrt[3] - tx_pad
-                elif effective_location == ROI_LOCATION.BOTTOM_LEFT:
-                    tx = main_lbrt[0] + tx_pad
-                    ty = main_lbrt[1] + tx_pad
-                elif effective_location == ROI_LOCATION.BOTTOM_RIGHT:
-                    tx = main_lbrt[2] - tx_pad
-                    ty = main_lbrt[1] + tx_pad
-
-                t_halign = self.metrics_text_location.value.split(" ")[1].lower()
-                t_valign = self.metrics_text_location.value.split(" ")[0].lower()
-
-                # set up dynamicmap for text
-                self._metrics_pipe[k] = streams.Pipe(data=metrics_dict[k])
-
-                def _met_text_callback(
-                    data, tx=tx, ty=ty, t_halign=t_halign, t_valign=t_valign
-                ):
-
-                    txt = ""
-                    for j, (mk, mv) in enumerate(data.items()):
-                        txt += f"{mk}: {mv:.2f}"
-                        if j < len(data) - 1:
-                            txt += "\n"
-
-                    return hv.Text(
-                        tx,
-                        ty,
-                        txt,
-                        halign=t_halign,
-                        valign=t_valign,
-                        fontsize=self.metrics_text_font_size,
-                    ).opts(
-                        text_font=bokeh_value(themes.VIEW_THEME.text_font),
-                        text_color=themes.VIEW_THEME.text_color,
-                    )
-
-                MetricsText = hv.DynamicMap(
-                    _met_text_callback,
-                    streams=[self._metrics_pipe[k]],
-                )
-
-                imgs[-1] = imgs[-1] * MetricsText
 
         # To start
         Ncols = len(imgs)
@@ -868,6 +819,16 @@ class NDSlicer(param.Parameterized):
                     # send data
                     self._diffmap_pipes[k].send(error_dict[k])
 
+                # If we have an error map, add the text to it
+                if (
+                    metrics_dict
+                    and k in metrics_dict
+                    and self.metrics_state in [METRICS_STATE.MAP, METRICS_STATE.ALL]
+                ):
+                    diff_imgs[-1] = self._add_metrics_overlay(
+                        diff_imgs[-1], metrics_dict[k], main_lbrt
+                    )
+
             diff_row = hv.Layout(diff_imgs)
 
             # Add colorbar for difference map
@@ -887,6 +848,52 @@ class NDSlicer(param.Parameterized):
 
         # Set attributes
         self.Figure = row
+
+    def _add_metrics_overlay(self, base_plot, metrics, bounds):
+        """
+        Overlay text metrics on a given plot element.
+        """
+        tx_pad = 3
+        effective_location = utils.get_effective_location(
+            self.metrics_text_location, self.flip_lr, self.flip_ud
+        )
+        # compute text position
+        if effective_location == ROI_LOCATION.TOP_LEFT:
+            tx = bounds[0] + tx_pad
+            ty = bounds[3] - tx_pad
+        elif effective_location == ROI_LOCATION.TOP_RIGHT:
+            tx = bounds[2] - tx_pad
+            ty = bounds[3] - tx_pad
+        elif effective_location == ROI_LOCATION.BOTTOM_LEFT:
+            tx = bounds[0] + tx_pad
+            ty = bounds[1] + tx_pad
+        else:
+            tx = bounds[2] - tx_pad
+            ty = bounds[1] + tx_pad
+
+        halign = self.metrics_text_location.value.split(" ")[1].lower()
+        valign = self.metrics_text_location.value.split(" ")[0].lower()
+        pipe = streams.Pipe(data=metrics)
+
+        def _text_callback(data, tx=tx, ty=ty, halign=halign, valign=valign):
+            txt = "\n".join(f"{mk}: {mv:.2f}" for mk, mv in data.items())
+            return hv.Text(
+                tx,
+                ty,
+                txt,
+                halign=halign,
+                valign=valign,
+                fontsize=self.metrics_text_font_size,
+            ).opts(
+                text_font=bokeh_value(themes.VIEW_THEME.text_font),
+                text_color=themes.VIEW_THEME.text_color,
+            )
+
+        dyn = hv.DynamicMap(_text_callback, streams=[pipe])
+        # send metrics for initial render
+        pipe.send(metrics)
+
+        return base_plot * dyn
 
     def update_figure(self, input_data: Dict[str, dict]):
         """
@@ -912,6 +919,7 @@ class NDSlicer(param.Parameterized):
             if (
                 self.metrics_state in [METRICS_STATE.TEXT, METRICS_STATE.ALL]
                 and k != self.metrics_reference
+                and k in self._metrics_pipe
             ):
                 self._metrics_pipe[k].send(input_data["metrics"][k])
 
