@@ -241,12 +241,12 @@ class ComparativeViewer(Viewer, param.Parameterized):
         else:
             self._autoscale_clim(event=None)
 
-    def launch(self):
+    def launch(self, title="MRI Viewer"):
         """
         Launch the viewer.
         """
 
-        pn.serve(self.app, title="MRI Viewer", show=True)
+        pn.serve(self.app, title=title, show=True)
 
     def load_from_config(self, config_path: str):
         """
