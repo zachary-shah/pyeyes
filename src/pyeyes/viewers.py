@@ -699,6 +699,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
     def _build_display_images_widget(self):
 
+        len_names = np.sum([len(name) for name in self.img_names]).item()
+        orientation = "vertical" if len_names > 30 else "vertical"
+
         if self.single_image_toggle:
 
             display_images_widget = pn.widgets.RadioButtonGroup(
@@ -707,6 +710,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
                 value=self.img_names[0],
                 button_type="success",
                 button_style="outline",
+                orientation=orientation,
             )
 
         else:
@@ -716,6 +720,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
                 value=self.img_names,
                 button_type="primary",
                 button_style="outline",
+                orientation=orientation,
             )
 
         @error.error_handler_decorator()
