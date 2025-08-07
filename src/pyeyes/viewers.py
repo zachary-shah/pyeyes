@@ -1428,7 +1428,6 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         pn.state.notifications.success(f"Config saved to {self.config_path}")
 
-
     def _save_config(self, path: Union[Path, str]):
         if isinstance(path, str):
             path = Path(path)
@@ -1587,9 +1586,27 @@ class ComparativeViewer(Viewer, param.Parameterized):
         Save a compressed .npz of the (optionally subsampled) image data plus
         a small standalone launcher script at `path` that reloads & launches
         the viewer with the same dims and categories.
-        usage:
+
+        Parameters:
+        -----------
+        path : Union[Path, str]
+            Path where to save the launcher script
+        num_slices_to_keep : Union[int, Dict[str, int]] | None
+            Number of slices to keep per dimension. If int, applies to all subsampleable
+            dimensions. If dict, maps dimension names to slice counts. Takes precedence
+            over subsampling parameter.
+        subsampling : Union[int, Dict[str, int]]
+            Step size for subsampling. If int, applies to all subsampleable dimensions.
+            If dict, maps dimension names to step sizes. Only used if num_slices_to_keep is None.
+
+        Example:
+        --------
         ```
-        Viewer.export_reloadable_pyeyes(path="./reloadable_viewer.py", num_slices_to_keep={"z": 20})
+        # Keep 20 slices in 'z' dimension, 10 in 't' dimension
+        viewer.export_reloadable_pyeyes("./viewer.py", num_slices_to_keep={"z": 20, "t": 10})
+
+        # Use step size of 2 for all subsampleable dimensions
+        viewer.export_reloadable_pyeyes("./viewer.py", subsampling=2)
         ```
         """
         if isinstance(path, str):
@@ -1598,35 +1615,20 @@ class ComparativeViewer(Viewer, param.Parameterized):
         out_dir = path.parent
         os.makedirs(out_dir, exist_ok=True)
 
-        if num_slices_to_keep is not None:
-            if isinstance(num_slices_to_keep, dict):
-                if (self.vdim_horiz in num_slices_to_keep) or (
-                    self.vdim_vert in num_slices_to_keep
-                ):
-                    bokeh_root_logger.warning(
-                        "You are trying to subsample the viewing dimensions. The loaded view might look weird."
-                        "Are you sure that this is what you want?"
-                    )
-            data_shape = self.raw_data[list(self.raw_data.keys())[0]].shape
-            step_map = {}
-            for i, dim in enumerate(self.ndims):
-                # we don't subsample categorical dimensions for now...
-                if dim in self.cat_dims:
-                    continue
-                else:
-                    n_keep = (
-                        num_slices_to_keep
-                        if isinstance(num_slices_to_keep, int)
-                        else num_slices_to_keep.get(dim, data_shape[i])
-                    )
-                    step_map[dim] = data_shape[i] // n_keep
-        else:
-            if isinstance(subsampling, int):
-                step_map = {dim: subsampling for dim in self.ndims}
-            else:
-                step_map = subsampling
+        # Determine which dimensions can be subsampled (exclude viewing dims and categorical dims)
+        subsampleable_dims = [
+            dim
+            for dim in self.noncat_dims
+            if dim not in [self.vdim_horiz, self.vdim_vert]
+        ]
+
+        # Calculate step sizes for each dimension
+        step_map = self._calculate_subsampling_steps(
+            subsampleable_dims, num_slices_to_keep, subsampling
+        )
 
         saved_data = {}
+
         slicers = []
         for dim in self.ndims:
             step = step_map.get(dim, 1)
@@ -1635,12 +1637,51 @@ class ComparativeViewer(Viewer, param.Parameterized):
         for name, arr in self.raw_data.items():
             saved_data[name] = arr[tuple(slicers)]
 
+        # Save data and config
         data_file = path.with_suffix(".npz")
         np.savez_compressed(data_file, **saved_data)
-
         self._save_config(path.with_suffix(".json"))
 
-        # 5) Build the launcher script in a single string
+        self._create_launcher_script(path)
+
+        # Make launcher executable
+        os.chmod(path, 0o755)
+
+        bokeh_root_logger.info(
+            f"Export complete: script at {path}, data at {data_file}"
+        )
+
+    def _calculate_subsampling_steps(
+        self,
+        subsampleable_dims: List[str],
+        num_slices_to_keep: Union[int, Dict[str, int]] | None,
+        subsampling: Union[int, Dict[str, int]] = 1,
+    ) -> Dict[str, int]:
+        """Calculate step sizes for subsampling based on input parameters."""
+        step_map = {}
+        data_shape = self.raw_data[list(self.raw_data.keys())[0]].shape
+
+        if num_slices_to_keep is not None:
+            for i, dim in enumerate(self.ndims):
+                if dim not in subsampleable_dims:
+                    continue
+
+                if isinstance(num_slices_to_keep, int):
+                    n_keep = num_slices_to_keep
+                else:
+                    n_keep = num_slices_to_keep.get(dim, data_shape[i])
+
+                step_map[dim] = max(1, data_shape[i] // n_keep)
+        else:
+            if isinstance(subsampling, int):
+                step_map = {dim: subsampling for dim in subsampleable_dims}
+            else:
+                step_map = {dim: subsampling.get(dim, 1) for dim in subsampleable_dims}
+
+        return step_map
+
+    def _create_launcher_script(self, path: Path):
+        """Create the standalone launcher script."""
         script = f"""#!/usr/bin/env python3
 import numpy as np
 import json
@@ -1666,10 +1707,3 @@ viewer.launch()
 """
         with open(path, "w") as f:
             f.write(script)
-
-        # 6) Make the launcher executable
-        os.chmod(path, 0o755)
-
-        bokeh_root_logger.info(
-            f"Export complete: script at {path}, data at {data_file}"
-        )
