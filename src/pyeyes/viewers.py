@@ -1512,10 +1512,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             stop = dim_range_widget[1].value
             step = dim_range_widget[2].value
             if step_override is not None:
-                if isinstance(step_override, dict):
-                    step = step_override[dim]
-                else:
-                    step = step_override
+                step = step_override
             dim_range = list(range(start, stop + 1, step))
             max_opts = max(max_opts, len(dim_range))
             if start > stop:
