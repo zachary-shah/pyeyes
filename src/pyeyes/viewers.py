@@ -2,6 +2,7 @@ import json
 import os
 import warnings
 from copy import deepcopy
+from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Union
 
 import bokeh
@@ -48,7 +49,6 @@ class Viewer:
             return self._launch()
         finally:
             error.uninstall_pyeyes_error_handler()
-
 
     def _launch(self):
         """
@@ -1424,7 +1424,16 @@ class ComparativeViewer(Viewer, param.Parameterized):
             pn.state.notifications.warning("No path provided to export config.")
             return
 
-        exp_dir = os.path.dirname(self.config_path)
+        self._save_config(self.config_path)
+
+        pn.state.notifications.success(f"Config saved to {self.config_path}")
+
+
+    def _save_config(self, path: Union[Path, str]):
+        if isinstance(path, str):
+            path = Path(path)
+
+        exp_dir = os.path.dirname(path)
 
         if len(exp_dir) > 2:
             os.makedirs(exp_dir, exist_ok=True)
@@ -1442,10 +1451,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
             "roi_config": roi_config,
         }
 
-        with open(self.config_path, "w") as f:
+        with open(path, "w") as f:
             json.dump(config_dict, f, indent=4, default=config.json_serial)
-
-        pn.state.notifications.success(f"Config saved to {self.config_path}")
 
     def _export_html(self, event, step_override=None):
         if self.html_export_path is None:
@@ -1506,7 +1513,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
             stop = dim_range_widget[1].value
             step = dim_range_widget[2].value
             if step_override is not None:
-                step = step_override
+                if isinstance(step_override, dict):
+                    step = step_override[dim]
+                else:
+                    step = step_override
             dim_range = list(range(start, stop + 1, step))
             max_opts = max(max_opts, len(dim_range))
             if start > stop:
@@ -1566,3 +1576,100 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         pn.state.notifications.clear()
         pn.state.notifications.success("Static HTML saved!", duration=0)
+
+    def export_reloadable_pyeyes(
+        self,
+        path: Union[Path, str],
+        num_slices_to_keep: Union[int, Dict[str, int]] | None = None,
+        subsampling: Union[int, Dict[str, int]] = 1,
+    ):
+        """
+        Save a compressed .npz of the (optionally subsampled) image data plus
+        a small standalone launcher script at `path` that reloads & launches
+        the viewer with the same dims and categories.
+        usage:
+        ```
+        Viewer.export_reloadable_pyeyes(path="./reloadable_viewer.py", num_slices_to_keep={"z": 20})
+        ```
+        """
+        if isinstance(path, str):
+            path = Path(path)
+
+        out_dir = path.parent
+        os.makedirs(out_dir, exist_ok=True)
+
+        if num_slices_to_keep is not None:
+            if isinstance(num_slices_to_keep, dict):
+                if (self.vdim_horiz in num_slices_to_keep) or (
+                    self.vdim_vert in num_slices_to_keep
+                ):
+                    bokeh_root_logger.warning(
+                        "You are trying to subsample the viewing dimensions. The loaded view might look weird."
+                        "Are you sure that this is what you want?"
+                    )
+            data_shape = self.raw_data[list(self.raw_data.keys())[0]].shape
+            step_map = {}
+            for i, dim in enumerate(self.ndims):
+                # we don't subsample categorical dimensions for now...
+                if dim in self.cat_dims:
+                    continue
+                else:
+                    n_keep = (
+                        num_slices_to_keep
+                        if isinstance(num_slices_to_keep, int)
+                        else num_slices_to_keep.get(dim, data_shape[i])
+                    )
+                    step_map[dim] = data_shape[i] // n_keep
+        else:
+            if isinstance(subsampling, int):
+                step_map = {dim: subsampling for dim in self.ndims}
+            else:
+                step_map = subsampling
+
+        saved_data = {}
+        slicers = []
+        for dim in self.ndims:
+            step = step_map.get(dim, 1)
+            slicers.append(slice(None, None, step))
+
+        for name, arr in self.raw_data.items():
+            saved_data[name] = arr[tuple(slicers)]
+
+        data_file = path.with_suffix(".npz")
+        np.savez_compressed(data_file, **saved_data)
+
+        self._save_config(path.with_suffix(".json"))
+
+        # 5) Build the launcher script in a single string
+        script = f"""#!/usr/bin/env python3
+import numpy as np
+import json
+from pathlib import Path
+from pyeyes.viewers import ComparativeViewer as cv
+
+this = Path(__file__)
+data = dict(np.load(this.with_suffix('.npz')))
+
+config_path = this.with_suffix(".json")
+cat_dims = {self.cat_dims!r}
+named_dims = {self.ndims!r}
+view_dims = {[self.vdim_horiz, self.vdim_vert]!r}
+
+viewer = cv(
+    data=data,
+    named_dims=named_dims,
+    view_dims=view_dims,
+    cat_dims=cat_dims,
+    config_path=config_path,
+)
+viewer.launch()
+"""
+        with open(path, "w") as f:
+            f.write(script)
+
+        # 6) Make the launcher executable
+        os.chmod(path, 0o755)
+
+        bokeh_root_logger.info(
+            f"Export complete: script at {path}, data at {data_file}"
+        )
