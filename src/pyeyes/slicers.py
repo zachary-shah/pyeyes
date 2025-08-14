@@ -648,8 +648,9 @@ class NDSlicer(param.Parameterized):
                 and k in metrics_dict
                 and self.metrics_state == METRICS_STATE.TEXT
             ):
+                self._metrics_pipe[k] = streams.Pipe(data=metrics_dict[k])
                 imgs[-1] = self._add_metrics_overlay(
-                    imgs[-1], metrics_dict[k], main_lbrt
+                    imgs[-1], metrics_dict[k], main_lbrt, k
                 )
 
         # To start
@@ -827,8 +828,9 @@ class NDSlicer(param.Parameterized):
                     and k in metrics_dict
                     and self.metrics_state in [METRICS_STATE.MAP, METRICS_STATE.ALL]
                 ):
+                    self._metrics_pipe[k] = streams.Pipe(data=metrics_dict[k])
                     diff_imgs[-1] = self._add_metrics_overlay(
-                        diff_imgs[-1], metrics_dict[k], main_lbrt
+                        diff_imgs[-1], metrics_dict[k], main_lbrt, k
                     )
 
             diff_row = hv.Layout(diff_imgs)
@@ -851,7 +853,7 @@ class NDSlicer(param.Parameterized):
         # Set attributes
         self.Figure = row
 
-    def _add_metrics_overlay(self, base_plot, metrics, bounds):
+    def _add_metrics_overlay(self, base_plot, metrics, bounds, key):
         """
         Overlay text metrics on a given plot element.
         """
@@ -875,7 +877,6 @@ class NDSlicer(param.Parameterized):
 
         halign = self.metrics_text_location.value.split(" ")[1].lower()
         valign = self.metrics_text_location.value.split(" ")[0].lower()
-        pipe = streams.Pipe(data=metrics)
 
         def _text_callback(data, tx=tx, ty=ty, halign=halign, valign=valign):
             txt = "\n".join(f"{mk}: {mv:.2f}" for mk, mv in data.items())
@@ -891,9 +892,9 @@ class NDSlicer(param.Parameterized):
                 text_color=themes.VIEW_THEME.text_color,
             )
 
-        dyn = hv.DynamicMap(_text_callback, streams=[pipe])
+        dyn = hv.DynamicMap(_text_callback, streams=[self._metrics_pipe[key]])
         # send metrics for initial render
-        pipe.send(metrics)
+        self._metrics_pipe[key].send(metrics)
 
         return base_plot * dyn
 

@@ -2,6 +2,7 @@ import json
 import os
 import warnings
 from copy import deepcopy
+from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Union
 
 import bokeh
@@ -43,7 +44,16 @@ class Viewer:
         """
         Launch the viewer.
         """
+        error.install_pyeyes_error_handler()
+        try:
+            return self._launch()
+        finally:
+            error.uninstall_pyeyes_error_handler()
 
+    def _launch(self):
+        """
+        Launch the viewer.
+        """
         raise NotImplementedError
 
 
@@ -241,7 +251,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         else:
             self._autoscale_clim(event=None)
 
-    def launch(self, title="MRI Viewer"):
+    def _launch(self, title="MRI Viewer"):
         """
         Launch the viewer.
         """
@@ -1414,7 +1424,15 @@ class ComparativeViewer(Viewer, param.Parameterized):
             pn.state.notifications.warning("No path provided to export config.")
             return
 
-        exp_dir = os.path.dirname(self.config_path)
+        self._save_config(self.config_path)
+
+        pn.state.notifications.success(f"Config saved to {self.config_path}")
+
+    def _save_config(self, path: Union[Path, str]):
+        if isinstance(path, str):
+            path = Path(path)
+
+        exp_dir = os.path.dirname(path)
 
         if len(exp_dir) > 2:
             os.makedirs(exp_dir, exist_ok=True)
@@ -1432,10 +1450,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
             "roi_config": roi_config,
         }
 
-        with open(self.config_path, "w") as f:
+        with open(path, "w") as f:
             json.dump(config_dict, f, indent=4, default=config.json_serial)
-
-        pn.state.notifications.success(f"Config saved to {self.config_path}")
 
     def _export_html(self, event, step_override=None):
         if self.html_export_path is None:
@@ -1556,3 +1572,135 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         pn.state.notifications.clear()
         pn.state.notifications.success("Static HTML saved!", duration=0)
+
+    def export_reloadable_pyeyes(
+        self,
+        path: Union[Path, str],
+        num_slices_to_keep: Union[int, Dict[str, int]] | None = None,
+        subsampling: Union[int, Dict[str, int]] = 1,
+    ):
+        """
+        Save a compressed .npz of the (optionally subsampled) image data plus
+        a small standalone launcher script at `path` that reloads & launches
+        the viewer with the same dims and categories.
+
+        Parameters:
+        -----------
+        path : Union[Path, str]
+            Path where to save the launcher script
+        num_slices_to_keep : Union[int, Dict[str, int]] | None
+            Number of slices to keep per dimension. If int, applies to all subsampleable
+            dimensions. If dict, maps dimension names to slice counts. Takes precedence
+            over subsampling parameter.
+        subsampling : Union[int, Dict[str, int]]
+            Step size for subsampling. If int, applies to all subsampleable dimensions.
+            If dict, maps dimension names to step sizes. Only used if num_slices_to_keep is None.
+
+        Example:
+        --------
+        ```
+        # Keep 20 slices in 'z' dimension, 10 in 't' dimension
+        viewer.export_reloadable_pyeyes("./viewer.py", num_slices_to_keep={"z": 20, "t": 10})
+
+        # Use step size of 2 for all subsampleable dimensions
+        viewer.export_reloadable_pyeyes("./viewer.py", subsampling=2)
+        ```
+        """
+        if isinstance(path, str):
+            path = Path(path)
+
+        out_dir = path.parent
+        os.makedirs(out_dir, exist_ok=True)
+
+        # Determine which dimensions can be subsampled (exclude viewing dims and categorical dims)
+        subsampleable_dims = [
+            dim
+            for dim in self.noncat_dims
+            if dim not in [self.vdim_horiz, self.vdim_vert]
+        ]
+
+        # Calculate step sizes for each dimension
+        step_map = self._calculate_subsampling_steps(
+            subsampleable_dims, num_slices_to_keep, subsampling
+        )
+
+        saved_data = {}
+
+        slicers = []
+        for dim in self.ndims:
+            step = step_map.get(dim, 1)
+            slicers.append(slice(None, None, step))
+
+        for name, arr in self.raw_data.items():
+            saved_data[name] = arr[tuple(slicers)]
+
+        # Save data and config
+        data_file = path.with_suffix(".npz")
+        np.savez_compressed(data_file, **saved_data)
+        self._save_config(path.with_suffix(".json"))
+
+        self._create_launcher_script(path)
+
+        # Make launcher executable
+        os.chmod(path, 0o755)
+
+        bokeh_root_logger.info(
+            f"Export complete: script at {path}, data at {data_file}"
+        )
+
+    def _calculate_subsampling_steps(
+        self,
+        subsampleable_dims: List[str],
+        num_slices_to_keep: Union[int, Dict[str, int]] | None,
+        subsampling: Union[int, Dict[str, int]] = 1,
+    ) -> Dict[str, int]:
+        """Calculate step sizes for subsampling based on input parameters."""
+        step_map = {}
+        data_shape = self.raw_data[list(self.raw_data.keys())[0]].shape
+
+        if num_slices_to_keep is not None:
+            for i, dim in enumerate(self.ndims):
+                if dim not in subsampleable_dims:
+                    continue
+
+                if isinstance(num_slices_to_keep, int):
+                    n_keep = num_slices_to_keep
+                else:
+                    n_keep = num_slices_to_keep.get(dim, data_shape[i])
+
+                step_map[dim] = max(1, data_shape[i] // n_keep)
+        else:
+            if isinstance(subsampling, int):
+                step_map = {dim: subsampling for dim in subsampleable_dims}
+            else:
+                step_map = {dim: subsampling.get(dim, 1) for dim in subsampleable_dims}
+
+        return step_map
+
+    def _create_launcher_script(self, path: Path):
+        """Create the standalone launcher script."""
+        script = f"""#!/usr/bin/env python3
+import numpy as np
+import json
+from pathlib import Path
+from pyeyes.viewers import ComparativeViewer as cv
+
+this = Path(__file__)
+data = dict(np.load(this.with_suffix('.npz')))
+
+config_path = this.with_suffix(".json")
+cat_dims = {self.cat_dims!r}
+named_dims = {self.ndims!r}
+view_dims = {[self.vdim_horiz, self.vdim_vert]!r}
+
+viewer = cv(
+    data=data,
+    named_dims=named_dims,
+    view_dims=view_dims,
+    cat_dims=cat_dims,
+    config_path=config_path,
+)
+viewer.launch()
+"""
+        with open(path, "w") as f:
+            f.write(script)
