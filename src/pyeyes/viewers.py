@@ -118,8 +118,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         data = {k: tonp(v) for k, v in data.items()}
 
+        first_key = list(data.keys())[0]
         if named_dims is None or len(named_dims) == 0:
-            named_dims = [f"Dim {i}" for i in range(data["Image"].ndim)]
+            named_dims = [f"Dim {i}" for i in range(data[first_key].ndim)]
 
         super().__init__(data)
         param.Parameterized.__init__(self)
@@ -139,7 +140,17 @@ class ComparativeViewer(Viewer, param.Parameterized):
         else:
             cat_dims = {}
         self.cat_dims = cat_dims
-        self.noncat_dims = [dim for dim in named_dims if dim not in cat_dims.keys()]
+
+        # Sliceable dimensions are only those which are non-categorical and not singleton
+        self.noncat_dims = []
+        for i, d in enumerate(named_dims):
+            if d in cat_dims.keys():
+                continue
+            elif data[first_key].shape[i] <= 1:
+                print(f"Detected '{d}' is singleton. Cannot slice.")
+                continue
+            else:
+                self.noncat_dims.append(d)
 
         assert np.array(
             [img.shape == img_list[0].shape for img in img_list]
@@ -151,7 +162,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         if view_dims is not None:
             assert all(
                 [dim in self.noncat_dims for dim in view_dims]
-            ), "All view dimensions must be in dimension_names."
+            ), "All view dimensions must be non-singleton, non-categorical, and in dimension_names."
         else:
             # Default viewing dims
             dl = [dim.lower() for dim in named_dims]
@@ -528,7 +539,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         """
         Return a dictionary of panel widgets to interactively control slicing.
         """
-
+        num_interactable_dims = 0
         sliders = {}
         for i, dim in enumerate(self.slicer.sdims):
             if dim in self.cat_dims.keys():
@@ -546,7 +557,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
                         value=self.slicer.dim_indices[dim],
                     )
                 else:
-                    print(f"Detected '{dim}' is singleton. Cannot slice.")
+                    # Singleton dimensions
                     continue
 
             def _update_dim_indices(event, this_dim=dim):
@@ -555,7 +566,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
             s.param.watch(_update_dim_indices, "value")
 
-            sliders[f"sdim{i}"] = s
+            sliders[f"sdim{num_interactable_dims}"] = s
+            num_interactable_dims += 1
 
         return sliders
 
