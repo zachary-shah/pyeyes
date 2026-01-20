@@ -47,12 +47,14 @@ def serialize_parameters(obj: param.Parameterized) -> dict:
     - dict: A dictionary containing parameter definitions and their current values.
     """
     serialized = {}
-    for name, p in obj.param.params().items():
+    for name in obj.param:
         param_info = {}
 
         # don't serialize the name parameter - this is just the class instance
         if name == "name":
             continue
+
+        p = obj.param[name]
 
         # for enums, extract value
         if isinstance(getattr(obj, name), enum.Enum):
@@ -88,10 +90,12 @@ def deserialize_parameters(obj: param.Parameterized, serialized: dict):
     - obj (param.Parameterized): The object to deserialize into.
     - serialized (dict): A dictionary containing parameter definitions and their current values.
     """
-    for name, p in obj.param.params().items():
+    for name in obj.param:
 
         if name == "name" or (name not in serialized):
             continue
+
+        p = obj.param[name]
 
         param_info = serialized[name]
         value = param_info["value"]
