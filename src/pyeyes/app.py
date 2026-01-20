@@ -13,7 +13,14 @@ def launch_viewers(
     """
 
     if isinstance(viewer_dict, dict):
-        viewer_dict = {k: v.app for k, v in viewer_dict.items()}
+        viewer_dict_out = {}
+        for k, v in viewer_dict.items():
+            # check if app is attribute
+            if hasattr(v, "app"):
+                viewer_dict_out[k] = v.app
+            else:
+                viewer_dict_out[k] = v
+        viewer_dict = viewer_dict_out
 
     pn.serve(
         viewer_dict,
