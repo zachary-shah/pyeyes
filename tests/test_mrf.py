@@ -5,7 +5,9 @@ Test case:
 
 import numpy as np
 
-from pyeyes.viewers import ComparativeViewer
+from pyeyes.viewers import ComparativeViewer, spawn_comparative_viewer_detached
+
+spawn_detached = True
 
 # Load Data
 mrf_folder = "/local_mount/space/mayday/data/users/zachs/pyeyes/data/mrf"
@@ -30,14 +32,24 @@ vdims = ["y", "z"]
 cat_dims = {"Map Type": ["PD", "T1", "T2"]}
 
 # Allow loading viewer from config
-config_path = "./cfgs/cfg_mrf_1min_vs_2min.yaml"
+config_path = "./cfgs/config_mrf.yaml"
 
-Viewer = ComparativeViewer(
-    data=img_dict,
-    named_dims=named_dims,
-    view_dims=vdims,
-    cat_dims=cat_dims,
-    config_path=config_path,
-)
-
-Viewer.launch()
+if spawn_detached:
+    spawn_comparative_viewer_detached(
+        data=img_dict,
+        named_dims=named_dims,
+        view_dims=vdims,
+        cat_dims=cat_dims,
+        config_path=config_path,
+    )
+    print("Process spawned in detached mode.")
+else:
+    Viewer = ComparativeViewer(
+        data=img_dict,
+        named_dims=named_dims,
+        view_dims=vdims,
+        cat_dims=cat_dims,
+        config_path=config_path,
+    )
+    print("Process launching in attached mode.")
+    Viewer.launch(detached=True, title="MRF Viewer")

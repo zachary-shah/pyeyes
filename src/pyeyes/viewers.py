@@ -1,5 +1,9 @@
 import json
 import os
+import pickle
+import subprocess
+import sys
+import tempfile
 import warnings
 from copy import deepcopy
 from pathlib import Path
@@ -40,17 +44,17 @@ class Viewer:
         """
         self.data = data
 
-    def launch(self):
+    def launch(self, title="Viewer", **kwargs):
         """
         Launch the viewer.
         """
         error.install_pyeyes_error_handler()
         try:
-            return self._launch()
+            return self._launch(title=title, **kwargs)
         finally:
             error.uninstall_pyeyes_error_handler()
 
-    def _launch(self):
+    def _launch(self, title="Viewer", **kwargs):
         """
         Launch the viewer.
         """
@@ -262,7 +266,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         else:
             self._autoscale_clim(event=None)
 
-    def _launch(self, title="MRI Viewer"):
+    def _launch(self, title="MRI Viewer", **kwargs):
         """
         Launch the viewer.
         """
@@ -1727,3 +1731,66 @@ viewer.launch()
 """
         with open(path, "w") as f:
             f.write(script)
+
+
+def spawn_comparative_viewer_detached(
+    data,
+    named_dims=None,
+    view_dims=None,
+    cat_dims=None,
+    config_path=None,
+    title="MRI Viewer",
+):
+    """
+    Helper that spawns a ComparativeViewer in its own Python subprocess.
+
+    For safe(ish) removal of temporary data generated, and to kill subprocesses for cleanup, add
+    this to your .bashrc or .zshrc:
+
+    alias pyeyes_cleanup="pkill -9 -f '_PYEYES_SUBPROCESS.py' && rm -f /tmp/*_PYEYES_SUBPROCESS.*"
+    """
+    # convert data to numpy in case its not, for pickling
+    if not isinstance(data, dict):
+        data = tonp(data)
+    if isinstance(data, np.ndarray):
+        data = {"Image": data}
+    data = {k: tonp(v) for k, v in data.items()}
+
+    tmp_data = tempfile.NamedTemporaryFile(
+        suffix="_PYEYES_SUBPROCESS.pkl", delete=False
+    )
+    pickle.dump(data, tmp_data)
+    tmp_data.close()
+
+    # Build the script to load and serve the viewer
+    script = f"""import panel as pn
+import pickle
+import os
+from pyeyes.viewers import ComparativeViewer
+
+# Load data
+with open(r'{tmp_data.name}', 'rb') as f:
+    data = pickle.load(f)
+
+# Instantiate and serve
+viewer = ComparativeViewer(
+    data,
+    named_dims={repr(named_dims)},
+    view_dims={repr(view_dims)},
+    cat_dims={repr(cat_dims)},
+    config_path={repr(config_path)},
+)
+# print this process's PID
+print(f"Detached Viewer Subprocess PID: {{os.getpid()}}")
+pn.serve(viewer.app, title={repr(title)}, show=True)
+"""
+
+    # Write script to a temporary file and launch it
+    tmp_script = tempfile.NamedTemporaryFile(
+        suffix="_PYEYES_SUBPROCESS.py", delete=False, mode="w"
+    )
+    tmp_script.write(script)
+    tmp_script.flush()
+    tmp_script.close()
+    subprocess.Popen([sys.executable, tmp_script.name])
+    print(f"Launched detached viewer subprocess: {tmp_script.name}")
