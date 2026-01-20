@@ -13,6 +13,7 @@ VALID_COLORMAPS = [
     "inferno",
     "RdBu",
     "Magma",
+    "hot",
     "Quantitative",
 ]
 
@@ -25,6 +26,7 @@ VALID_ERROR_COLORMAPS = [
     "RdBu",
     "Magma",
     "Grays",  # this is good for SSIM
+    "hot",
 ]
 
 QUANTITATIVE_MAPTYPES = [
