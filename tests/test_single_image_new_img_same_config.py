@@ -4,6 +4,7 @@ Test case:
 """
 
 import numpy as np
+from paths import cfg_path, data_path
 
 from pyeyes import set_theme
 from pyeyes.viewers import ComparativeViewer
@@ -11,14 +12,14 @@ from pyeyes.viewers import ComparativeViewer
 set_theme("dark")
 
 # Load Data
-mrf_folder = "/local_mount/space/mayday/data/users/zachs/pyeyes/data/mrf"
-llr_1min_pd = np.load(f"{mrf_folder}/llr_1min_pd.npy")
-llr_1min_t1 = np.load(f"{mrf_folder}/llr_1min_t1.npy")
-llr_1min_t2 = np.load(f"{mrf_folder}/llr_1min_t2.npy")
+mrf_folder = data_path / "mrf"
+llr_1min_pd = np.load(mrf_folder / "llr_1min_pd.npy")
+llr_1min_t1 = np.load(mrf_folder / "llr_1min_t1.npy")
+llr_1min_t2 = np.load(mrf_folder / "llr_1min_t2.npy")
 mrf_1min = np.stack([llr_1min_pd, llr_1min_t1, llr_1min_t2], axis=0)
 
 # Allow loading viewer from config
-config_path = "./cfgs/cfg_mrf_single.yaml"
+config_path = cfg_path / "cfg_mrf_single.yaml"
 
 Viewer = ComparativeViewer(
     data={"1-Minute MRF": mrf_1min},

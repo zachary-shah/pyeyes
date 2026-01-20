@@ -4,19 +4,20 @@ Test case:
 """
 
 import numpy as np
+from paths import cfg_path, data_path
 
 from pyeyes.viewers import ComparativeViewer, spawn_comparative_viewer_detached
 
 spawn_detached = True
 
 # Load Data
-mrf_folder = "/local_mount/space/mayday/data/users/zachs/pyeyes/data/mrf"
-llr_1min_pd = np.load(f"{mrf_folder}/llr_1min_pd.npy")
-llr_1min_t1 = np.load(f"{mrf_folder}/llr_1min_t1.npy")
-llr_1min_t2 = np.load(f"{mrf_folder}/llr_1min_t2.npy")
-llr_2min_pd = np.load(f"{mrf_folder}/llr_2min_pd.npy")
-llr_2min_t1 = np.load(f"{mrf_folder}/llr_2min_t1.npy")
-llr_2min_t2 = np.load(f"{mrf_folder}/llr_2min_t2.npy")
+mrf_folder = data_path / "mrf"
+llr_1min_pd = np.load(mrf_folder / "llr_1min_pd.npy")
+llr_1min_t1 = np.load(mrf_folder / "llr_1min_t1.npy")
+llr_1min_t2 = np.load(mrf_folder / "llr_1min_t2.npy")
+llr_2min_pd = np.load(mrf_folder / "llr_2min_pd.npy")
+llr_2min_t1 = np.load(mrf_folder / "llr_2min_t1.npy")
+llr_2min_t2 = np.load(mrf_folder / "llr_2min_t2.npy")
 
 mrf_1min = np.stack([llr_1min_pd, llr_1min_t1, llr_1min_t2], axis=0)
 mrf_2min = np.stack([llr_2min_pd, llr_2min_t1, llr_2min_t2], axis=0)
@@ -32,7 +33,7 @@ vdims = ["y", "z"]
 cat_dims = {"Map Type": ["PD", "T1", "T2"]}
 
 # Allow loading viewer from config
-config_path = "./cfgs/config_mrf.yaml"
+config_path = cfg_path / "config_mrf.yaml"
 
 if spawn_detached:
     spawn_comparative_viewer_detached(

@@ -6,6 +6,7 @@ TODO: Port to Bokeh (currently mpl backend)
 
 import os
 import warnings
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import nibabel as nib
@@ -59,8 +60,8 @@ def plot_dti(
     dti_keys = ["FA", "MD", "MO", "S0", "L1", "L2", "L3", "V1", "V2", "V3"]
     dti_keys_color = ["V1", "V2", "V3"]
 
-    if isinstance(dti_imgs_or_path, str):
-        dti_imgs = load_dti(dti_imgs_or_path)
+    if isinstance(dti_imgs_or_path, (str, Path)):
+        dti_imgs = load_dti(str(dti_imgs_or_path))
     else:
         dti_imgs = dti_imgs_or_path
 

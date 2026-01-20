@@ -1762,6 +1762,9 @@ def spawn_comparative_viewer_detached(
     pickle.dump(data, tmp_data)
     tmp_data.close()
 
+    if config_path is not None:
+        config_path = str(config_path)
+
     # Build the script to load and serve the viewer
     script = f"""import panel as pn
 import pickle
