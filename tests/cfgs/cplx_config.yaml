@@ -39,8 +39,18 @@
         },
         "config_path": {
             "type": "String",
-            "value": "./config.yaml",
+            "value": "./cfgs/cplx_config.yaml",
             "default": "./config.yaml"
+        },
+        "html_export_path": {
+            "type": "String",
+            "value": "./viewer.html",
+            "default": "./viewer.html"
+        },
+        "html_export_page_name": {
+            "type": "String",
+            "value": "MRI Viewer",
+            "default": "MRI Viewer"
         }
     },
     "slicer_config": {
@@ -56,23 +66,23 @@
         },
         "vmin": {
             "type": "Number",
-            "value": -3.1415913105010986,
-            "default": -3.1415913105010986,
+            "value": 0.003281897632405162,
+            "default": 0.003281897632405162,
             "bounds": [
-                -3.1415913105010986,
-                3.141592264175415
+                0.003281897632405162,
+                383.658447265625
             ],
-            "step": 0.0314159169793129
+            "step": 3.1054036617279053
         },
         "vmax": {
             "type": "Number",
-            "value": 3.141592264175415,
-            "default": 3.141592264175415,
+            "value": 383.658447265625,
+            "default": 383.658447265625,
             "bounds": [
-                -3.1415913105010986,
-                3.141592264175415
+                0.003281897632405162,
+                383.658447265625
             ],
-            "step": 0.0314159169793129
+            "step": 3.1054036617279053
         },
         "size_scale": {
             "type": "Number",
@@ -96,7 +106,7 @@
         },
         "cplx_view": {
             "type": "ObjectSelector",
-            "value": "phase",
+            "value": "mag",
             "default": "mag",
             "objects": [
                 "mag",
@@ -119,17 +129,8 @@
         },
         "cmap": {
             "type": "ObjectSelector",
-            "value": "viridis",
-            "default": "jet",
-            "objects": [
-                "gray",
-                "jet",
-                "viridis",
-                "inferno",
-                "RdBu",
-                "Magma",
-                "Quantitative"
-            ]
+            "value": "gray",
+            "default": "gray"
         },
         "colorbar_on": {
             "type": "Boolean",
@@ -189,17 +190,7 @@
         "roi_cmap": {
             "type": "ObjectSelector",
             "value": "Same",
-            "default": "Same",
-            "objects": [
-                "gray",
-                "jet",
-                "viridis",
-                "inferno",
-                "RdBu",
-                "Magma",
-                "Quantitative",
-                "Same"
-            ]
+            "default": "Same"
         },
         "roi_mode": {
             "value": 0,
@@ -228,43 +219,19 @@
         "error_map_type": {
             "type": "ObjectSelector",
             "value": "L1Diff",
-            "default": "L1Diff",
-            "objects": [
-                "L1Diff",
-                "L2Diff",
-                "SSIM",
-                "RelativeL1",
-                "Diff"
-            ]
+            "default": "L1Diff"
         },
         "error_map_cmap": {
             "type": "ObjectSelector",
             "value": "inferno",
-            "default": "inferno",
-            "objects": [
-                "gray",
-                "jet",
-                "viridis",
-                "inferno",
-                "RdBu",
-                "Magma",
-                "Grays"
-            ]
+            "default": "inferno"
         },
         "metrics_text_types": {
             "type": "ListSelector",
             "value": [
                 "NRMSE"
             ],
-            "default": [],
-            "objects": [
-                "L1Diff",
-                "RMSE",
-                "NRMSE",
-                "PSNR",
-                "SSIM",
-                "RelativeL1"
-            ]
+            "default": []
         },
         "metrics_text_location": {
             "value": "Top Left",
