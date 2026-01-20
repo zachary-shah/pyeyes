@@ -2,9 +2,10 @@
     "viewer_config": {
         "vdim_horiz": {
             "type": "ObjectSelector",
-            "value": "x",
+            "value": "y",
             "default": "x",
             "objects": [
+                "Map Type",
                 "x",
                 "y",
                 "z"
@@ -12,9 +13,10 @@
         },
         "vdim_vert": {
             "type": "ObjectSelector",
-            "value": "y",
+            "value": "z",
             "default": "y",
             "objects": [
+                "Map Type",
                 "x",
                 "y",
                 "z"
@@ -28,18 +30,22 @@
         "display_images": {
             "type": "ListSelector",
             "value": [
-                "4avg",
-                "1avg"
+                "30sec",
+                "45sec",
+                "1min",
+                "2min"
             ],
             "default": [],
             "objects": [
-                "4avg",
-                "1avg"
+                "30sec",
+                "45sec",
+                "1min",
+                "2min"
             ]
         },
         "config_path": {
             "type": "String",
-            "value": "./cfgs/cplx_config.yaml",
+            "value": "./cfgs/mrf-4view-config.yaml",
             "default": "./config.yaml"
         },
         "html_export_path": {
@@ -56,7 +62,7 @@
     "slicer_config": {
         "title_font_size": {
             "type": "Number",
-            "value": 16,
+            "value": 12,
             "default": 12,
             "bounds": [
                 2,
@@ -66,27 +72,27 @@
         },
         "vmin": {
             "type": "Number",
-            "value": 0.003281897632405162,
-            "default": 0.003281897632405162,
+            "value": 0.0,
+            "default": 0.0,
             "bounds": [
-                0.00014692450349684805,
-                574.1680908203125
+                0.0,
+                5238.934705691853
             ],
-            "step": 5.741679668426514
+            "step": 52.38934705691853
         },
         "vmax": {
             "type": "Number",
-            "value": 383.658447265625,
-            "default": 383.658447265625,
+            "value": 4401.674622572172,
+            "default": 4401.674622572172,
             "bounds": [
-                0.00014692450349684805,
-                574.1680908203125
+                0.0,
+                5238.934705691853
             ],
-            "step": 5.741679668426514
+            "step": 52.38934705691853
         },
         "size_scale": {
             "type": "Number",
-            "value": 310,
+            "value": 360,
             "default": 400,
             "bounds": [
                 200,
@@ -101,7 +107,7 @@
         },
         "flip_lr": {
             "type": "Boolean",
-            "value": true,
+            "value": false,
             "default": false
         },
         "cplx_view": {
@@ -118,18 +124,22 @@
         "display_images": {
             "type": "ListSelector",
             "value": [
-                "4avg",
-                "1avg"
+                "30sec",
+                "45sec",
+                "1min",
+                "2min"
             ],
             "default": [],
             "objects": [
-                "4avg",
-                "1avg"
+                "30sec",
+                "45sec",
+                "1min",
+                "2min"
             ]
         },
         "cmap": {
             "type": "ObjectSelector",
-            "value": "gray",
+            "value": "Quantitative",
             "default": "gray"
         },
         "colorbar_on": {
@@ -139,23 +149,25 @@
         },
         "colorbar_label": {
             "type": "String",
-            "value": "Rad",
+            "value": "",
             "default": ""
         },
         "dim_indices": {
             "type": "Dict",
             "value": {
-                "z": 10
+                "x": 111,
+                "Map Type": "T1"
             },
             "default": {
-                "z": 12
+                "x": 111,
+                "Map Type": "T1"
             }
         },
         "lr_crop": {
             "type": "Range",
             "value": [
-                0,
-                230
+                27,
+                182
             ],
             "default": [
                 0,
@@ -163,15 +175,15 @@
             ],
             "bounds": [
                 0,
-                230
+                220
             ],
             "step": 1
         },
         "ud_crop": {
             "type": "Range",
             "value": [
-                0,
-                230
+                23,
+                200
             ],
             "default": [
                 0,
@@ -179,7 +191,7 @@
             ],
             "bounds": [
                 0,
-                230
+                220
             ],
             "step": 1
         },
@@ -193,25 +205,27 @@
             "default": "Same"
         },
         "roi_mode": {
-            "value": 0,
+            "value": 1,
             "enum_class": "ROI_VIEW_MODE"
         },
         "metrics_reference": {
             "type": "ObjectSelector",
-            "value": "4avg",
+            "value": "30sec",
             "default": "",
             "objects": [
-                "4avg",
-                "1avg"
+                "30sec",
+                "45sec",
+                "1min",
+                "2min"
             ]
         },
         "metrics_state": {
-            "value": 3,
+            "value": 0,
             "enum_class": "METRICS_STATE"
         },
         "error_map_scale": {
             "type": "Number",
-            "value": 10,
+            "value": 1.0,
             "default": 1.0,
             "bounds": null,
             "step": null
@@ -233,9 +247,7 @@
         },
         "metrics_text_types": {
             "type": "ListSelector",
-            "value": [
-                "NRMSE"
-            ],
+            "value": [],
             "default": []
         },
         "metrics_text_location": {
@@ -244,7 +256,7 @@
         },
         "metrics_text_font_size": {
             "type": "Number",
-            "value": 11,
+            "value": 12,
             "default": 12,
             "bounds": [
                 5,
@@ -264,14 +276,6 @@
         "color": "red",
         "line_width": 2,
         "zoom_order": 1,
-        "padding_pct": 0.001,
-        "point1": {
-            "x": 93.85975970643942,
-            "y": 164
-        },
-        "point2": {
-            "x": 154.73825905539775,
-            "y": 188
-        }
+        "padding_pct": 0.001
     }
 }

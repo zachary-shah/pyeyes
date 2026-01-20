@@ -829,6 +829,72 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         self.slicer.param.trigger("vmin", "vmax", "cmap")
 
+    def update_clim_widget(self, vmin, vmax, bound_min, bound_max, step):
+        """
+        Set the values for the clim widget.
+
+        Parameters
+        ----------
+        vmin : float
+            Desired min value in the bar.
+        vmax : float
+            Desired max value in the bar.
+        bound_min : float
+            Lower end bound of the bar.
+        bound_max : float
+            Upper end bound of the bar.
+        step : float
+            Step size for incrementing bar.
+        """
+        self._set_app_widget_attr(
+            "Contrast",
+            "clim",
+            "value",
+            (vmin, vmax),
+        )
+        self._set_app_widget_attr(
+            "Contrast",
+            "clim",
+            "start",
+            bound_min,
+        )
+        self._set_app_widget_attr(
+            "Contrast",
+            "clim",
+            "end",
+            bound_max,
+        )
+        self._set_app_widget_attr(
+            "Contrast",
+            "clim",
+            "step",
+            step,
+        )
+
+    def _update_clim(self, event):
+        """
+        Callback to update the clim of the slicer.
+        """
+        with param.parameterized.discard_events(self.slicer):
+            vmin, vmax = event.new
+
+            if vmin > vmax:
+                pn.state.notifications.warning("vmin > vmax. Setting vmin = vmax.")
+                vmin = vmax
+            elif vmax < vmin:
+                pn.state.notifications.warning("vmax < vmin. Setting vmax = vmin.")
+                vmax = vmin
+
+            # Slice limits
+            vmin, vmax, bound_min, bound_max, step = self.slicer.set_vmin_vmax(
+                vmin=vmin,
+                vmax=vmax,
+            )
+
+            self.update_clim_widget(vmin, vmax, bound_min, bound_max, step)
+
+        self.slicer.param.trigger("vmin", "vmax")
+
     def _build_contrast_widgets(self) -> Dict[str, pn.widgets.Widget]:
 
         widgets = {}
@@ -842,12 +908,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             step=self.slicer.param.vmin.step,
         )
 
-        def _update_clim(event):
-            with param.parameterized.discard_events(self.slicer):
-                self.slicer.vmin, self.slicer.vmax = event.new
-            self.slicer.param.trigger("vmin", "vmax")
-
-        range_slider.param.watch(_update_clim, "value")
+        range_slider.param.watch(self._update_clim, "value")
         widgets["clim"] = range_slider
 
         # Colormap
@@ -902,18 +963,11 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
     def _autoscale_clim(self, event):
         """
-        Routine to run to update the viewing dimensions of the data.
+        Routine to automatically scale clim of the slicer.
         """
-
-        # Update Slicer
         with param.parameterized.discard_events(self.slicer):
-            self.slicer.autoscale_clim()
-
-            # Update gui
-            self._set_app_widget_attr(
-                "Contrast", "clim", "value", (self.slicer.vmin, self.slicer.vmax)
-            )
-
+            vmin, vmax, bound_min, bound_max, step = self.slicer.autoscale_clim()
+            self.update_clim_widget(vmin, vmax, bound_min, bound_max, step)
         self.slicer.param.trigger("vmin", "vmax")
 
     def _build_roi_widgets(self) -> Dict[str, pn.widgets.Widget]:
@@ -1631,8 +1685,11 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # Use step size of 2 for all subsampleable dimensions
         viewer.export_reloadable_pyeyes("./viewer.py", subsampling=2)
+
+        TODO: add option to save this on GUI
         ```
         """
+
         if isinstance(path, str):
             path = Path(path)
 
@@ -1646,6 +1703,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
             if dim not in [self.vdim_horiz, self.vdim_vert]
         ]
 
+        # tmp update to dim_indices
+        dim_indices_old = deepcopy(self.slicer.dim_indices)
+
         # Calculate step sizes for each dimension
         step_map = self._calculate_subsampling_steps(
             subsampleable_dims, num_slices_to_keep, subsampling
@@ -1656,7 +1716,11 @@ class ComparativeViewer(Viewer, param.Parameterized):
         slicers = []
         for dim in self.ndims:
             step = step_map.get(dim, 1)
-            slicers.append(slice(None, None, step))
+            tslc = slice(None, None, step)
+            slicers.append(tslc)
+            if step > 1:
+                inds = np.arange(self.slicer.dim_sizes[dim])[tslc]
+                self.slicer.dim_indices[dim] = inds.shape[0] // 2
 
         for name, arr in self.raw_data.items():
             saved_data[name] = arr[tuple(slicers)]
@@ -1674,6 +1738,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
         bokeh_root_logger.info(
             f"Export complete: script at {path}, data at {data_file}"
         )
+
+        # restore dim_indices
+        with param.parameterized.discard_events(self.slicer):
+            self.slicer.dim_indices = dim_indices_old
 
     def _calculate_subsampling_steps(
         self,

@@ -2,6 +2,7 @@
 Slicers: Defined as classes that take N-dimensional data and can return a 2D view of that data given some input
 """
 
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import holoviews as hv
@@ -23,6 +24,16 @@ from .enums import METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
 from .utils import CPLX_VIEW_MAP
 
 hv.extension("bokeh")
+
+
+@dataclass
+class ClimSettings:
+    vmin: float
+    vmax: float
+    bound_min: float
+    bound_max: float
+    step: float
+    cmap: str
 
 
 def _format_image(plot, element):
@@ -117,7 +128,7 @@ class NDSlicer(param.Parameterized):
     # Viewing Parameters
     title_font_size = param.Number(default=12, bounds=(2, 36), step=1)
     vmin = param.Number(default=0.0)
-    vmax = param.Number(default=1.0)
+    vmax = param.Number(default=0.0)
     size_scale = param.Number(default=400, bounds=(200, 1000), step=10)
     flip_ud = param.Boolean(default=False)
     flip_lr = param.Boolean(default=False)
@@ -208,7 +219,7 @@ class NDSlicer(param.Parameterized):
             for dim in self.ndims:
                 self.dim_sizes[dim] = data.aggregate(dim, np.mean).data[dim].size
 
-            # Initialize slize cache
+            # Initialize slice cache
             self.slice_cache = {}
             for dim in self.ndims:
                 if dim in self.cat_dims.keys():
@@ -273,12 +284,15 @@ class NDSlicer(param.Parameterized):
                 self.DifferenceColorMapper = ColorMap(self.error_map_cmap)
 
             else:
-                # Update color limits with default
-                self.update_cplx_view(self.cplx_view)
-
                 # Initialize display images
                 self.param.display_images.objects = self.clabs
                 self.display_images = self.clabs
+
+                # ROI init
+                self.ROI = roi.ROI()
+
+                # Update color limits with default
+                self.update_cplx_view(self.cplx_view)
 
                 # Color map object. Auto-select "Quantitative" if inferred from named dimensions.
                 if self._infer_quantitative_maptype() is not None:
@@ -289,13 +303,12 @@ class NDSlicer(param.Parameterized):
                 else:
                     self.ColorMapper = ColorMap(self.cmap)
 
-                # ROI init
-                self.ROI = roi.ROI()
-
                 # Diff map and metrics init
                 self.param.metrics_reference.objects = self.clabs
                 self.metrics_reference = self.clabs[0]  # Default to the first one
                 self.DifferenceColorMapper = ColorMap(self.error_map_cmap)
+
+        self.set_vmin_vmax()
 
         # Initialize static instance of plot through self.Figure
         self.build_figure_objects(self.slice())
@@ -309,16 +322,21 @@ class NDSlicer(param.Parameterized):
         self.crop_cache[self.vdims[0]] = (self.lr_crop[0], self.lr_crop[1])
         self.crop_cache[self.vdims[1]] = (self.ud_crop[0], self.ud_crop[1])
 
-        # Cache color details
-        self.CPLX_VIEW_CLIM_CACHE[self.cplx_view]["vmin"] = self.vmin
-        self.CPLX_VIEW_CLIM_CACHE[self.cplx_view]["vmax"] = self.vmax
-        self.CPLX_VIEW_CLIM_CACHE[self.cplx_view]["cmap"] = self.cmap
+        # Cache contrast details
+        self.CPLX_VIEW_CLIM_CACHE[self.cplx_view] = ClimSettings(
+            vmin=self.vmin,
+            vmax=self.vmax,
+            bound_min=min(self.param.vmin.bounds[0], self.param.vmax.bounds[0]),
+            bound_max=max(self.param.vmin.bounds[1], self.param.vmax.bounds[1]),
+            step=self.param.vmin.step,
+            cmap=self.cmap,
+        )
 
         # Slice cache
         for dim in self.sdims:
             self.slice_cache[dim] = self.dim_indices[dim]
 
-    def slice(self, apply_colormap: bool = True) -> Dict:
+    def slice(self, apply_colormap: bool = True, return_metrics: bool = True) -> Dict:
         """
         Return the slice of the hv.Dataset given the current slice indices.
 
@@ -385,7 +403,7 @@ class NDSlicer(param.Parameterized):
         Gather metrics and difference maps of slice
         """
         # TODO: integrate caching
-        if self.metrics_state is not METRICS_STATE.INACTIVE:
+        if (self.metrics_state is not METRICS_STATE.INACTIVE) and return_metrics:
             # Gather arrays
             ref_img = np.copy(imgs[self.metrics_reference].data["Value"])
 
@@ -439,6 +457,7 @@ class NDSlicer(param.Parameterized):
         if (
             self.metrics_state is not METRICS_STATE.INACTIVE
             and self.metrics_reference not in self.display_images
+            and return_metrics
         ):
             imgs.pop(self.metrics_reference)
 
@@ -1040,98 +1059,250 @@ class NDSlicer(param.Parameterized):
         self.param.trigger("lr_crop", "ud_crop")
 
     def update_cplx_view(self, new_cplx_view: str, recompute_min_max: bool = True):
-
         # set attribute
+        same_cplx_view = self.cplx_view == new_cplx_view
         self.cplx_view = new_cplx_view
+        dmin = None
+        dmax = None
+        vmin = None
+        vmax = None
+        step = None
+        cmap = None
+        bound_min = None
+        bound_max = None
 
-        VSTEP_INTERVAL = 200
-
-        if (
-            self.cplx_view in self.CPLX_VIEW_CLIM_CACHE
-            and len(self.CPLX_VIEW_CLIM_CACHE[self.cplx_view]) > 0
-        ):
-
-            vmind = self.CPLX_VIEW_CLIM_CACHE[self.cplx_view]["vmin"]
-            vminb = self.CPLX_VIEW_CLIM_CACHE[self.cplx_view]["vmin_bounds"]
-            vmins = self.CPLX_VIEW_CLIM_CACHE[self.cplx_view]["vmin_step"]
-            vmaxd = self.CPLX_VIEW_CLIM_CACHE[self.cplx_view]["vmax"]
-            vmaxb = self.CPLX_VIEW_CLIM_CACHE[self.cplx_view]["vmax_bounds"]
-            vmaxs = self.CPLX_VIEW_CLIM_CACHE[self.cplx_view]["vmax_step"]
-            cmap = self.CPLX_VIEW_CLIM_CACHE[self.cplx_view]["cmap"]
-
+        if self.cplx_view in self.CPLX_VIEW_CLIM_CACHE:
+            clim_settings = self.CPLX_VIEW_CLIM_CACHE[self.cplx_view]
+            assert isinstance(clim_settings, ClimSettings)
+            vmin = clim_settings.vmin
+            vmax = clim_settings.vmax
+            dmin = clim_settings.bound_min
+            dmax = clim_settings.bound_max
+            step = clim_settings.step
+            cmap = clim_settings.cmap
+            bound_min = clim_settings.bound_min
+            bound_max = clim_settings.bound_max
         else:
-
             # use same cmap
             cmap = self.cmap
 
-            # Compute max color limits
-            if recompute_min_max:
-                if self.cplx_view == "phase":
-                    mn = -np.pi
-                    mx = np.pi
-                else:
-                    cplx_callable = CPLX_VIEW_MAP[self.cplx_view]
-                    d = np.stack(
-                        [cplx_callable(self.data[v.name]) for v in self.data.vdims]
-                    )
-                    mn = np.nanmin(d)
-                    mx = np.nanmax(d)
-
-                vmind = mn
-                vminb = (mn, mx)
-                vmins = (mx - mn) / VSTEP_INTERVAL
-                vmaxd = mx
-                vmaxb = (mn, mx)
-                vmaxs = (mx - mn) / VSTEP_INTERVAL
+            # Compute max color limits if setting up new complex view or input desires recomputation
+            if recompute_min_max or (not same_cplx_view):
+                dmin, dmax, vmin, vmax = self.get_autoscale_lims()
             else:
                 # for loading from config
-                mn = self.vmin
-                mx = self.vmax
-                vmind = self.vmin
-                vminb = (self.param.vmin.bounds[0], self.param.vmin.bounds[1])
-                vmins = self.param.vmin.step
-                vmaxd = self.vmax
-                vmaxb = (self.param.vmax.bounds[0], self.param.vmax.bounds[1])
-                vmaxs = self.param.vmax.step
-
-            self.CPLX_VIEW_CLIM_CACHE[self.cplx_view] = dict(
-                vmin=vmind,
-                vmin_bounds=vminb,
-                vmin_step=vmins,
-                vmax=vmaxd,
-                vmax_bounds=vmaxb,
-                vmax_step=vmaxs,
-                cmap=self.cmap,
-            )
+                vmin = self.vmin
+                vmax = self.vmax
+                if (
+                    self.param.vmin.bounds is not None
+                    and self.param.vmax.bounds is not None
+                ):
+                    dmin = float(
+                        min(self.param.vmin.bounds[0], self.param.vmax.bounds[0])
+                    )
+                    dmax = float(
+                        max(self.param.vmin.bounds[1], self.param.vmax.bounds[1])
+                    )
+                else:
+                    dmin, dmax = self.get_data_lims()
+                bound_min, bound_max = dmin, dmax
+                step = self.param.vmin.step
 
         # Update color limits
         with param.parameterized.discard_events(self):
-            self.param.vmin.default = vmind
-            self.param.vmin.bounds = vminb
-            self.param.vmin.step = vmins
-            self.param.vmax.default = vmaxd
-            self.param.vmax.bounds = vmaxb
-            self.param.vmax.step = vmaxs
-            self.param.cmap.default = cmap
-            self.vmin = vmind
-            self.vmax = vmaxd
+            # Update bounds if new complex view
+            if not same_cplx_view:
+                bound_min = dmin
+                bound_max = dmax
+
+            self.set_vmin_vmax(
+                vmin=vmin,
+                vmax=vmax,
+                dmin=dmin,
+                dmax=dmax,
+                bound_min=bound_min,
+                bound_max=bound_max,
+                step=step,
+            )
+
             self.cmap = cmap
+
+            # update cmap for quantitative colormap
+            self.update_colormap()
+
+            self.update_cache()
 
         # Trigger
         self.param.trigger("vmin", "vmax", "cmap")
+
+    def get_slice_data(self) -> np.ndarray:
+        """
+        Get the data for the current slice.
+        """
+        data = np.stack(
+            [
+                d.data["Value"]
+                for d in self.slice(apply_colormap=False, return_metrics=False)[
+                    "img"
+                ].values()
+            ]
+        )
+        data[np.isnan(data)] = 0
+        return data
+
+    def get_data_lims(self) -> Tuple[float, float]:
+        """
+        Get the data limits for the current slice.
+        """
+        data = self.get_slice_data()
+        return np.min(data), np.max(data)
+
+    def set_vmin_vmax(
+        self,
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+        dmin: Optional[float] = None,
+        dmax: Optional[float] = None,
+        bound_min: Optional[float] = None,
+        bound_max: Optional[float] = None,
+        step: Optional[float] = None,
+    ):
+        """
+        Ensure vmin/vmax can be set as desired, and set GUI bounds accordingly.
+
+        Parameters
+        ----------
+        vmin : float, optional
+            Desired vmin. If None, use current vmin.
+        vmax : float, optional
+            Desired vmax. If None, use current vmax.
+        dmin : float, optional
+            Data min
+        dmax : float, optional
+            Data max
+        step : float, optional
+            Step size for incrementing bar. If None, do 1/100 of data range.
+        """
+
+        # current slice's data limits
+        if (dmin is None) or (dmax is None):
+            dmin, dmax = self.get_data_lims()
+
+        # desired contrast bounds
+        if vmin is None:
+            vmin = self.vmin
+        if vmax is None:
+            vmax = self.vmax
+
+        # Slider bounds
+        if bound_min is None:
+            if (
+                self.param.vmin.bounds is not None
+                and self.param.vmax.bounds is not None
+            ):
+                bound_min = min(self.param.vmin.bounds[0], self.param.vmax.bounds[0])
+            else:
+                bound_min = dmin
+        if bound_max is None:
+            if (
+                self.param.vmin.bounds is not None
+                and self.param.vmax.bounds is not None
+            ):
+                bound_max = max(self.param.vmin.bounds[1], self.param.vmax.bounds[1])
+            else:
+                bound_max = dmax
+
+        # Allow extending beyond data bounds if user desires (vmin/vmax)
+        bound_min = min(bound_min, vmin)
+        bound_max = max(bound_max, vmax)
+
+        # By default, keep clim bar within data bounds if desired vmin/vmax are within data bounds
+        if vmin > dmin:
+            bound_min = dmin
+        if vmax < dmax:
+            bound_max = dmax
+
+        # ensure data limits met
+        if vmin > dmax:
+            pn.state.notifications.warning(
+                f"Requested vmin={vmin:0.1e} > data max={dmax:0.1e}. Setting vmin to data max."
+            )
+            vmin = dmax
+        if vmax < dmin:
+            pn.state.notifications.warning(
+                f"Requested vmax={vmax:0.1e} < data min={dmin:0.1e}. Setting vmax to data min."
+            )
+            vmax = dmin
+
+        # Equal vmin / vmax case
+        if vmin == vmax:
+            if vmin == 0:
+                msg = "Requested min = max = 0. Setting vmin/vmax to -1/1."
+            else:
+                msg = f"Data min = max = {dmin:0.1e}. Setting vmin/vmax to {dmin:0.1e} +/- 1."
+            pn.state.notifications.warning(msg)
+            vmin = vmin - 1
+            vmax = vmax + 1
+            bound_min = min(bound_min, vmin - 1)
+            bound_max = max(bound_max, vmax + 1)
+            step = step or 0.1
+        else:
+            if dmin == dmax:
+                step = (bound_max - bound_min) / 100
+            else:
+                step = step or (dmax - dmin) / 100
+
+        step = max(step, 1e-14)
+
+        self.param.vmin.bounds = (bound_min, bound_max)
+        self.param.vmax.bounds = (bound_min, bound_max)
+        self.param.vmin.step = step
+        self.param.vmax.step = step
+        self.vmin = vmin
+        self.vmax = vmax
+        self.param.vmin.default = vmin
+        self.param.vmax.default = vmax
+
+        self.update_cache()
+
+        return vmin, vmax, bound_min, bound_max, step
+
+    def get_autoscale_lims(self) -> Tuple[float, float, float, float]:
+        # Get data limits and auto-scale by percentiles
+        data = self.get_slice_data()
+
+        if self.cplx_view == "phase":
+            dmin, dmax = -np.pi, np.pi
+        else:
+            dmin = np.min(data)
+            dmax = np.max(data)
+
+        vmin = np.percentile(data, 0.1)
+        vmax = np.percentile(data, 99.9)
+
+        return dmin, dmax, vmin, vmax
 
     def autoscale_clim(self):
         """
         For given slice, automatically set vmin and vmax to min and max of data
         """
-
-        data = np.stack([d.data["Value"] for d in self.slice()["img"].values()])
-
         with param.parameterized.discard_events(self):
-            self.vmin = max(self.param.vmin.bounds[0], np.percentile(data, 0.1))
-            self.vmax = min(self.param.vmin.bounds[1], np.percentile(data, 99.9))
+            # Get data limits and auto-scale by percentiles
+            dmin, dmax, vmin, vmax = self.get_autoscale_lims()
+
+            # supply this to set_vmin_vmax to avoid recomputing data limits
+            vmin, vmax, bound_min, bound_max, step = self.set_vmin_vmax(
+                vmin=vmin,
+                vmax=vmax,
+                dmin=dmin,
+                dmax=dmax,
+                bound_min=dmin,
+                bound_max=dmax,
+            )
 
         self.param.trigger("vmin", "vmax")
+
+        return vmin, vmax, bound_min, bound_max, step
 
     def update_display_image_list(self, display_images: Sequence[str]):
         self.display_images = display_images

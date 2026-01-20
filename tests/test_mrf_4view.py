@@ -4,7 +4,7 @@ Test case:
 """
 
 import numpy as np
-from paths import data_path
+from paths import cfg_path, data_path
 
 from pyeyes import set_theme
 from pyeyes.viewers import ComparativeViewer
@@ -71,6 +71,7 @@ Viewer = ComparativeViewer(
     named_dims=named_dims,
     view_dims=vdims,
     cat_dims=cat_dims,
+    config_path=cfg_path / "mrf-4view-config.yaml",
 )
 
 Viewer.launch()
