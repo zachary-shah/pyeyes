@@ -159,6 +159,7 @@ class NDSlicer(param.Parameterized):
     error_map_cmap = param.ObjectSelector(
         default="inferno", objects=VALID_ERROR_COLORMAPS
     )
+    normalize_error_map = param.Boolean(default=True)
     metrics_text_types = param.ListSelector(default=[], objects=metrics.FULL_METRICS)
     metrics_text_location = param.ObjectSelector(
         default=ROI_LOCATION.TOP_LEFT, objects=ROI_LOCATION
@@ -317,7 +318,7 @@ class NDSlicer(param.Parameterized):
         for dim in self.sdims:
             self.slice_cache[dim] = self.dim_indices[dim]
 
-    def slice(self) -> Dict:
+    def slice(self, apply_colormap: bool = True) -> Dict:
         """
         Return the slice of the hv.Dataset given the current slice indices.
 
@@ -401,6 +402,7 @@ class NDSlicer(param.Parameterized):
                 if (
                     self._infer_quantitative_maptype() is None
                     and self.cplx_view != "phase"
+                    and self.normalize_error_map
                 ):
                     tar_img = utils.normalize(
                         tar_img, ref_img, ofs=True, mag=np.iscomplexobj(tar_img)
@@ -441,10 +443,11 @@ class NDSlicer(param.Parameterized):
             imgs.pop(self.metrics_reference)
 
         # Preprocessing for color map data
-        for k in imgs.keys():
-            imgs[k].data["Value"] = self.ColorMapper.preprocess_data(
-                imgs[k].data["Value"]
-            )
+        if apply_colormap:
+            for k in imgs.keys():
+                imgs[k].data["Value"] = self.ColorMapper.preprocess_data(
+                    imgs[k].data["Value"]
+                )
 
         out_dict["img"] = imgs
 
@@ -1063,12 +1066,16 @@ class NDSlicer(param.Parameterized):
 
             # Compute max color limits
             if recompute_min_max:
-                cplx_callable = CPLX_VIEW_MAP[self.cplx_view]
-                d = np.stack(
-                    [cplx_callable(self.data[v.name]) for v in self.data.vdims]
-                )
-                mn = np.min(d)
-                mx = np.max(d)
+                if self.cplx_view == "phase":
+                    mn = -np.pi
+                    mx = np.pi
+                else:
+                    cplx_callable = CPLX_VIEW_MAP[self.cplx_view]
+                    d = np.stack(
+                        [cplx_callable(self.data[v.name]) for v in self.data.vdims]
+                    )
+                    mn = np.nanmin(d)
+                    mx = np.nanmax(d)
 
                 vmind = mn
                 vminb = (mn, mx)
@@ -1314,6 +1321,11 @@ class NDSlicer(param.Parameterized):
     def update_error_map_cmap(self, new_cmap: str):
         self.error_map_cmap = new_cmap
         self.DifferenceColorMapper = ColorMap(new_cmap)
+        if self.metrics_state in [METRICS_STATE.MAP, METRICS_STATE.ALL]:
+            self.param.trigger("error_map_scale")
+
+    def update_normalize_error_map(self, normalize: bool):
+        self.normalize_error_map = normalize
         if self.metrics_state in [METRICS_STATE.MAP, METRICS_STATE.ALL]:
             self.param.trigger("error_map_scale")
 

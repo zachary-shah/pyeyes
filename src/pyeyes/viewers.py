@@ -1227,6 +1227,17 @@ class ComparativeViewer(Viewer, param.Parameterized):
         error_scale_widget.param.watch(_update_error_scale, "value")
         widgets["error_scale"] = error_scale_widget
 
+        error_normalize_widget = pn.widgets.Checkbox(
+            name="Normalize Error Map",
+            value=self.slicer.normalize_error_map,
+        )
+
+        def _update_error_normalize(event):
+            self.slicer.update_normalize_error_map(event.new)
+
+        error_normalize_widget.param.watch(_update_error_normalize, "value")
+        widgets["error_normalize"] = error_normalize_widget
+
         error_cmap_widget = pn.widgets.Select(
             name="Error Map Color Map",
             options=VALID_ERROR_COLORMAPS,

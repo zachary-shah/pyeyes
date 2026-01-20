@@ -6,6 +6,7 @@ import panel as pn
 pn.extension(notifications=True)
 _ORIGINAL_EXCEPTHOOK = sys.excepthook
 
+
 # Decorator to handle errors
 def error_handler_decorator(disp_duration_ms=3000):
     def decorator(func):
@@ -39,9 +40,11 @@ def global_error_handler(exc_type, exc_value, exc_traceback):
     pn.state.notifications.error(f"An error occurred: {exc_value}", duration=0)
     raise exc_value
 
+
 def install_pyeyes_error_handler():
     """Call this when you actually launch your PyEyes viewer."""
     sys.excepthook = global_error_handler
+
 
 def uninstall_pyeyes_error_handler():
     """Restore the system default hook."""

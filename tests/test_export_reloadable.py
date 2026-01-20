@@ -1,5 +1,6 @@
-import numpy as np
 from pathlib import Path
+
+import numpy as np
 
 from pyeyes.viewers import ComparativeViewer
 
@@ -31,4 +32,6 @@ Viewer = ComparativeViewer(
     cat_dims=cat_dims,
 )
 
-Viewer.export_reloadable_pyeyes(path=Path("./test_export_reloadable.py"), num_slices_to_keep={"z": 20})
+Viewer.export_reloadable_pyeyes(
+    path=Path("./test_export_reloadable.py"), num_slices_to_keep={"z": 20}
+)
