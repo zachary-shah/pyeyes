@@ -21,7 +21,8 @@ from .cmap.cmap import (
     QuantitativeColorMap,
 )
 from .enums import METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
-from .utils import CPLX_VIEW_MAP
+from .metrics import ERROR_TOL, TOL
+from .utils import CPLX_VIEW_MAP, round_str
 
 hv.extension("bokeh")
 
@@ -579,7 +580,7 @@ class NDSlicer(param.Parameterized):
                 diff_cbar_opts["colorbar_opts"] = dict(title="SSIM")
             else:
                 diff_cbar_opts["colorbar_opts"] = dict(
-                    title=f"Difference ({self.error_map_scale}x)"
+                    title=f"Difference ({round_str(self.error_map_scale, ndec=3)}x)"
                 )
 
         opts = dict(
@@ -827,7 +828,12 @@ class NDSlicer(param.Parameterized):
                     if self.error_map_type == "SSIM":
                         label = f"{name} (SSIM)"
                     else:
-                        label = f"Diff ({self.error_map_scale}x)"
+                        # ems = int(self.error_map_scale * 10)
+                        # if ems % 10 == 0:
+                        #     lb_ems = f"{int(ems/10)}"
+                        # else:
+                        #     lb_ems = f"{float(float(ems)/10):0.1f}"
+                        label = f"Diff ({round_str(self.error_map_scale, ndec=3)}x)"
 
                     def _diff_callback(data):
                         return hv.Image(data, label=label).opts(**opts["diff_opts"])
@@ -1252,7 +1258,7 @@ class NDSlicer(param.Parameterized):
             else:
                 step = step or (dmax - dmin) / 100
 
-        step = max(step, 1e-14)
+        step = max(step, TOL)
 
         self.param.vmin.bounds = (bound_min, bound_max)
         self.param.vmax.bounds = (bound_min, bound_max)
@@ -1531,7 +1537,7 @@ class NDSlicer(param.Parameterized):
 
             error_max = self._get_max_err()
 
-            if error_max > 1e-10:
+            if error_max > ERROR_TOL:
                 self.error_map_scale = round(self.vmax / error_max, 1)
 
         elif self.error_map_type == "Diff":
@@ -1539,7 +1545,7 @@ class NDSlicer(param.Parameterized):
             self.DifferenceColorMapper = ColorMap(self.error_map_cmap)
             error_max = np.abs(self._get_max_err())
 
-            if error_max > 1e-10:
+            if error_max > ERROR_TOL:
                 error_max = np.abs(self._get_max_err())
                 self.error_map_scale = round(self.vmax / error_max, 1)
 
