@@ -20,7 +20,7 @@ from . import config, error, metrics, themes
 from .cmap.cmap import VALID_COLORMAPS, VALID_ERROR_COLORMAPS
 from .enums import METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
 from .slicers import NDSlicer
-from .utils import tonp
+from .utils import parse_dimensional_input, tonp
 
 hv.extension("bokeh")
 pn.extension(notifications=True)
@@ -96,6 +96,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
         named_dims : Optional[Sequence[str]]
             String name for each dimension of the image data, with the same ordering as
             the array dimensions. Highly recommended to provide this for easier use.
+            Input format options include:
+            - List of strings equal in length to number of dimensions
+            - Character string with number of characters equal to num dims
+            - Single character string delimited by spaces or commas
             If not provided, default is ["Dim 0", "Dim 1", ...].
         view_dims : Optional[Sequence[str]]
             Initial dimensions to view, should be a subset of dimension_names.
@@ -123,8 +127,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         data = {k: tonp(v) for k, v in data.items()}
 
         first_key = list(data.keys())[0]
-        if named_dims is None or len(named_dims) == 0:
-            named_dims = [f"Dim {i}" for i in range(data[first_key].ndim)]
+        named_dims = parse_dimensional_input(named_dims, data[first_key].ndim)
 
         super().__init__(data)
         param.Parameterized.__init__(self)
@@ -164,6 +167,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         ), "Number of dimension names must match the number of dimensions in the data."
 
         if view_dims is not None:
+            view_dims = parse_dimensional_input(view_dims, 2)
             assert all(
                 [dim in self.noncat_dims for dim in view_dims]
             ), "All view dimensions must be non-singleton, non-categorical, and in dimension_names."
@@ -1400,7 +1404,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         """
         widgets["export_path_desc"] = pn.widgets.StaticText(
             name="Save Viewer Config",
-            value="Save config to yaml file. Use: Viewer(..., from_config=path).",
+            value="Save config to yaml file. Use: Viewer(..., config_path=path).",
             width=dwidth,
         )
 
