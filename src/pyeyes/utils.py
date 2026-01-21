@@ -200,6 +200,34 @@ def masked_angle(x, thresh=1e-2):
     return x
 
 
+def round_str(x: float, ndec: int = 1) -> str:
+    """
+    Return string of x rounded to ndec decimal places.
+    """
+    MAXR = 30
+    assert 0 < ndec < MAXR, f"ndec must be between 0 and {MAXR}."
+
+    if ndec == 0:
+        return str(int(round(x)))
+
+    x = float(round(x, ndec))
+
+    p = 10**ndec
+    xi = int(x * p)
+
+    nz = 0
+    while ((xi % 10) == 0) and (nz < ndec):
+        nz += 1
+        xi = xi // 10
+
+    if nz == ndec:
+        return str(int(x))
+
+    nrem_div = 10 ** (ndec - nz)
+
+    return f"{float(float(xi) / nrem_div):.{(ndec - nz)}f}"
+
+
 # Complex view mapping
 CPLX_VIEW_MAP = {
     "mag": np.abs,

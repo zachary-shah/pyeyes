@@ -8,10 +8,16 @@ from paths import cfg_path, data_path
 
 from pyeyes.viewers import ComparativeViewer
 
+small_scale = True
+
 img_dict = {
     "4avg": np.load(data_path / "se" / "avg_se.npy"),
     "1avg": np.load(data_path / "se" / "single_se.npy"),
 }
+
+if small_scale:
+    for k in img_dict:
+        img_dict[k] = img_dict[k] * 1e-10
 
 # Parameters
 named_dims = ["x", "y", "z"]
@@ -23,4 +29,5 @@ Viewer = ComparativeViewer(
     view_dims=vdims,
     config_path=cfg_path / "cplx_config.yaml",
 )
+Viewer._autoscale_clim(None)
 Viewer.launch()

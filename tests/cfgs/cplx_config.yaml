@@ -234,17 +234,22 @@
         "metrics_text_types": {
             "type": "ListSelector",
             "value": [
-                "NRMSE"
+                "L1Diff",
+                "RMSE",
+                "NRMSE",
+                "PSNR",
+                "SSIM",
+                "RelativeL1"
             ],
             "default": []
         },
         "metrics_text_location": {
-            "value": "Top Left",
+            "value": "Top Right",
             "enum_class": "ROI_LOCATION"
         },
         "metrics_text_font_size": {
             "type": "Number",
-            "value": 11,
+            "value": 7,
             "default": 12,
             "bounds": [
                 5,

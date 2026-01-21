@@ -18,7 +18,9 @@ MAPPABLE_METRICS = [
     "Diff",
 ]
 
-TOL = 1e-8
+# small tol
+TOL = 1e-14
+ERROR_TOL = 1e-12
 
 
 def diff(recon: np.ndarray, true: np.ndarray, return_map=False, isphase=False) -> float:
@@ -62,16 +64,14 @@ def RelativeL1(
     true: np.ndarray,
     return_map=False,
     isphase=False,
-    eps=1e-9,
 ) -> float:
 
     assert recon.shape == true.shape, "Input array dimensions mismatch."
 
     diff_map = diff(recon, true, return_map=True, isphase=isphase)
-
-    rel_diff = np.abs(diff_map) / (np.abs(true) + eps)
-
-    valid = np.abs(true) > TOL
+    mx = np.max(np.abs(true))
+    rel_diff = np.abs(diff_map) / (np.abs(true) + TOL * mx)
+    valid = np.abs(true) > TOL * mx
 
     if return_map:
         if np.sum(valid) == 0:
@@ -116,7 +116,7 @@ def RMSE(recon: np.ndarray, true: np.ndarray, return_map=False, isphase=False) -
 
 
 def NRMSE(
-    recon: np.ndarray, true: np.ndarray, return_map=False, isphase=False, eps=1e-8
+    recon: np.ndarray, true: np.ndarray, return_map=False, isphase=False
 ) -> float:
     """
     Given 2 complex arrays of the same shape, recon (g) and true (f), compute the NRMSE between arrays
@@ -132,14 +132,15 @@ def NRMSE(
     if return_map:
         if np.max(np.abs(true)) < TOL:
             return np.zeros_like(mse)
-        nrmse = mse / ((np.abs(true) ** 2) + eps)
-        if np.max(nrmse) < TOL:
-            return np.zeros_like(nrmse)
+        nrmse = mse / ((np.abs(true) ** 2) + (TOL**2))
+        nrmse = np.sqrt(nrmse)
         nrmse[nrmse < TOL] = np.nan
-        nrmse[nrmse > (1 / eps)] = np.nan
-        return np.sqrt(nrmse)
+        nrmse[nrmse > (1 / TOL)] = np.nan
+        if np.nanmax(nrmse) < TOL:
+            return np.zeros_like(nrmse)
+        return nrmse
 
-    nrmse = np.mean(mse) / (np.mean(np.abs(true) ** 2) + eps)
+    nrmse = np.mean(mse) / (np.mean(np.abs(true) ** 2) + (TOL**2))
     return np.sqrt(nrmse)
 
 
