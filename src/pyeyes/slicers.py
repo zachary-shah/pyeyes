@@ -22,7 +22,7 @@ from .cmap.cmap import (
 )
 from .enums import METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
 from .metrics import ERROR_TOL, TOL
-from .utils import CPLX_VIEW_MAP
+from .utils import CPLX_VIEW_MAP, round_str
 
 hv.extension("bokeh")
 
@@ -580,7 +580,7 @@ class NDSlicer(param.Parameterized):
                 diff_cbar_opts["colorbar_opts"] = dict(title="SSIM")
             else:
                 diff_cbar_opts["colorbar_opts"] = dict(
-                    title=f"Difference ({self.error_map_scale}x)"
+                    title=f"Difference ({round_str(self.error_map_scale, ndec=3)}x)"
                 )
 
         opts = dict(
@@ -828,7 +828,12 @@ class NDSlicer(param.Parameterized):
                     if self.error_map_type == "SSIM":
                         label = f"{name} (SSIM)"
                     else:
-                        label = f"Diff ({self.error_map_scale}x)"
+                        # ems = int(self.error_map_scale * 10)
+                        # if ems % 10 == 0:
+                        #     lb_ems = f"{int(ems/10)}"
+                        # else:
+                        #     lb_ems = f"{float(float(ems)/10):0.1f}"
+                        label = f"Diff ({round_str(self.error_map_scale, ndec=3)}x)"
 
                     def _diff_callback(data):
                         return hv.Image(data, label=label).opts(**opts["diff_opts"])
