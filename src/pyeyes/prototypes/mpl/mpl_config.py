@@ -9,7 +9,6 @@ import numpy as np
 # Plotting dataclass
 @dataclass
 class PlotConfig:
-    # TODO: reselect best defaults
     save: bool = False
     figdir: str = None  # must set this up
 

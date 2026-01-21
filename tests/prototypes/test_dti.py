@@ -1,4 +1,4 @@
-# TODO: Depreciate dti viewer
+# Depreciated
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import use as mpl_backend
@@ -11,7 +11,6 @@ mpl_backend("WebAgg")
 # Options.
 dti_type = "festive"  # 'skope', 'uncorr', or 'festive'
 
-# TODO: allow multiple DTI to compare like with ComparativeViewer. This will need to handle color dims tho
 dti_root = data_path / "dti" / "dtifit"
 dti_folder = dti_root / dti_type / f"{dti_type}_b1000_DTI"
 

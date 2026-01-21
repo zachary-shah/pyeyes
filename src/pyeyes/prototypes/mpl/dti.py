@@ -1,7 +1,7 @@
 """
 Plotting tools for DTI data.
 
-TODO: Port to Bokeh (currently mpl backend)
+Depreciated
 """
 
 import os
@@ -182,7 +182,6 @@ class PlotDTIDynamic:
         self.plot_trim = cfg.plot_trim
         self.fov_shift = cfg.fov_shift
 
-        # TODO: move basic preprocessing steps to generic infastructure
         if transpose:
 
             def tp(x):
@@ -257,10 +256,10 @@ class PlotDTIDynamic:
         # larger font
         plt.rcParams.update({"font.size": cfg.font_size})
 
-        # Initialize Figure. TODO: make sizings more intuitive / parameterizeable
+        # Initialize Figure.
         W, H = (self.im_shape[1] / self.im_shape[0]) * 1, 1
         S = cfg.figsize[0]
-        W_CBAR = 0.15  # TODO: play with
+        W_CBAR = 0.15
         FF = 0.1
         figsize = (W * S * (5 + 2 * W_CBAR), H * S * (2 + FF))
         fig = plt.figure(figsize=figsize, dpi=cfg.dpi)
