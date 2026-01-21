@@ -14,7 +14,7 @@ import numpy as np
 from matplotlib import use as backend_use
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
-from ..utils import tonp
+from ...utils import tonp
 from .mpl_config import PlotConfig, dark_mode
 
 

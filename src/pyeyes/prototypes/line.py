@@ -6,7 +6,7 @@ import param
 hv.extension("bokeh")
 pn.extension()
 
-from .utils import tonp
+from ..utils import tonp
 
 
 def launch_1d_viewer(

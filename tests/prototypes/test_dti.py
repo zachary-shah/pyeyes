@@ -4,7 +4,7 @@ import numpy as np
 from matplotlib import use as mpl_backend
 from paths import data_path
 
-from pyeyes.mpl.dti import plot_dti
+from pyeyes.prototypes.mpl.dti import plot_dti
 
 mpl_backend("WebAgg")
 
