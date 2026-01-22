@@ -89,16 +89,54 @@ TASK 1: Translate current test scripts to pytest.
     - [x] Single array for viewing only one dataset
 - [x] Move "basic" tests into `tests/comparative/basic`.
 - [x] Move the rest of the tests into `tests/comparative/load`
+
 TASK 2: Add one basic pytest for GUI interactive features to test editing the value of the sdim widget.
 - [x] Add scripted ways to test GUI features through pytest
 - [x] Test should load a viewer (using dataset from test_cmplx.py), simulate `editing` the value of the sdim widget, and then ensure no errors pop up.
 - [x] If possible, test should also ensure the viewer updates as desired.
 - [x] These tests will go into `tests/comparative/gui`
-TASK 3.1: Implement interactive testing for exhaustive features.
+
+TASK 3: Implement interactive testing for exhaustive features.
 - [x] For headless GUI tests, add a unique CSS class identifier css class to each widget, which can be found with page.locator
 - [x] For running headless GUI tests, first add a way to enable playwright to click on each tab in the ComparativeViewer. Then develop a pytest to ensure tabs can be navigated between each other by verifying the existence of one or two widgets by their CSS class identifiers which should exist on each tab. First try to find a solution that doesn't require editing the code in `/src/`. Then, if this doesn't work, you can try giving each tab a hidden anchor that can be identified more easily with the headless test to click on each tab.
-TASK 3.2:
-- [ ] Implement tests to exhaust the feature list and put in `tests/comparative/gui`. Widgets to test and datasets to use:
+
+- [x] Implement tests to exhaust the feature list and put in `tests/comparative/gui`. To each test, navigate to the appropriate tab and add light-weight print statements to help debug tests. Widgets to test and datasets to use:
+
+se data:
+- [x] View Tab:
+    - [x] Test that lr crop and ud crop can be modified, and that the dimensions of the data returned accurately reflect this change.
+    - [x] Test change of title font size
+    - [x] Test change of size scale
+    - [x] Test change of flip U/D and flip L/R, and verify slice data is accurately flipped.
+    - [x] Test editing the 'z' sdim slider to 13, and then back to 10. the starting slice should be at 10 before edit to the slider, so verify that after going from 10->13->10 in value, the data is the same. also verify that when going to z=13, the slice data is different than for z=10.
+- [x] Contrast Tab:
+    - [x] Test changing the pyeyes-cplx-view complex widget between 'mag' (default) and 'phase'. For this test, extend timeout to 30s.
+        - [x] (1) After loading viewer, save the vmin/vmax/cmap of the viewer. Ensure that the cplx view is 'mag'.
+        - [x] (2) Switch cplx view to phase. Ensure all values in the returned slice are between -3.15 and 3.15. Also ensure the clim of the slider also changes to have a vmin close to -3.14159 by 10%, and vmax close to 3.14159 by 10%.
+        - [x] (3) Then change the cmap to 'jet' and ensure the slider.cmap is 'jet'.
+        - [x] (4) Then change back to 'mag' complex view. ensure that the cmap is restored to the value cached in step 1. Also ensure that the vmin/vmax are restored to within 10% of their values in step 1.
+    - [x] Test toggling the colorbar checkbox on and off.
+    - [x] Test changing the colorbar label
+- [x] Analysis Tab:
+    - [x] Build a test which changes the reference dataset from '4avg' to '1avg'. Verify that the metrics (SSIM) is different by more than 0.01% when having the reference change.
+    - [x] Test clicking 'normalize error map' button. Verify that the metrics (SSIM, PSNR) change when normalize is on or off by more than 0.01%.
+    - [x] Test changing the error map cmap to 'hot'.
+    - [x] Test moving metrics to bottom left.
+    - [x] Test pressing autoformat error map.
+- [x] Export Tab:
+    - [x] Load the viewer without changing anything, then update export config path to a temporary location. press the export config button. verify the exported file is not empty.
+    - [x] Load the viewer without changing anything, then update HTML save path to a temporary location. press the export HTML button. verify the exported file is not empty. for this test, extend timeout to 30s.
+
+diffusion data:
+- [x] ROI Tab:
+    - [x] Check the "ROI Overlay Enabled" checkbox. Verify no bug.
+    - [x] Check the "Clear ROI" button. Verify no bug.
+    - [x] Change ROI color map to 'jet'. Verify no error.
+    - [x] Check the "ROI Overlay Enabled" checkbox, then change ROI location to "Top left".
+    - [x] Change the ROI line width to 3.
+    - [x] Change the ROI zoom order to 2.
+    - [x] Change the ROI line color to #FFFFFF.
+
 
 ## Refactor
 
@@ -116,7 +154,7 @@ TASK 4 END
 
 ## ComparativeViewer Bug Fix List
 TASK 5
-- [ ] Issue with overlay displays and flipping image dimensions. When both "Flip Image Up/Down" and "Flip Image Left/Right" are checked, and metrics display is enabled, the location of the metrics flips sides and goes outside the viewed window. This is the case for any location of the metrics, and only happens when both flips are enabled. This also happens with ROI overlay. When both flips are enabled, the ROI location flips L/R relative to where it should be (Displays in "bottom right" corner when "bottom left" is checked). 
+- [ ] Issue with overlay displays and flipping image dimensions. When both "Flip Image Up/Down" and "Flip Image Left/Right" are checked, and metrics display is enabled, the location of the metrics flips sides and goes outside the viewed window. This is the case for any location of the metrics, and only happens when both flips are enabled. This also happens with ROI overlay. When both flips are enabled, the ROI location flips L/R relative to where it should be (Displays in "bottom right" corner when "bottom left" is checked).
 
 ## ComparativeViewer Feature Request Log
 TASK 6

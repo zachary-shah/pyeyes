@@ -170,6 +170,30 @@ def mrf_data(data_path):
 
 
 @pytest.fixture
+def se_viewer(se_data, cfg_path):
+    """Create a viewer with SE data for Analysis tab tests."""
+    print("[se_viewer] Creating ComparativeViewer with SE data...")
+    viewer = ComparativeViewer(
+        data=se_data, named_dims="xyz", config_path=cfg_path / "cfg_cplx.yaml"
+    )
+    print(f"[se_viewer] Viewer created. Image names: {viewer.img_names}")
+    return viewer
+
+
+@pytest.fixture
+def dwi_viewer(dwi_data, cfg_path):
+    """Create a viewer with DWI data for ROI tab tests."""
+    print("[dwi_viewer] Creating ComparativeViewer with DWI data...")
+    viewer = ComparativeViewer(
+        data=dwi_data,
+        named_dims=["Bdir", "x", "y", "z"],
+        config_path=cfg_path / "cfg_diff.yaml",
+    )
+    print(f"[dwi_viewer] Viewer created. Image names: {viewer.img_names}")
+    return viewer
+
+
+@pytest.fixture
 def launched_viewer():
     """
     Fixture that launches a viewer silently and cleans up after test.
@@ -338,7 +362,9 @@ def navigate_to_tab():
         """
         valid_tabs = ["View", "Contrast", "ROI", "Analysis", "Export"]
         if tab_name not in valid_tabs:
-            raise ValueError(f"Invalid tab name '{tab_name}'. Must be one of: {valid_tabs}")
+            raise ValueError(
+                f"Invalid tab name '{tab_name}'. Must be one of: {valid_tabs}"
+            )
 
         print(f"[navigate_to_tab] Attempting to navigate to '{tab_name}' tab...")
 
@@ -349,7 +375,7 @@ def navigate_to_tab():
             print(f"[navigate_to_tab] ERROR: Tab header '{tab_name}' not found in page")
             return False
 
-        print(f"[navigate_to_tab] Found tab header, clicking...")
+        print("[navigate_to_tab] Found tab header, clicking...")
         tab_header.click()
         page.wait_for_timeout(timeout)
         print(f"[navigate_to_tab] Successfully navigated to '{tab_name}' tab")

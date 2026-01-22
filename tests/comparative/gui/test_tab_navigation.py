@@ -56,7 +56,7 @@ def test_tab_navigation_by_text(viewer_page, basic_viewer, navigate_to_tab):
 
     print("[test_tab_navigation_by_text] Launching viewer with Playwright...")
     viewer, page, server = viewer_page(basic_viewer)
-    print(f"[test_tab_navigation_by_text] Viewer launched, server running")
+    print("[test_tab_navigation_by_text] Viewer launched, server running")
 
     # Initial state: View tab should be active
     print("[test_tab_navigation_by_text] Checking initial state (View tab)...")
@@ -141,7 +141,9 @@ def test_view_tab_widgets_present(viewer_page, basic_viewer):
     print("=" * 60)
 
     viewer, page, server = viewer_page(basic_viewer)
-    print("[test_view_tab_widgets_present] Viewer launched, checking View tab widgets...")
+    print(
+        "[test_view_tab_widgets_present] Viewer launched, checking View tab widgets..."
+    )
 
     # Widgets that should be on View tab
     view_tab_widgets = [
@@ -192,7 +194,9 @@ def test_contrast_tab_widgets_present(viewer_page, basic_viewer, navigate_to_tab
     for css_class in contrast_tab_widgets:
         widget = page.locator(f".{css_class}")
         count = widget.count()
-        print(f"[test_contrast_tab_widgets_present] Widget '{css_class}': count={count}")
+        print(
+            f"[test_contrast_tab_widgets_present] Widget '{css_class}': count={count}"
+        )
         assert count > 0, f"Widget '{css_class}' should exist on Contrast tab"
 
     print("[test_contrast_tab_widgets_present] All Contrast tab widgets found!")
@@ -262,7 +266,9 @@ def test_analysis_tab_widgets_present(viewer_page, basic_viewer, navigate_to_tab
     for css_class in analysis_tab_widgets:
         widget = page.locator(f".{css_class}")
         count = widget.count()
-        print(f"[test_analysis_tab_widgets_present] Widget '{css_class}': count={count}")
+        print(
+            f"[test_analysis_tab_widgets_present] Widget '{css_class}': count={count}"
+        )
         assert count > 0, f"Widget '{css_class}' should exist on Analysis tab"
 
     print("[test_analysis_tab_widgets_present] All Analysis tab widgets found!")

@@ -646,7 +646,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # Flip Widgets
         ud_w = pn.widgets.Checkbox(
-            name="Flip Image Up/Down", 
+            name="Flip Image Up/Down",
             value=self.slicer.flip_ud,
             css_classes=["pyeyes-flip-ud"],
         )
@@ -853,7 +853,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # Auto-scale for given slice
         clim_scale_widget = pn.widgets.Button(
-            name="Auto-Scale", 
+            name="Auto-Scale",
             button_type="primary",
             css_classes=["pyeyes-autoscale"],
         )
@@ -1040,7 +1040,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # Option for ROI in-figure
         roi_mode = pn.widgets.Checkbox(
-            name="ROI Overlay Enabled", 
+            name="ROI Overlay Enabled",
             value=bool(self.slicer.roi_mode.value),
             css_classes=["pyeyes-roi-mode"],
         )
@@ -1053,7 +1053,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # ROI Button
         roi_button = pn.widgets.Button(
-            name="Draw ROI", 
+            name="Draw ROI",
             button_type="primary",
             css_classes=["pyeyes-draw-roi"],
         )
@@ -1066,7 +1066,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # Clear Button
         clear_button = pn.widgets.Button(
-            name="Clear ROI", 
+            name="Clear ROI",
             button_type="warning",
             css_classes=["pyeyes-clear-roi"],
         )
@@ -1295,9 +1295,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
         widgets["diff_map_type"] = diff_map_type_widget
 
         text_description_widget = pn.widgets.StaticText(
-            name="Metrics", value="Select metrics to display in text.",
+            name="Metrics",
+            value="Select metrics to display in text.",
             css_classes=["pyeyes-metrics-text-description"],
-
         )
         widgets["text_description"] = text_description_widget
 
@@ -1315,7 +1315,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
         widgets["text_metrics"] = text_metrics_widget
 
         text_description_widget = pn.widgets.StaticText(
-            name="Enable", value="Click to add 'Error map' or 'text metrics'.",
+            name="Enable",
+            value="Click to add 'Error map' or 'text metrics'.",
             css_classes=["pyeyes-metrics-text-button-description"],
         )
         widgets["button_description"] = text_description_widget
@@ -1540,25 +1541,28 @@ class ComparativeViewer(Viewer, param.Parameterized):
         s_width = (dwidth - 45) // 3
         for i, dim in enumerate(noncat_sdims):
             start = pn.widgets.IntInput(
-                name=f"{dim}: start", 
-                value=0, 
-                width=s_width, 
+                name=f"{dim}: start",
+                value=0,
+                width=s_width,
                 css_classes=[f"pyeyes-export-html-range-start-{dim}"],
             )
             stop = pn.widgets.IntInput(
-                name=f"{dim}: stop", 
-                value=self.slicer.dim_sizes[dim] - 1, 
+                name=f"{dim}: stop",
+                value=self.slicer.dim_sizes[dim] - 1,
                 width=s_width,
                 css_classes=[f"pyeyes-export-html-range-stop-{dim}"],
             )
             step = pn.widgets.IntInput(
-                name=f"{dim}: step", 
-                value=1, 
+                name=f"{dim}: step",
+                value=1,
                 width=s_width,
                 css_classes=[f"pyeyes-export-html-range-step-{dim}"],
             )
             widgets[f"dim{i}_export_range"] = pn.Row(
-                start, stop, step, margin=sss_margin,
+                start,
+                stop,
+                step,
+                margin=sss_margin,
                 css_classes=[f"pyeyes-export-html-range-{dim}"],
             )
 
