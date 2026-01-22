@@ -304,6 +304,60 @@ def viewer_page():
             pass
 
 
+@pytest.fixture
+def navigate_to_tab():
+    """
+    Fixture providing a function to navigate to a specific tab in the ComparativeViewer.
+
+    This fixture handles clicking on tab headers in the Panel Tabs widget.
+
+    Usage:
+        def test_contrast_tab(viewer_page, navigate_to_tab):
+            viewer, page, server = viewer_page(my_viewer)
+            navigate_to_tab(page, "Contrast")
+            # Now the Contrast tab is active
+    """
+
+    def _navigate_to_tab(page, tab_name: str, timeout: int = 300):
+        """
+        Navigate to a specific tab by clicking its header.
+
+        Parameters
+        ----------
+        page : playwright.sync_api.Page
+            The Playwright page object
+        tab_name : str
+            Name of the tab to navigate to. One of: "View", "Contrast", "ROI", "Analysis", "Export"
+        timeout : int
+            Milliseconds to wait after clicking for tab content to load (default: 300)
+
+        Returns
+        -------
+        bool
+            True if navigation succeeded, False otherwise
+        """
+        valid_tabs = ["View", "Contrast", "ROI", "Analysis", "Export"]
+        if tab_name not in valid_tabs:
+            raise ValueError(f"Invalid tab name '{tab_name}'. Must be one of: {valid_tabs}")
+
+        print(f"[navigate_to_tab] Attempting to navigate to '{tab_name}' tab...")
+
+        # Try to find the tab header by its text content
+        tab_header = page.locator(f"text='{tab_name}'").first
+
+        if tab_header.count() == 0:
+            print(f"[navigate_to_tab] ERROR: Tab header '{tab_name}' not found in page")
+            return False
+
+        print(f"[navigate_to_tab] Found tab header, clicking...")
+        tab_header.click()
+        page.wait_for_timeout(timeout)
+        print(f"[navigate_to_tab] Successfully navigated to '{tab_name}' tab")
+        return True
+
+    return _navigate_to_tab
+
+
 def pytest_configure(config):
     """Configure pytest with custom markers."""
     config.addinivalue_line(
