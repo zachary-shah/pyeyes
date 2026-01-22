@@ -10,8 +10,12 @@ import pytest
 
 from pyeyes.viewers import ComparativeViewer
 
+# Timeout for GUI tests (in seconds)
+GUI_TEST_TIMEOUT = 10
+
 
 @pytest.mark.gui
+@pytest.mark.timeout(GUI_TEST_TIMEOUT)
 def test_blank_data_and_vdim_swaps(viewer_page):
     """Test viewer with data that has a blank (all zeros) slice by default. Ensure we can swap viewing dimensions."""
     data = np.zeros((100, 100, 3))
@@ -46,6 +50,7 @@ def test_blank_data_and_vdim_swaps(viewer_page):
 
 
 @pytest.mark.gui
+@pytest.mark.timeout(GUI_TEST_TIMEOUT)
 def test_single_view_toggle(viewer_page):
     """
     Test that the 'Single View' checkbox can be toggled via Playwright.

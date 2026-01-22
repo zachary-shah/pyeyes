@@ -10,7 +10,7 @@ import pytest
 
 from pyeyes.viewers import ComparativeViewer
 
-TEST_PORT = 52890
+TEST_PORT = 52891
 
 
 @dataclass

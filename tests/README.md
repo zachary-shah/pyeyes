@@ -121,10 +121,6 @@ Shared test fixtures are defined in `tests/comparative/conftest.py`:
 - `mrf_data`: MRF datasets (1min and 2min)
 - `dwi_data`: DWI datasets (festive, skope, uncorr)
 
-### Utility Fixtures
-- `isclose`: Tolerance-based comparison function (checks if values are within X% of each other)
-- `cplx_slc_data`: Extracts slice data and computed metrics from a viewer
-
 ### Server Fixtures
 - `launched_viewer`: Launches a viewer silently for testing server startup
 - `viewer_page`: Launches viewer + headless browser for GUI testing (Playwright)
@@ -146,26 +142,6 @@ def test_viewer_launches(launched_viewer):
     assert server is not None
 
     # Always stop the server when done
-    server.stop()
-```
-
-### Using the `cplx_slc_data` Fixture
-
-Extract slice data and metrics from a running viewer:
-
-```python
-@pytest.mark.basic
-def test_metrics(launched_viewer, cplx_slc_data, isclose):
-    viewer = ComparativeViewer(data=my_data, named_dims=["x", "y", "z"])
-    server = launched_viewer(viewer)
-
-    # Get slice data and metrics
-    data = cplx_slc_data(viewer, ikey="reference_image")
-
-    # Check metrics are within tolerance
-    assert isclose(data.nrmse, 0.15, tol=0.01)  # Within 1%
-    assert isclose(data.ssim, 0.80, tol=0.02)   # Within 2%
-
     server.stop()
 ```
 

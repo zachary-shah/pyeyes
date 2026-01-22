@@ -16,53 +16,53 @@ The viewer was designed specifically for MRI researchers with a focus on compara
 The GUI currently contains 5 Tabs: "View", "Contrast", "ROI", "Analysis", and "Export", each with interactive widgets of different functionality based on their names.
 
 ### Main "View" Functionalities
-- [ ] Given a dataset, select view dimensions (default x, y). This is specified as a L/R and U/D viewing dimension
-- [ ] Allow user to change slice along all other dimensions in GUI
-- [ ] Allow user to change which view dimensions are active, replacing sliced dimensions as needed
-- [ ] Allow for input dimensions to be categorical, in which case slicing does not use a slider but instead a drop-down selector
+- [x] Given a dataset, select view dimensions (default x, y). This is specified as a L/R and U/D viewing dimension
+- [x] Allow user to change slice along all other dimensions in GUI
+- [x] Allow user to change which view dimensions are active, replacing sliced dimensions as needed
+- [x] Allow for input dimensions to be categorical, in which case slicing does not use a slider but instead a drop-down selector
 - [x] Allow flips along L/R and U/D through buttons
 - [x] Modify size of base images through slider "Size Scale"
 - [x] Modify title font size
-- [ ] Modify L/R and U/D display ranges
-- [ ] In the default mode, click names of "Displayed Images" to enable which ones are viewed
-- [ ] Allow "Single View" mode, which instead of showing a grid of all images, will just show one at a time, which can be toggled by clicking different image names. This is enabled by a "Single View" button.
+- [x] Modify L/R and U/D display ranges
+- [x] In the default mode, click names of "Displayed Images" to enable which ones are viewed
+- [x] Allow "Single View" mode, which instead of showing a grid of all images, will just show one at a time, which can be toggled by clicking different image names. This is enabled by a "Single View" button.
 
 ### "Contrast" Functionalities
-- [ ] For complex-valued inputs, allow toggle between viewing real, im, mag, and phase of data. For magnitude, just toggle mag / real.
-- [ ] Allow user to control contrast with a 'clim' slider (sets vmin/vmax of images)
-- [ ] Select colormap for displayed images.
-    - [ ] Also supports "Quantitative" color maps for MRF, if input is supplied with a categorical dimension that is deemed MRF-like
-- [ ] Toggle inclusion/exclusion of colorbar
-- [ ] Add label to colorbar
-- [ ] Add "Auto Scale" button, which sets the clim and color map based on heuristics of percentile and view type
+- [x] For complex-valued inputs, allow toggle between viewing real, im, mag, and phase of data. For magnitude, just toggle mag / real.
+- [x] Allow user to control contrast with a 'clim' slider (sets vmin/vmax of images)
+- [x] Select colormap for displayed images.
+    - [x] Also supports "Quantitative" color maps for MRF, if input is supplied with a categorical dimension that is deemed MRF-like
+- [x] Toggle inclusion/exclusion of colorbar
+- [x] Add label to colorbar
+- [x] Add "Auto Scale" button, which sets the clim and color map based on heuristics of percentile and view type
 
 ### "ROI" Functionalities
-- [ ] Add functionality to draw a region of interest focus. This is initialized when the user clicks a "Draw ROI" button. They will then be prompted to select two corners which define a bounding box for the ROI, and then a menu with ROI options will appear. Customization includes:
-    - [ ] Color map for ROI (by default, is the 'same' as the image color map)
-    - [ ] Scale of zoom (factor by which it is enlarged relative to base image)
-    - [ ] Location (corner selection like 'top right', 'bottom left', etc)
-    - [ ] Crops (slider to control L/R crop in terms of pixel coordinates, and similar control for U/D)
-    - [ ] Line color selector for bounding box of ROI
-    - [ ] Line width for bounding box of ROI
-    - [ ] Zoom order (interpolation, zero, first, cubic, etc)
-    - [ ] Also an option to disable the ROI overlay, in which case it is displayed below the display image rather than over it. In this case, control for 'Zoom Scale' and 'ROI Location' are disabled, as these will be automatically parameterized.
+- [x] Add functionality to draw a region of interest focus. This is initialized when the user clicks a "Draw ROI" button. They will then be prompted to select two corners which define a bounding box for the ROI, and then a menu with ROI options will appear. Customization includes:
+    - [x] Color map for ROI (by default, is the 'same' as the image color map)
+    - [x] Scale of zoom (factor by which it is enlarged relative to base image)
+    - [x] Location (corner selection like 'top right', 'bottom left', etc)
+    - [x] Crops (slider to control L/R crop in terms of pixel coordinates, and similar control for U/D)
+    - [x] Line color selector for bounding box of ROI
+    - [x] Line width for bounding box of ROI
+    - [x] Zoom order (interpolation, zero, first, cubic, etc)
+    - [x] Also an option to disable the ROI overlay, in which case it is displayed below the display image rather than over it. In this case, control for 'Zoom Scale' and 'ROI Location' are disabled, as these will be automatically parameterized.
 
 ### "Analysis" functionalities
-- [ ] Compute metrics relative to one dataset, specified as the "reference". This dataset is automatically displayed on the left-hand side
-- [ ] First, allow selection of a 'difference metric map'. This includes L1 difference between 2 images, NRMSE, SSIM maps, etc. Modifications include
-    - [ ] Error Map Type
-    - [ ] Error scale
-    - [ ] Error color map
-    - [ ] An "autoformat" button which automatically sets the scale and color depending on the type
-- [ ] Clicking the "Error Map" button will enable this display below all Display Images except the reference
-- [ ] Also "Text" metrics can be displayed depending on which ones are selected in the GUI. These by default display on the Error Map plot, unless not shown, in which case they are instead placed over the main image. Modifications for these include:
-    - [ ] text metrics font size
-    - [ ] text metrics location
+- [x] Compute metrics relative to one dataset, specified as the "reference". This dataset is automatically displayed on the left-hand side
+- [x] First, allow selection of a 'difference metric map'. This includes L1 difference between 2 images, NRMSE, SSIM maps, etc. Modifications include
+    - [x] Error Map Type
+    - [x] Error scale
+    - [x] Error color map
+    - [x] An "autoformat" button which automatically sets the scale and color depending on the type
+- [x] Clicking the "Error Map" button will enable this display below all Display Images except the reference
+- [x] Also "Text" metrics can be displayed depending on which ones are selected in the GUI. These by default display on the Error Map plot, unless not shown, in which case they are instead placed over the main image. Modifications for these include:
+    - [x] text metrics font size
+    - [x] text metrics location
 
 ### "Export" functionalities
-- [ ] User can export the config used to generate the viewer to a path, which can then be loaded in as a paramter to the viewer as `config_path="/path/to/cfg/`.
-- [ ] User can export a static HTML of the viewer in the GUI, specifiing a reduced slice along each sliceable dimension to save for efficiency. Only saves along the current viewing dimension, as the viewer is static
-- [ ] Not in GUI, but viewer can also export the viewer as runnable .py file
+- [x] User can export the config used to generate the viewer to a path, which can then be loaded in as a paramter to the viewer as `config_path="/path/to/cfg/`.
+- [x] User can export a static HTML of the viewer in the GUI, specifiing a reduced slice along each sliceable dimension to save for efficiency. Only saves along the current viewing dimension, as the viewer is static
+- [x] Not in GUI, but viewer can also export the viewer as runnable .py file
 
 ### Other functionalities
 In the backend, user choices on contrast, slicing, and cropping are cached when appropriate views are changed. For example, if the user changes between magnitude and phase views, a cache of the clim and cmap are made so that returning to the other view restores the contrast settings at the time of the view switch.
@@ -94,11 +94,11 @@ TASK 2: Add one basic pytest for GUI interactive features to test editing the va
 - [x] Test should load a viewer (using dataset from test_cmplx.py), simulate `editing` the value of the sdim widget, and then ensure no errors pop up.
 - [x] If possible, test should also ensure the viewer updates as desired.
 - [x] These tests will go into `tests/comparative/gui`
-TASK 3: Implement interactive testing for exhaustive features.
-- [ ] Implement tests to exhaust the feature list and put in `tests/comparative/gui`. These can be done on one loaded dataset, rather than loading a new dataset for each test, for speed.
-
-For Scripting
-- [ ] Add a unique CSS class identifier css class to each widget, which can be found with page.locator
+TASK 3.1: Implement interactive testing for exhaustive features.
+- [x] For headless GUI tests, add a unique CSS class identifier css class to each widget, which can be found with page.locator
+- [x] For running headless GUI tests, first add a way to enable playwright to click on each tab in the ComparativeViewer. Then develop a pytest to ensure tabs can be navigated between each other by verifying the existence of one or two widgets by their CSS class identifiers which should exist on each tab. First try to find a solution that doesn't require editing the code in `/src/`. Then, if this doesn't work, you can try giving each tab a hidden anchor that can be identified more easily with the headless test to click on each tab.
+TASK 3.2:
+- [ ] Implement tests to exhaust the feature list and put in `tests/comparative/gui`. Widgets to test and datasets to use:
 
 ## Refactor
 
@@ -109,15 +109,14 @@ A way around this might be to treat all interactable / servable objects in the b
 
 In general, even the `Slicer` object would be considered a `Widget`, as it is displayed in the GUI, can be interacted with, and then upon some update to it's properties, might require update to other widgets. For example, if the user scrolled their mouse over the frame produced by the `NDSlicer`, then if a new slice is viewed, the slider showing the slice index along that dimension should also be updated. This could be done by having the `sdim` EditableIntSlider "subscribe" to changes in some parameter of the `NDSlicer`.
 
+It also might also be nice to have each widget class have a string returned for how to locate it
+
 This is not an essential task but might help with making things more flexible and clean for future features.
 TASK 4 END
 
-TASK 4.5
-- might also be nice to have each widget class have a string returned for how to locate it
-
 ## ComparativeViewer Bug Fix List
 TASK 5
-- [ ] Issue with ROI indexing and flipping L/R and U/D buttons if these display ranges are set to crop within the full range. Documentation on this TODO
+- [ ] Issue with overlay displays and flipping image dimensions. When both "Flip Image Up/Down" and "Flip Image Left/Right" are checked, and metrics display is enabled, the location of the metrics flips sides and goes outside the viewed window. This is the case for any location of the metrics, and only happens when both flips are enabled. This also happens with ROI overlay. When both flips are enabled, the ROI location flips L/R relative to where it should be (Displays in "bottom right" corner when "bottom left" is checked). 
 
 ## ComparativeViewer Feature Request Log
 TASK 6

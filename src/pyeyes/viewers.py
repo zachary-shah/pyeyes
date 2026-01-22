@@ -407,6 +407,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         widgets["im_display_desc"] = pn.widgets.StaticText(
             name="Displayed Images",
             value="Click names to toggle visibility.",
+            css_classes=["pyeyes-im-display-desc"],
         )
 
         widgets["im_display"] = self._build_display_images_widget()
@@ -589,6 +590,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
                     name=dim,
                     options=self.cat_dims[dim],
                     value=self.slicer.dim_indices[dim],
+                    css_classes=[f"pyeyes-sdim-{dim}"],
                 )
             else:
                 if self.slicer.dim_sizes[dim] - 1 > 0:
@@ -597,6 +599,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
                         start=0,
                         end=self.slicer.dim_sizes[dim] - 1,
                         value=self.slicer.dim_indices[dim],
+                        css_classes=[f"pyeyes-sdim-{dim}"],
                     )
                 else:
                     # Singleton dimensions
@@ -642,7 +645,11 @@ class ComparativeViewer(Viewer, param.Parameterized):
         sliders = {}
 
         # Flip Widgets
-        ud_w = pn.widgets.Checkbox(name="Flip Image Up/Down", value=self.slicer.flip_ud)
+        ud_w = pn.widgets.Checkbox(
+            name="Flip Image Up/Down", 
+            value=self.slicer.flip_ud,
+            css_classes=["pyeyes-flip-ud"],
+        )
 
         @error.error_handler_decorator()
         def flip_ud_callback(event):
@@ -653,7 +660,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
         sliders["flip_ud"] = ud_w
 
         lr_w = pn.widgets.Checkbox(
-            name="Flip Image Left/Right", value=self.slicer.flip_lr
+            name="Flip Image Left/Right",
+            value=self.slicer.flip_lr,
+            css_classes=["pyeyes-flip-lr"],
         )
 
         @error.error_handler_decorator()
@@ -670,6 +679,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             end=self.slicer.param.size_scale.bounds[1],
             value=self.slicer.size_scale,
             step=self.slicer.param.size_scale.step,
+            css_classes=["pyeyes-size-scale"],
         )
 
         @error.error_handler_decorator()
@@ -686,6 +696,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             end=self.slicer.param.title_font_size.bounds[1],
             value=self.slicer.title_font_size,
             step=self.slicer.param.title_font_size.step,
+            css_classes=["pyeyes-title-font-size"],
         )
 
         def _update_title_font_size(event):
@@ -701,6 +712,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             end=self.slicer.param.lr_crop.bounds[1],
             value=(self.slicer.lr_crop[0], self.slicer.lr_crop[1]),
             step=self.slicer.param.lr_crop.step,
+            css_classes=["pyeyes-lr-crop"],
         )
 
         def _update_lr_slider(event):
@@ -715,6 +727,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             end=self.slicer.param.ud_crop.bounds[1],
             value=(self.slicer.ud_crop[0], self.slicer.ud_crop[1]),
             step=self.slicer.param.ud_crop.step,
+            css_classes=["pyeyes-ud-crop"],
         )
 
         def _update_ud_slider(event):
@@ -777,6 +790,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
                 button_type="success",
                 button_style="outline",
                 orientation=orientation,
+                css_classes=["pyeyes-im-display-radio"],
             )
 
         else:
@@ -787,6 +801,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
                 button_type="primary",
                 button_style="outline",
                 orientation=orientation,
+                css_classes=["pyeyes-im-display-check"],
             )
 
         @error.error_handler_decorator()
@@ -826,6 +841,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             value=self.slicer.cplx_view,
             button_type="primary",
             button_style="outline",
+            css_classes=["pyeyes-cplx-view"],
         )
 
         @error.error_handler_decorator()
@@ -836,7 +852,11 @@ class ComparativeViewer(Viewer, param.Parameterized):
         cplx_widget.param.watch(cplx_callback, "value")
 
         # Auto-scale for given slice
-        clim_scale_widget = pn.widgets.Button(name="Auto-Scale", button_type="primary")
+        clim_scale_widget = pn.widgets.Button(
+            name="Auto-Scale", 
+            button_type="primary",
+            css_classes=["pyeyes-autoscale"],
+        )
         clim_scale_widget.on_click(self._autoscale_clim)
 
         return cplx_widget, clim_scale_widget
@@ -946,6 +966,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             end=self.slicer.param.vmax.bounds[1],
             value=(self.slicer.vmin, self.slicer.vmax),
             step=self.slicer.param.vmin.step,
+            css_classes=["pyeyes-clim"],
         )
 
         range_slider.param.watch(self._update_clim, "value")
@@ -956,6 +977,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="Color Map",
             options=VALID_COLORMAPS,
             value=self.slicer.cmap,
+            css_classes=["pyeyes-cmap"],
         )
 
         def _update_cmap(event):
@@ -973,6 +995,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         colorbar_widget = pn.widgets.Checkbox(
             name="Add Colorbar",
             value=self.slicer.colorbar_on,
+            css_classes=["pyeyes-colorbar"],
         )
 
         def _update_colorbar(event):
@@ -984,6 +1007,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         colorbar_label_widget = pn.widgets.TextInput(
             name="Colorbar Label",
             value=self.slicer.colorbar_label,
+            css_classes=["pyeyes-colorbar-label"],
         )
 
         def _update_colorbar_label(event):
@@ -1016,7 +1040,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # Option for ROI in-figure
         roi_mode = pn.widgets.Checkbox(
-            name="ROI Overlay Enabled", value=bool(self.slicer.roi_mode.value)
+            name="ROI Overlay Enabled", 
+            value=bool(self.slicer.roi_mode.value),
+            css_classes=["pyeyes-roi-mode"],
         )
 
         def _update_roi_mode(event):
@@ -1026,7 +1052,11 @@ class ComparativeViewer(Viewer, param.Parameterized):
         widgets["roi_mode"] = roi_mode
 
         # ROI Button
-        roi_button = pn.widgets.Button(name="Draw ROI", button_type="primary")
+        roi_button = pn.widgets.Button(
+            name="Draw ROI", 
+            button_type="primary",
+            css_classes=["pyeyes-draw-roi"],
+        )
 
         def _draw_roi(event):
             self.slicer.update_roi_state(ROI_STATE.FIRST_SELECTION)
@@ -1035,7 +1065,11 @@ class ComparativeViewer(Viewer, param.Parameterized):
         widgets["draw_roi"] = roi_button
 
         # Clear Button
-        clear_button = pn.widgets.Button(name="Clear ROI", button_type="warning")
+        clear_button = pn.widgets.Button(
+            name="Clear ROI", 
+            button_type="warning",
+            css_classes=["pyeyes-clear-roi"],
+        )
 
         def _clear_roi(event):
             self.slicer.update_roi_state(ROI_STATE.INACTIVE)
@@ -1051,6 +1085,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="ROI Color Map",
             options=self.slicer.param.roi_cmap.objects,
             value=self.slicer.roi_cmap,
+            css_classes=["pyeyes-roi-cmap"],
         )
 
         def _update_cmap(event):
@@ -1066,6 +1101,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             end=10.0,
             value=self.slicer.ROI.zoom_scale,
             step=0.1,
+            css_classes=["pyeyes-zoom-scale"],
         )
 
         def _update_zoom_scale(event):
@@ -1079,6 +1115,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="ROI Location",
             options=[loc.value for loc in ROI_LOCATION],
             value=self.slicer.ROI.roi_loc.value,
+            css_classes=["pyeyes-roi-loc"],
         )
 
         def _update_roi_loc(event):
@@ -1094,6 +1131,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             start=0,
             end=100000,
             step=0.1,
+            css_classes=["pyeyes-roi-lr-crop"],
         )
 
         def _update_roi_lr_crop(event):
@@ -1109,6 +1147,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             start=0,
             end=100000,
             step=0.1,
+            css_classes=["pyeyes-roi-ud-crop"],
         )
 
         def _update_roi_ud_crop(event):
@@ -1122,6 +1161,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         roi_line_color = pn.widgets.ColorPicker(
             name="ROI Line Color",
             value=self.slicer.ROI.color,
+            css_classes=["pyeyes-roi-line-color"],
         )
 
         def _update_roi_line_color(event):
@@ -1135,6 +1175,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             start=1,
             end=10,
             value=self.slicer.ROI.line_width,
+            css_classes=["pyeyes-roi-line-width"],
         )
 
         def _update_roi_line_width(event):
@@ -1148,6 +1189,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             value=self.slicer.ROI.zoom_order,
             start=0,
             end=3,
+            css_classes=["pyeyes-roi-zoom-order"],
         )
 
         def _update_roi_zoom_order(event):
@@ -1234,6 +1276,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="Reference Dataset",
             options=self.img_names,
             value=self.slicer.metrics_reference,
+            css_classes=["pyeyes-reference-dataset"],
         )
 
         def _update_reference(event):
@@ -1246,12 +1289,15 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="Error Map Type",
             options=metrics.MAPPABLE_METRICS,
             value=self.slicer.error_map_type,
+            css_classes=["pyeyes-error-map-type"],
         )
         diff_map_type_widget.param.watch(self._update_error_map_type, "value")
         widgets["diff_map_type"] = diff_map_type_widget
 
         text_description_widget = pn.widgets.StaticText(
-            name="Metrics", value="Select metrics to display in text."
+            name="Metrics", value="Select metrics to display in text.",
+            css_classes=["pyeyes-metrics-text-description"],
+
         )
         widgets["text_description"] = text_description_widget
 
@@ -1259,6 +1305,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="Metrics",
             options=metrics.FULL_METRICS,
             value=self.slicer.metrics_text_types,
+            css_classes=["pyeyes-metrics-text-checkbox"],
         )
 
         def _update_text_metrics(event):
@@ -1268,7 +1315,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
         widgets["text_metrics"] = text_metrics_widget
 
         text_description_widget = pn.widgets.StaticText(
-            name="Enable", value="Click to add 'Error map' or 'text metrics'."
+            name="Enable", value="Click to add 'Error map' or 'text metrics'.",
+            css_classes=["pyeyes-metrics-text-button-description"],
         )
         widgets["button_description"] = text_description_widget
 
@@ -1288,6 +1336,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             button_style="outline",
             value=display_options_value,
             options=["Error Map", "Text"],
+            css_classes=["pyeyes-metrics-text-button"],
         )
 
         def _update_displayed_metrics(event):
@@ -1317,6 +1366,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             end=50.0,
             value=self.slicer.error_map_scale,
             step=0.1,
+            css_classes=["pyeyes-error-scale"],
         )
 
         def _update_error_scale(event):
@@ -1328,6 +1378,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         error_normalize_widget = pn.widgets.Checkbox(
             name="Normalize Error Map",
             value=self.slicer.normalize_error_map,
+            css_classes=["pyeyes-error-normalize"],
         )
 
         def _update_error_normalize(event):
@@ -1340,6 +1391,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="Error Map Color Map",
             options=VALID_ERROR_COLORMAPS,
             value=self.slicer.error_map_cmap,
+            css_classes=["pyeyes-error-cmap"],
         )
 
         def _update_error_cmap(event):
@@ -1354,6 +1406,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             end=24,
             value=self.slicer.metrics_text_font_size,
             step=1,
+            css_classes=["pyeyes-metrics-text-font-size"],
         )
 
         def _update_metrics_text_font_size(event):
@@ -1368,6 +1421,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="Text Metrics Location",
             options=[loc.value for loc in ROI_LOCATION],
             value=self.slicer.metrics_text_location.value,
+            css_classes=["pyeyes-metrics-text-font-loc"],
         )
 
         def _update_metrics_text_loc(event):
@@ -1379,6 +1433,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         error_map_autoformat = pn.widgets.Button(
             name="Autoformat Error Map",
             button_type="primary",
+            css_classes=["pyeyes-error-map-autoformat"],
         )
         error_map_autoformat.on_click(self._autoformat_error_map)
         widgets["error_map_autoformat"] = error_map_autoformat
@@ -1442,6 +1497,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="Save Viewer Config",
             value="Save config to yaml file. Use: Viewer(..., config_path=path).",
             width=dwidth,
+            css_classes=["pyeyes-export-config-path-desc"],
         )
 
         widgets["export_path"] = pn.widgets.TextAreaInput(
@@ -1449,6 +1505,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             value=self.config_path,
             placeholder="Enter path to export config file",
             height=box_height,
+            css_classes=["pyeyes-export-config-path"],
         )
 
         def _update_export_path(event):
@@ -1460,6 +1517,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="Export Config",
             button_type="primary",
             on_click=self._export_config,
+            css_classes=["pyeyes-export-config-button"],
         )
 
         """
@@ -1475,18 +1533,33 @@ class ComparativeViewer(Viewer, param.Parameterized):
             value="range dims for data exports.",
             height=15,
             width=dwidth,
+            css_classes=["pyeyes-export-html-ranges-desc"],
         )
         # Make (start, stop, step) input for each non-cat sdim
         sss_margin = 5
         s_width = (dwidth - 45) // 3
         for i, dim in enumerate(noncat_sdims):
-            start = pn.widgets.IntInput(name=f"{dim}: start", value=0, width=s_width)
-            stop = pn.widgets.IntInput(
-                name=f"{dim}: stop", value=self.slicer.dim_sizes[dim] - 1, width=s_width
+            start = pn.widgets.IntInput(
+                name=f"{dim}: start", 
+                value=0, 
+                width=s_width, 
+                css_classes=[f"pyeyes-export-html-range-start-{dim}"],
             )
-            step = pn.widgets.IntInput(name=f"{dim}: step", value=1, width=s_width)
+            stop = pn.widgets.IntInput(
+                name=f"{dim}: stop", 
+                value=self.slicer.dim_sizes[dim] - 1, 
+                width=s_width,
+                css_classes=[f"pyeyes-export-html-range-stop-{dim}"],
+            )
+            step = pn.widgets.IntInput(
+                name=f"{dim}: step", 
+                value=1, 
+                width=s_width,
+                css_classes=[f"pyeyes-export-html-range-step-{dim}"],
+            )
             widgets[f"dim{i}_export_range"] = pn.Row(
-                start, stop, step, margin=sss_margin
+                start, stop, step, margin=sss_margin,
+                css_classes=[f"pyeyes-export-html-range-{dim}"],
             )
 
         """
@@ -1502,6 +1575,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             value="Save an interactive HTML. Interactively fast but memory \
                 intensive. Exports for every dim along ranges specified above.",
             width=dwidth,
+            css_classes=["pyeyes-export-html-line"],
         )
 
         widgets["export_html"] = pn.widgets.TextAreaInput(
@@ -1509,6 +1583,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             value=self.html_export_path,
             placeholder="Enter path to export viewer as interactive html",
             height=box_height,
+            css_classes=["pyeyes-export-html-path"],
         )
 
         def _update_export_path(event):
@@ -1521,6 +1596,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             value=self.html_export_page_name,
             placeholder="Enter a name for the page of the exported HTML",
             height=box_height,
+            css_classes=["pyeyes-export-html-page-name"],
         )
 
         def _update_export_page(event):
@@ -1532,6 +1608,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             name="Export HTML",
             button_type="primary",
             on_click=self._export_html,
+            css_classes=["pyeyes-export-html-button"],
         )
 
         return widgets
