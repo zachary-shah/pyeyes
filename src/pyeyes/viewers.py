@@ -44,17 +44,31 @@ class Viewer:
         """
         self.data = data
 
-    def launch(self, title="Viewer", **kwargs):
+    def launch(self, title="Viewer", show=True, **kwargs):
         """
         Launch the viewer.
+
+        Parameters
+        ----------
+        title : str
+            Title for the viewer window/tab
+        show : bool
+            If True, opens browser. If False, starts server silently (useful for testing)
+        **kwargs
+            Additional arguments passed to _launch
+
+        Returns
+        -------
+        server : panel.server.Server or None
+            The Panel server instance (can be used to stop the server)
         """
         error.install_pyeyes_error_handler()
         try:
-            return self._launch(title=title, **kwargs)
+            return self._launch(title=title, show=show, **kwargs)
         finally:
             error.uninstall_pyeyes_error_handler()
 
-    def _launch(self, title="Viewer", **kwargs):
+    def _launch(self, title="Viewer", show=True, **kwargs):
         """
         Launch the viewer.
         """
@@ -270,12 +284,26 @@ class ComparativeViewer(Viewer, param.Parameterized):
         else:
             self._autoscale_clim(event=None)
 
-    def _launch(self, title="MRI Viewer", **kwargs):
+    def _launch(self, title="MRI Viewer", show=True, **kwargs):
         """
         Launch the viewer.
-        """
 
-        pn.serve(self.app, title=title, show=True)
+        Parameters
+        ----------
+        title : str
+            Title for the viewer
+        show : bool
+            If True, opens browser. If False, server runs silently
+        **kwargs
+            Additional arguments for pn.serve (e.g., port, threaded)
+
+        Returns
+        -------
+        server : panel.server.Server or None
+            The Panel server instance (can be used to stop the server)
+        """
+        server = pn.serve(self.app, title=title, show=show, **kwargs)
+        return server
 
     def load_from_config(self, config_path: str):
         """
@@ -467,7 +495,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
         """
 
         vdim_horiz_widget = pn.widgets.Select(
-            name="L/R Viewing Dimension", options=self.noncat_dims, value=self.vdims[0]
+            name="L/R Viewing Dimension",
+            options=self.noncat_dims,
+            value=self.vdims[0],
+            css_classes=["pyeyes-vdim-lr"],
         )
 
         @error.error_handler_decorator()
@@ -480,7 +511,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
         vdim_horiz_widget.param.watch(vdim_horiz_callback, "value")
 
         vdim_vert_widget = pn.widgets.Select(
-            name="U/D Viewing Dimension", options=self.noncat_dims, value=self.vdims[1]
+            name="U/D Viewing Dimension",
+            options=self.noncat_dims,
+            value=self.vdims[1],
+            css_classes=["pyeyes-vdim-ud"],
         )
 
         @error.error_handler_decorator()
@@ -694,7 +728,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
     def _build_single_toggle_widget(self):
         # Single toggle view
         single_toggle = pn.widgets.Checkbox(
-            name="Single View", value=self.single_image_toggle
+            name="Single View",
+            value=self.single_image_toggle,
+            css_classes=["pyeyes-single-view"],
         )
 
         @error.error_handler_decorator()
@@ -1663,6 +1699,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         path: Union[Path, str],
         num_slices_to_keep: Union[int, Dict[str, int]] | None = None,
         subsampling: Union[int, Dict[str, int]] = 1,
+        silent: bool = False,
     ):
         """
         Save a compressed .npz of the (optionally subsampled) image data plus
@@ -1734,7 +1771,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         np.savez_compressed(data_file, **saved_data)
         self._save_config(path.with_suffix(".json"))
 
-        self._create_launcher_script(path)
+        self._create_launcher_script(path, silent=silent)
 
         # Make launcher executable
         os.chmod(path, 0o755)
@@ -1776,7 +1813,17 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         return step_map
 
-    def _create_launcher_script(self, path: Path):
+    def _create_launcher_script(self, path: Path, silent: bool = False):
+        # for debugging
+        if silent:
+            sstr = """
+server = viewer.launch(show=False, threaded=True, verbose=False)
+import time
+time.sleep(0.5)
+server.stop()"""
+        else:
+            sstr = "viewer.launch()"
+
         """Create the standalone launcher script."""
         script = f"""#!/usr/bin/env python3
 import numpy as np
@@ -1799,7 +1846,7 @@ viewer = cv(
     cat_dims=cat_dims,
     config_path=config_path,
 )
-viewer.launch()
+{sstr}
 """
         with open(path, "w") as f:
             f.write(script)

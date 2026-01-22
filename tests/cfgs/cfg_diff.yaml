@@ -70,8 +70,8 @@
         },
         "size_scale": {
             "type": "Number",
-            "value": 400,
-            "default": 400,
+            "value": 300,
+            "default": 300,
             "bounds": [
                 200,
                 1000
@@ -141,11 +141,11 @@
             "type": "Dict",
             "value": {
                 "z": 15,
-                "Bdir": 10
+                "Bdir": 2
             },
             "default": {
                 "z": 15,
-                "Bdir": 10
+                "Bdir": 2
             }
         },
         "lr_crop": {
