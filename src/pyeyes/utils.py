@@ -284,6 +284,49 @@ def parse_dimensional_input(
     return [f"Dim {i}" for i in range(N)]
 
 
+def sanitize_css_class(name: str) -> str:
+    """
+    Make a string safe for use as a CSS class.
+    """
+    BAD_CHARS = [
+        " ",
+        ".",
+        ":",
+        ";",
+        "<",
+        ">",
+        "[",
+        "]",
+        "{",
+        "}",
+        "|",
+        "\\",
+        "/",
+        "?",
+        "!",
+        "@",
+        "#",
+        "$",
+        "%",
+        "^",
+        "&",
+        "*",
+        "(",
+        ")",
+        "=",
+        "+",
+        "~",
+        "`",
+        "'",
+        '"',
+    ]
+
+    for badchar in BAD_CHARS:
+        name = name.replace(badchar, "-")
+
+    return name
+
+
 # Complex view mapping
 CPLX_VIEW_MAP = {
     "mag": np.abs,

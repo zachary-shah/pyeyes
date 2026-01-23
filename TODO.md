@@ -147,14 +147,25 @@ A way around this might be to treat all interactable / servable objects in the b
 
 In general, even the `Slicer` object would be considered a `Widget`, as it is displayed in the GUI, can be interacted with, and then upon some update to it's properties, might require update to other widgets. For example, if the user scrolled their mouse over the frame produced by the `NDSlicer`, then if a new slice is viewed, the slider showing the slice index along that dimension should also be updated. This could be done by having the `sdim` EditableIntSlider "subscribe" to changes in some parameter of the `NDSlicer`.
 
-It also might also be nice to have each widget class have a string returned for how to locate it
+For this task, first we need to build the `Widget` interface. Given the properties and use of the widgets in `viewers.py`, create a plan for what this Widget should be able to do. Things I can think of include:
+- have `init` function which takes in the typical properties of the specific `pn.widget.Widget` and creates the internal `pn.widget.Widget` of the relevant class
+- having a `viewer` class as an attribute
+- having a way to `subscribe` to other widgets and their updates
+- have a way to run callbacks triggered by new events
+- takes a string used as the css identifier for the widget (used in pytests)
 
-This is not an essential task but might help with making things more flexible and clean for future features.
-TASK 4 END
+After we plan this widget, we will build the interface and an interface for each pn.widget used in `viewers.py`.
+
+Then we will update the interface for `NDSlicer`, as it should also inherit and behave like a `Widget`.
+
+Finally, we will update the instantiated widgets in `viewers.py` given this refactored interface, cleaning up the definitions of call-backs and updates accordingly.
 
 ## ComparativeViewer Bug Fix List
 TASK 5
-- [ ] Issue with overlay displays and flipping image dimensions. When both "Flip Image Up/Down" and "Flip Image Left/Right" are checked, and metrics display is enabled, the location of the metrics flips sides and goes outside the viewed window. This is the case for any location of the metrics, and only happens when both flips are enabled. This also happens with ROI overlay. When both flips are enabled, the ROI location flips L/R relative to where it should be (Displays in "bottom right" corner when "bottom left" is checked).
+- [x] Issue with overlay displays and flipping image dimensions. When both "Flip Image Up/Down" and "Flip Image Left/Right" are checked, and metrics display is enabled, the location of the metrics flips sides and goes outside the viewed window. This is the case for any location of the metrics, and only happens when both flips are enabled. This also happens with ROI overlay. When both flips are enabled, the ROI location flips L/R relative to where it should be (Displays in "bottom right" corner when "bottom left" is checked).
+- [ ] Ensure widgets can't be incremented out of bounds (like incrementing sdims below 0 or above max)
+- [ ] ensure slice is non-zero when computing metrics
+- [ ] Issue with L/R and U/D display range in terms of crops
 
 ## ComparativeViewer Feature Request Log
 TASK 6
@@ -185,6 +196,8 @@ TASK 15
 TASK 16
 - [ ] Add option to add borders for gridspec layout. This would be controlled with a button on the "View" panel.
 
+Other tasks
+- [ ] quantitative map cache clim properties?
 
 ## MultisliceViewer
 
