@@ -11,8 +11,8 @@ from pyeyes.viewers import ComparativeViewer
 small_scale = True
 
 img_dict = {
-    "4avg": np.load(data_path / "se" / "se_1avg.npy"),
-    "1avg": np.load(data_path / "se" / "se_4avg.npy"),
+    "4avg": np.load(data_path / "se" / "se_4avg.npy"),
+    "1avg": np.load(data_path / "se" / "se_1avg.npy"),
 }
 
 if small_scale:

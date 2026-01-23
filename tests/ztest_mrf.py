@@ -8,7 +8,7 @@ from paths import cfg_path, data_path
 
 from pyeyes.viewers import ComparativeViewer, spawn_comparative_viewer_detached
 
-spawn_detached = True
+spawn_detached = False
 
 # Load Data
 mrf_folder = data_path / "mrf"
@@ -53,4 +53,4 @@ else:
         config_path=config_path,
     )
     print("Process launching in attached mode.")
-    Viewer.launch(detached=True, title="MRF Viewer")
+    Viewer.launch(title="MRF Viewer")
