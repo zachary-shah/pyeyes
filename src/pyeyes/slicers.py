@@ -261,7 +261,7 @@ class NDSlicer(param.Parameterized):
                 self.crop_cache[dim] = (0, self.dim_sizes[dim])
 
             # This sets self.vdims, self.sdims, self.non_sdims, and upates self.dim_indices param
-            self._set_volatile_dims(vdims)
+            self._set_volatile_dims(vdims, pre_cache=False)
 
             # Initialize view cache
             self.CPLX_VIEW_CLIM_CACHE = {}
@@ -278,7 +278,9 @@ class NDSlicer(param.Parameterized):
                     self.metrics_reference = self.clabs[0]
 
                 self.ROI = roi.ROI(config=cfg["roi_config"])
-                self.update_cplx_view(self.cplx_view, recompute_min_max=False)
+                self.update_cplx_view(
+                    self.cplx_view, recompute_min_max=False, pre_cache=False
+                )
                 self.update_colormap()
                 self.update_roi_colormap(self.roi_cmap)
 
@@ -293,7 +295,7 @@ class NDSlicer(param.Parameterized):
                 self.ROI = roi.ROI()
 
                 # Update color limits with default
-                self.update_cplx_view(self.cplx_view)
+                self.update_cplx_view(self.cplx_view, pre_cache=False)
 
                 # Color map object. Auto-select "Quantitative" if inferred from named dimensions.
                 if self._infer_quantitative_maptype() is not None:
@@ -336,6 +338,8 @@ class NDSlicer(param.Parameterized):
         # Slice cache
         for dim in self.sdims:
             self.slice_cache[dim] = self.dim_indices[dim]
+
+        # TODO: quantitative map cache (?)
 
     def slice(self, apply_colormap: bool = True, return_metrics: bool = True) -> Dict:
         """
@@ -1025,10 +1029,12 @@ class NDSlicer(param.Parameterized):
 
         return None
 
-    def _set_volatile_dims(self, vdims: Sequence[str]):
+    def _set_volatile_dims(self, vdims: Sequence[str], pre_cache: bool = True):
         """
         Sets dimensions which could be updated upon a change in viewing dimension.
         """
+        if pre_cache:
+            self.update_cache()
 
         with param.parameterized.discard_events(self):
             vdims = list(vdims)
@@ -1062,9 +1068,15 @@ class NDSlicer(param.Parameterized):
             self.dim_indices = slice_dim_names
 
         # trigger callbacks now
-        self.param.trigger("lr_crop", "ud_crop")
+        self.param.trigger("lr_crop", "ud_crop", "dim_indices")
 
-    def update_cplx_view(self, new_cplx_view: str, recompute_min_max: bool = True):
+    def update_cplx_view(
+        self, new_cplx_view: str, recompute_min_max: bool = True, pre_cache: bool = True
+    ):
+
+        if pre_cache:
+            self.update_cache()
+
         # set attribute
         same_cplx_view = self.cplx_view == new_cplx_view
         self.cplx_view = new_cplx_view
