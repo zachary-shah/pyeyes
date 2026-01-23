@@ -114,7 +114,16 @@ def get_effective_location(
     """
 
     effective_loc = loc
-    if flip_lr:
+    if flip_lr and flip_ud:
+        if loc == ROI_LOCATION.TOP_LEFT:
+            effective_loc = ROI_LOCATION.BOTTOM_RIGHT
+        elif loc == ROI_LOCATION.TOP_RIGHT:
+            effective_loc = ROI_LOCATION.BOTTOM_LEFT
+        elif loc == ROI_LOCATION.BOTTOM_LEFT:
+            effective_loc = ROI_LOCATION.TOP_RIGHT
+        elif loc == ROI_LOCATION.BOTTOM_RIGHT:
+            effective_loc = ROI_LOCATION.TOP_LEFT
+    elif flip_lr:
         if loc == ROI_LOCATION.TOP_LEFT:
             effective_loc = ROI_LOCATION.TOP_RIGHT
         elif loc == ROI_LOCATION.TOP_RIGHT:
@@ -123,7 +132,7 @@ def get_effective_location(
             effective_loc = ROI_LOCATION.BOTTOM_RIGHT
         elif loc == ROI_LOCATION.BOTTOM_RIGHT:
             effective_loc = ROI_LOCATION.BOTTOM_LEFT
-    if flip_ud:
+    elif flip_ud:
         if loc == ROI_LOCATION.TOP_LEFT:
             effective_loc = ROI_LOCATION.BOTTOM_LEFT
         elif loc == ROI_LOCATION.TOP_RIGHT:
