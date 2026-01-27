@@ -1,10 +1,10 @@
 import os
 from typing import Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import colors as mcolors
 from matplotlib.colors import LinearSegmentedColormap
-from matplotlib.pyplot import cm
 
 VALID_COLORMAPS = [
     "gray",
@@ -196,7 +196,7 @@ def color_log_remap(ori_cmap, loLev, upLev):
 
 # Unused: will use in the future
 def get_jet_black_cmp(ap=1.2):
-    jet = cm.get_cmap("jet", 256)
+    jet = plt.get_cmap("jet", 256)
     jet_colors = jet(np.linspace(0, 1, 256))
     jet_colors[0] = np.array([0.1, 0.1, 1, 1])
     jet_colors[255] = np.array([1, 0.1, 0.1, 1])

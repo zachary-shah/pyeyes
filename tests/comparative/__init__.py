@@ -1,0 +1,3 @@
+"""
+Comparative viewer tests.
+"""

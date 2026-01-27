@@ -13,3 +13,4 @@ tests/exports/
 # deploy
 dist/
 .vscode
+.cursor

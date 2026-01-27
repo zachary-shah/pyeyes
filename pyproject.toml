@@ -45,6 +45,10 @@ dev = [
     "pre-commit",
     "black",
 ]
+test = [
+    "pytest>=6.0",
+    "pytest-playwright>=0.4.0",
+]
 
 [tool.setuptools]
 include-package-data = true

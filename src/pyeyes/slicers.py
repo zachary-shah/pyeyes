@@ -2,6 +2,7 @@
 Slicers: Defined as classes that take N-dimensional data and can return a 2D view of that data given some input
 """
 
+import warnings
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
@@ -21,6 +22,7 @@ from .cmap.cmap import (
     QuantitativeColorMap,
 )
 from .enums import METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
+from .gui.scroll import ScrollHandler, _bokeh_disable_wheel_zoom_tool
 from .metrics import ERROR_TOL, TOL
 from .utils import CPLX_VIEW_MAP, round_str
 
@@ -37,34 +39,54 @@ class ClimSettings:
     cmap: str
 
 
-def _format_image(plot, element):
+def _get_format_image(
+    text_font: str,
+    title_visible: bool = True,
+    grid_visible: bool = False,
+):
     """
-    For setting image theme (light/dark mode).
+    Get the format image hook given desired title and grid visibility.
     """
 
-    # Enforce theme
-    plot.state.background_fill_color = themes.VIEW_THEME.background_color
-    plot.state.border_fill_color = themes.VIEW_THEME.background_color
+    def _format_image(plot, element):
+        """
+        For setting image theme (light/dark mode).
+        """
 
-    # Constant height for the figure title
-    if plot.state.title.text_font_size[-2:] in ["px", "pt"]:
-        tfs = int(plot.state.title.text_font_size[:-2]) * 2 + plot.border
-        plot.state.height = plot.height + tfs
-    elif plot.state.title.text_font_size[-2:] == "em":
-        pass  # Child of parent uses relative font size
-    else:
-        error.warning(
-            f"_format_image hook could not parse title font size: \
-            {plot.state.title.text_font_size}. Figure scale may be skewed."
-        )
+        # Enforce theme
+        plot.state.background_fill_color = themes.VIEW_THEME.background_color
 
-    # Color to match theme
-    plot.state.outline_line_color = themes.VIEW_THEME.background_color
-    plot.state.outline_line_alpha = 1.0
-    plot.state.title.text_color = themes.VIEW_THEME.text_color
-    plot.state.title.text_font = themes.VIEW_THEME.text_font
-    # Center title above image
-    plot.state.title.align = "center"
+        if grid_visible:
+            plot.state.border_fill_color = themes.VIEW_THEME.accent_color
+        else:
+            plot.state.border_fill_color = themes.VIEW_THEME.background_color
+
+        plot.state.title.text_color = themes.VIEW_THEME.text_color
+        plot.state.title.text_font = text_font
+
+        # Constant height for the figure title
+        if title_visible:
+            if plot.state.title.text_font_size[-2:] in ["px", "pt"]:
+                tfs = int(plot.state.title.text_font_size[:-2]) * 2 + plot.border
+                plot.state.height = plot.height + tfs
+            elif plot.state.title.text_font_size[-2:] == "em":
+                pass  # Child of parent uses relative font size
+            else:
+                error.warning(
+                    f"_format_image hook could not parse title font size: \
+                    {plot.state.title.text_font_size}. Figure scale may be skewed."
+                )
+        else:
+            plot.state.height = plot.height
+
+        # Color to match theme
+        plot.state.outline_line_color = themes.VIEW_THEME.background_color
+        plot.state.outline_line_alpha = 1.0
+
+        # Center title above image
+        plot.state.title.align = "center"
+
+    return _format_image
 
 
 def _hide_image(plot, element):
@@ -82,47 +104,50 @@ def _hide_image(plot, element):
     plot.state.outline_line_alpha = 0
 
 
-def _format_colorbar(plot, element):
-    """
-    Colorbar formatting. Just need to ensure that colorbar scales with plot height.
-    Assumes that colorbar is the first element in the right panel.
-    """
-    p = plot.state.right[0]
+def _get_format_colorbar(text_font: str):
+    def _format_colorbar(plot, element):
+        """
+        Colorbar formatting. Just need to ensure that colorbar scales with plot height.
+        Assumes that colorbar is the first element in the right panel.
+        """
+        p = plot.state.right[0]
 
-    # title
-    if p.title == "":
-        p.title = None
+        # title
+        if p.title == "":
+            p.title = None
 
-    # sizes
-    p.width = int(plot.state.width * (0.22 - 0.03 * (p.title is not None)))
+        # sizes
+        p.width = int(plot.state.width * (0.22 - 0.03 * (p.title is not None)))
 
-    p.major_label_text_font_size = f"{int(plot.state.width/8)}pt"
-    p.title_text_font_size = f"{int(plot.state.width/8)}pt"
+        p.major_label_text_font_size = f"{int(plot.state.width/8)}pt"
+        p.title_text_font_size = f"{int(plot.state.width/8)}pt"
 
-    # spacing
-    p.padding = 5
+        # spacing
+        p.padding = 5
 
-    # coloring
-    p.background_fill_color = themes.VIEW_THEME.background_color
-    p.background_fill_alpha = 1.0
-    p.major_label_text_color = themes.VIEW_THEME.text_color
-    p.major_tick_line_color = themes.VIEW_THEME.text_color
-    p.title_text_color = themes.VIEW_THEME.text_color
-    p.title_text_align = "center"
-    p.title_text_baseline = "middle"
+        # coloring
+        p.background_fill_color = themes.VIEW_THEME.background_color
+        p.background_fill_alpha = 1.0
+        p.major_label_text_color = themes.VIEW_THEME.text_color
+        p.major_tick_line_color = themes.VIEW_THEME.text_color
+        p.title_text_color = themes.VIEW_THEME.text_color
+        p.title_text_align = "center"
+        p.title_text_baseline = "middle"
 
-    # text font
-    p.title_text_font = themes.VIEW_THEME.text_font
-    p.major_label_text_font = themes.VIEW_THEME.text_font
+        # text font
+        p.title_text_font = text_font
+        p.major_label_text_font = text_font
 
-    # other keys to format
-    p.major_label_text_align = "left"
-    p.major_label_text_alpha = 1.0
-    p.major_label_text_baseline = "middle"
-    p.major_label_text_line_height = 1.2
-    p.major_tick_line_alpha = 1.0
-    p.major_tick_line_dash_offset = 0
-    p.major_tick_line_width = 1
+        # other keys to format
+        p.major_label_text_align = "left"
+        p.major_label_text_alpha = 1.0
+        p.major_label_text_baseline = "middle"
+        p.major_label_text_line_height = 1.2
+        p.major_tick_line_alpha = 1.0
+        p.major_tick_line_dash_offset = 0
+        p.major_tick_line_width = 1
+
+    return _format_colorbar
 
 
 class NDSlicer(param.Parameterized):
@@ -137,6 +162,13 @@ class NDSlicer(param.Parameterized):
         default="mag", objects=["mag", "phase", "real", "imag"]
     )
     display_images = param.ListSelector(default=[], objects=[])
+    display_image_titles = param.Dict(default={})
+    display_image_titles_visible = param.Boolean(default=True)
+    display_error_map_titles_visible = param.Boolean(default=False)
+    grid_visible = param.Boolean(default=False)
+    text_font = param.ObjectSelector(
+        default=themes.DEFAULT_FONT, objects=themes.VALID_FONTS
+    )
 
     # Color mapping
     cmap = param.ObjectSelector(default="gray", objects=VALID_COLORMAPS)
@@ -181,6 +213,11 @@ class NDSlicer(param.Parameterized):
     # Rebuilding figure
     rebuild_figure_flag = param.Boolean(default=False)
 
+    # Mouse scroll dimension
+    scroll_dim = param.String(
+        default=None, doc="Dimension to scroll through with mouse wheel"
+    )
+
     def __init__(
         self,
         data: hv.Dataset,
@@ -189,6 +226,7 @@ class NDSlicer(param.Parameterized):
         clabs: Optional[Sequence[str]] = None,
         cat_dims: Optional[Dict[str, List]] = None,
         cfg: Optional[Dict[str, str]] = None,
+        viewer: Optional["Viewer"] = None,  # noqa : F821
         **params,
     ):
         """
@@ -208,7 +246,16 @@ class NDSlicer(param.Parameterized):
 
         super().__init__(**params)
 
+        # Currently hard-coded but TODO make more robust
+        self._BASE_SCROLL_BUFFER_TIME = 50  # [ms], default
+
+        # Set up scroll handler
+        self.scroller = ScrollHandler(
+            callback_func=self._handle_scroll,
+        )
+
         with param.parameterized.discard_events(self):
+            self.viewer = viewer
             self.data = data
             self.cat_dims = cat_dims
 
@@ -261,7 +308,7 @@ class NDSlicer(param.Parameterized):
                 self.crop_cache[dim] = (0, self.dim_sizes[dim])
 
             # This sets self.vdims, self.sdims, self.non_sdims, and upates self.dim_indices param
-            self._set_volatile_dims(vdims)
+            self._set_volatile_dims(vdims, pre_cache=False)
 
             # Initialize view cache
             self.CPLX_VIEW_CLIM_CACHE = {}
@@ -277,8 +324,24 @@ class NDSlicer(param.Parameterized):
                     self.param.metrics_reference.objects = self.clabs
                     self.metrics_reference = self.clabs[0]
 
+                # Default display image titles
+                if not ("display_image_titles" in cfg["slicer_config"]):
+                    self.display_image_titles = {
+                        img_name: img_name for img_name in self.display_images
+                    }
+
+                if "text_font" in cfg["slicer_config"]:
+                    tf = cfg["slicer_config"]["text_font"]["value"]
+                    if not (tf in themes.VALID_FONTS):
+                        warnings.warn(
+                            f"Config contains invalid text font: {tf}. Using default font."
+                        )
+                        self.text_font = themes.DEFAULT_FONT
+
                 self.ROI = roi.ROI(config=cfg["roi_config"])
-                self.update_cplx_view(self.cplx_view, recompute_min_max=False)
+                self.update_cplx_view(
+                    self.cplx_view, recompute_min_max=False, pre_cache=False
+                )
                 self.update_colormap()
                 self.update_roi_colormap(self.roi_cmap)
 
@@ -288,12 +351,15 @@ class NDSlicer(param.Parameterized):
                 # Initialize display images
                 self.param.display_images.objects = self.clabs
                 self.display_images = self.clabs
+                self.display_image_titles = {
+                    img_name: img_name for img_name in self.display_images
+                }
 
                 # ROI init
                 self.ROI = roi.ROI()
 
                 # Update color limits with default
-                self.update_cplx_view(self.cplx_view)
+                self.update_cplx_view(self.cplx_view, pre_cache=False)
 
                 # Color map object. Auto-select "Quantitative" if inferred from named dimensions.
                 if self._infer_quantitative_maptype() is not None:
@@ -336,6 +402,8 @@ class NDSlicer(param.Parameterized):
         # Slice cache
         for dim in self.sdims:
             self.slice_cache[dim] = self.dim_indices[dim]
+
+        # TODO: quantitative map cache (?)
 
     def slice(self, apply_colormap: bool = True, return_metrics: bool = True) -> Dict:
         """
@@ -500,6 +568,12 @@ class NDSlicer(param.Parameterized):
             border=BORDER_SIZE,
         )
 
+        fmt_img_hook = _get_format_image(
+            self.text_font,
+            self.display_image_titles_visible,
+            self.grid_visible,
+        )
+
         # Image options
         im_opts = dict(
             cmap=self.ColorMapper.get_cmap(),
@@ -508,7 +582,11 @@ class NDSlicer(param.Parameterized):
             invert_yaxis=self.flip_ud,
             invert_xaxis=self.flip_lr,
             fontscale=(self.title_font_size / 12),
-            hooks=[_format_image],
+            hooks=[
+                fmt_img_hook,
+                _bokeh_disable_wheel_zoom_tool,
+                self.scroller.make_scroll_hook(),  # Bind the scroller to the plot
+            ],
             **shared_opts,
         )
 
@@ -527,7 +605,11 @@ class NDSlicer(param.Parameterized):
             roi_opts.update(
                 dict(
                     shared_axes=False,
-                    hooks=[_format_image],
+                    hooks=[
+                        fmt_img_hook,
+                        _bokeh_disable_wheel_zoom_tool,
+                        self.scroller.make_scroll_hook(),
+                    ],
                 )
             )
 
@@ -549,15 +631,29 @@ class NDSlicer(param.Parameterized):
                 self.title_font_size / 12
             ),  # div by 12 because fontscale=1 is font=12pt
             hooks=[
-                _format_image,
+                _get_format_image(
+                    self.text_font,
+                    title_visible=self.display_image_titles_visible,
+                    grid_visible=False,
+                ),
+                _bokeh_disable_wheel_zoom_tool,
                 _hide_image,
-                _format_colorbar,
+                _get_format_colorbar(self.text_font),
             ],  # Hide the dummy glyph
             **shared_opts,
         )
 
         # Difference map
         diff_opts = im_opts.copy()
+        diff_opts["hooks"] = [
+            _get_format_image(
+                self.text_font,
+                title_visible=self.display_error_map_titles_visible,
+                grid_visible=self.grid_visible,
+            ),
+            _bokeh_disable_wheel_zoom_tool,
+            self.scroller.make_scroll_hook(),
+        ]
         diff_opts["cmap"] = self.DifferenceColorMapper.get_cmap()
 
         if self.error_map_type == "SSIM":
@@ -572,6 +668,16 @@ class NDSlicer(param.Parameterized):
 
         # Diff map colorbar
         diff_cbar_opts = cbar_opts.copy()
+        diff_cbar_opts["hooks"] = [
+            _get_format_image(
+                self.text_font,
+                title_visible=self.display_error_map_titles_visible,
+                grid_visible=False,
+            ),
+            _bokeh_disable_wheel_zoom_tool,
+            _hide_image,
+            _get_format_colorbar(self.text_font),
+        ]
         diff_cbar_opts["clim"] = diff_opts["clim"]
         diff_cbar_opts.pop("colorbar_opts")
 
@@ -638,12 +744,12 @@ class NDSlicer(param.Parameterized):
         for k in fig_image_names:
 
             # Extract metrics
-            image_name = k
+            image_name = self.display_image_titles[k]
 
             if (
                 self.metrics_state != METRICS_STATE.INACTIVE
             ) and k == self.metrics_reference:
-                image_name = f"{k} (Ref)"
+                image_name = f"{image_name} (Ref)"
 
             img_labels[k] = image_name
 
@@ -658,9 +764,7 @@ class NDSlicer(param.Parameterized):
                 hv.DynamicMap(
                     _img_callback,
                     streams=[pipe],
-                ).opts(
-                    title=image_name,
-                )
+                ).opts(title=image_name if self.display_image_titles_visible else "")
             )
             # send data
             self._image_pipes[k].send(img_dict[k])
@@ -806,7 +910,7 @@ class NDSlicer(param.Parameterized):
             diff_imgs = []
             self._diffmap_pipes = {}
             for k in fig_image_names:
-                name = k
+                name = self.display_image_titles[k]
                 diff_pipe = streams.Pipe(data=error_dict[k])
 
                 # No pipe for reference
@@ -843,7 +947,7 @@ class NDSlicer(param.Parameterized):
                             _diff_callback,
                             streams=[diff_pipe],
                         ).opts(
-                            title=label,
+                            title=label if self.display_error_map_titles_visible else ""
                         )
                     )
 
@@ -881,6 +985,8 @@ class NDSlicer(param.Parameterized):
         # Set attributes
         self.Figure = row
 
+        self._update_scroll_buffer_time()
+
     def _add_metrics_overlay(self, base_plot, metrics, bounds, key):
         """
         Overlay text metrics on a given plot element.
@@ -916,7 +1022,7 @@ class NDSlicer(param.Parameterized):
                 valign=valign,
                 fontsize=self.metrics_text_font_size,
             ).opts(
-                text_font=bokeh_value(themes.VIEW_THEME.text_font),
+                text_font=bokeh_value(self.text_font),
                 text_color=themes.VIEW_THEME.text_color,
             )
 
@@ -964,12 +1070,17 @@ class NDSlicer(param.Parameterized):
         "lr_crop",
         "ud_crop",
         "display_images",
+        "display_image_titles",
+        "display_image_titles_visible",
+        "display_error_map_titles_visible",
+        "grid_visible",
         "colorbar_on",
         "colorbar_label",
         "roi_state",
         "error_map_scale",
         "metrics_state",
         "title_font_size",
+        "text_font",
         watch=True,
     )
     @error.error_handler_decorator()
@@ -1025,10 +1136,12 @@ class NDSlicer(param.Parameterized):
 
         return None
 
-    def _set_volatile_dims(self, vdims: Sequence[str]):
+    def _set_volatile_dims(self, vdims: Sequence[str], pre_cache: bool = True):
         """
         Sets dimensions which could be updated upon a change in viewing dimension.
         """
+        if pre_cache:
+            self.update_cache()
 
         with param.parameterized.discard_events(self):
             vdims = list(vdims)
@@ -1042,6 +1155,9 @@ class NDSlicer(param.Parameterized):
 
             # sliceable dimensions
             self.sdims = [d for d in self.ndims if d not in self.non_sdims]
+
+            # Reset scroll dimension to first sdim when view dims change
+            self.scroll_dim = self.sdims[0] if self.sdims else None
 
             # Update scaling for height and width ranges
             self.img_dims = np.array([self.dim_sizes[vd] for vd in self.vdims])
@@ -1062,9 +1178,15 @@ class NDSlicer(param.Parameterized):
             self.dim_indices = slice_dim_names
 
         # trigger callbacks now
-        self.param.trigger("lr_crop", "ud_crop")
+        self.param.trigger("lr_crop", "ud_crop", "dim_indices")
 
-    def update_cplx_view(self, new_cplx_view: str, recompute_min_max: bool = True):
+    def update_cplx_view(
+        self, new_cplx_view: str, recompute_min_max: bool = True, pre_cache: bool = True
+    ):
+
+        if pre_cache:
+            self.update_cache()
+
         # set attribute
         same_cplx_view = self.cplx_view == new_cplx_view
         self.cplx_view = new_cplx_view
@@ -1571,3 +1693,78 @@ class NDSlicer(param.Parameterized):
         error_np[np.isnan(error_np)] = 0
 
         return np.percentile(error_np, 99.9)
+
+    def _num_display_items(self):
+        """
+        Determine number of display items in the figure.
+        """
+        Ntype = 1
+
+        try:
+            roi_state = ROI_STATE(self.roi_state)
+        except ValueError:
+            roi_state = ROI_STATE.INACTIVE
+
+        try:
+            metrics_state = self.metrics_state
+        except ValueError:
+            metrics_state = METRICS_STATE.INACTIVE
+
+        if roi_state == ROI_STATE.ACTIVE:
+            Ntype += 1
+        if metrics_state != METRICS_STATE.INACTIVE:
+            Ntype += 1
+
+        try:
+            nimg = len(self._image_pipes)
+        except ValueError:
+            nimg = 1
+
+        return Ntype * nimg
+
+    def _update_scroll_buffer_time(self):
+        """
+        Set scroll buffer time based on time it takes to update the figure.
+        """
+        buff_time = self._BASE_SCROLL_BUFFER_TIME * self._num_display_items()
+        self.scroller.update_buffer_time(buff_time)
+
+    def _handle_scroll(self, delta: float):
+        """
+        Handle mouse wheel scroll to change slice index along scroll_dim.
+
+        Parameters
+        ----------
+        delta : float
+            Scroll delta from MouseWheel event. Positive = scroll up, negative = scroll down.
+        """
+
+        if self.scroll_dim is None or self.scroll_dim not in self.sdims:
+            return
+
+        # Determine scroll direction (positive delta = scroll up = increment)
+        move_amt = 1 if (abs(delta) > 1e-2) else 0
+        direction = 1 if delta > 0 else -1
+        move_amt = move_amt * direction
+        move_amt = int(round(move_amt))
+
+        # Handle categorical vs numeric dimensions
+        if self.scroll_dim in self.cat_dims:
+            # Cycle through categorical options
+            options = self.cat_dims[self.scroll_dim]
+            current_value = self.dim_indices[self.scroll_dim]
+            try:
+                current_idx = options.index(current_value)
+            except ValueError:
+                current_idx = 0
+            new_idx = (current_idx + direction) % len(options)
+            new_value = options[new_idx]
+        else:
+            # Numeric dimension - increment/decrement with bounds checking
+            current = self.dim_indices[self.scroll_dim]
+            max_val = self.dim_sizes[self.scroll_dim] - 1
+            new_value = max(0, min(max_val, current + move_amt))
+
+        # Only update if value changed
+        if new_value != self.dim_indices[self.scroll_dim]:
+            self.viewer._sync_sdim_widget_from_scroll(self.scroll_dim, new_value)

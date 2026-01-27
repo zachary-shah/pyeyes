@@ -19,8 +19,28 @@ from holoviews import opts
 from . import config, error, metrics, themes
 from .cmap.cmap import VALID_COLORMAPS, VALID_ERROR_COLORMAPS
 from .enums import METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
+from .gui import (
+    Button,
+    Checkbox,
+    CheckBoxGroup,
+    CheckButtonGroup,
+    ColorPicker,
+    EditableFloatSlider,
+    EditableIntSlider,
+    EditableRangeSlider,
+    IntInput,
+    IntRangeSlider,
+    IntSlider,
+    Pane,
+    RadioButtonGroup,
+    RawPanelObject,
+    Select,
+    StaticText,
+    TextAreaInput,
+    TextInput,
+)
 from .slicers import NDSlicer
-from .utils import tonp
+from .utils import parse_dimensional_input, sanitize_css_class, tonp
 
 hv.extension("bokeh")
 pn.extension(notifications=True)
@@ -32,10 +52,16 @@ bokeh_root_logger.manager.disable = bokeh.logging.WARNING
 
 
 class Viewer:
+    """
+    Base class for pyeyes viewers.
+
+    Provides subscription infrastructure for bidirectional communication
+    between widgets and the viewer/slicer components.
+    """
 
     def __init__(self, data, **kwargs):
         """
-        Generic class for viewing image data. TODO: make generic more useful.
+        Generic class for viewing image data.
 
         Parameters:
         -----------
@@ -44,17 +70,31 @@ class Viewer:
         """
         self.data = data
 
-    def launch(self, title="Viewer", **kwargs):
+    def launch(self, title="Viewer", show=True, **kwargs):
         """
         Launch the viewer.
+
+        Parameters
+        ----------
+        title : str
+            Title for the viewer window/tab
+        show : bool
+            If True, opens browser. If False, starts server silently (useful for testing)
+        **kwargs
+            Additional arguments passed to _launch
+
+        Returns
+        -------
+        server : panel.server.Server or None
+            The Panel server instance (can be used to stop the server)
         """
         error.install_pyeyes_error_handler()
         try:
-            return self._launch(title=title, **kwargs)
+            return self._launch(title=title, show=show, **kwargs)
         finally:
             error.uninstall_pyeyes_error_handler()
 
-    def _launch(self, title="Viewer", **kwargs):
+    def _launch(self, title="Viewer", show=True, **kwargs):
         """
         Launch the viewer.
         """
@@ -96,6 +136,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
         named_dims : Optional[Sequence[str]]
             String name for each dimension of the image data, with the same ordering as
             the array dimensions. Highly recommended to provide this for easier use.
+            Input format options include:
+            - List of strings equal in length to number of dimensions
+            - Character string with number of characters equal to num dims
+            - Single character string delimited by spaces or commas
             If not provided, default is ["Dim 0", "Dim 1", ...].
         view_dims : Optional[Sequence[str]]
             Initial dimensions to view, should be a subset of dimension_names.
@@ -123,8 +167,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         data = {k: tonp(v) for k, v in data.items()}
 
         first_key = list(data.keys())[0]
-        if named_dims is None or len(named_dims) == 0:
-            named_dims = [f"Dim {i}" for i in range(data[first_key].ndim)]
+        named_dims = parse_dimensional_input(named_dims, data[first_key].ndim)
 
         super().__init__(data)
         param.Parameterized.__init__(self)
@@ -164,6 +207,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         ), "Number of dimension names must match the number of dimensions in the data."
 
         if view_dims is not None:
+            view_dims = parse_dimensional_input(view_dims, 2)
             assert all(
                 [dim in self.noncat_dims for dim in view_dims]
             ), "All view dimensions must be non-singleton, non-categorical, and in dimension_names."
@@ -217,6 +261,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             clabs=img_names,
             cat_dims=cat_dims,
             cfg=cfg,
+            viewer=self,
         )
 
         # Attach watcher variables to slicer attributes that need GUI updates
@@ -225,35 +270,22 @@ class ComparativeViewer(Viewer, param.Parameterized):
         """
         Create Panel Layout
         """
-        # Widgets per pane
-        view_pane_widgets = self._init_view_pane_widgets()
-        contrast_pane_widgets = self._init_contrast_pane_widgets()
-        roi_pane_widgets = self._init_roi_pane_widgets()
-        analysis_pane_widgets = self._init_analysis_pane_widgets()
-        export_pane_widgets = self._init_export_pane_widgets()
-
-        def keys_to_index_dict(d):
-            return dict(zip((list(d.keys())), range(len(d))))
-
-        # image of control panel through nested dict
-        self.panel_tab_index_dict = {
-            "View": [0, keys_to_index_dict(view_pane_widgets)],
-            "Contrast": [1, keys_to_index_dict(contrast_pane_widgets)],
-            "ROI": [2, keys_to_index_dict(roi_pane_widgets)],
-            "Analysis": [3, keys_to_index_dict(analysis_pane_widgets)],
-            "Export": [4, keys_to_index_dict(export_pane_widgets)],
+        # Build panes using Pane-based pattern
+        self.panes = {
+            "View": self._init_view_pane(),
+            "Contrast": self._init_contrast_pane(),
+            "ROI": self._init_roi_pane(),
+            "Analysis": self._init_analysis_pane(),
+            "Misc": self._init_misc_pane(),
+            "Export": self._init_export_pane(),
         }
 
-        # Build Control Panel
+        # order of tabs
+        self.tab_order = ["View", "Contrast", "ROI", "Analysis", "Misc", "Export"]
+
+        # Build Control Panel from Panes
         control_panel = pn.Tabs(
-            (
-                "View",
-                pn.Column(*list(view_pane_widgets.values())),
-            ),
-            ("Contrast", pn.Column(*list(contrast_pane_widgets.values()))),
-            ("ROI", pn.Column(*list(roi_pane_widgets.values()))),
-            ("Analysis", pn.Column(*list(analysis_pane_widgets.values()))),
-            ("Export", pn.Column(*list(export_pane_widgets.values()))),
+            *[(tab, self.panes[tab].to_column()) for tab in self.tab_order],
         )
 
         # App
@@ -266,12 +298,27 @@ class ComparativeViewer(Viewer, param.Parameterized):
         else:
             self._autoscale_clim(event=None)
 
-    def _launch(self, title="MRI Viewer", **kwargs):
+    def _launch(self, title="MRI Viewer", show=True, **kwargs):
         """
         Launch the viewer.
-        """
 
-        pn.serve(self.app, title=title, show=True)
+        Parameters
+        ----------
+        title : str
+            Title for the viewer
+        show : bool
+            If True, opens browser. If False, server runs silently
+        **kwargs
+            Additional arguments for pn.serve (e.g., port, threaded)
+
+        Returns
+        -------
+        server : panel.server.Server or None
+            The Panel server instance (can be used to stop the server)
+        """
+        server = pn.serve(self.app, title=title, show=show, **kwargs)
+
+        return server
 
     def load_from_config(self, config_path: str):
         """
@@ -322,117 +369,136 @@ class ComparativeViewer(Viewer, param.Parameterized):
     Widget Management
     """
 
-    def _get_app_widget(self, tab_name, widget_name):
+    def replace_widget_in_app(
+        self, pane_name: str, widget_name: str, new_widget
+    ) -> None:
         """
-        Get a widget from the app by tab name and widget name.
+        Replace a widget in both the pane and the control panel display.
+
+        Parameters
+        ----------
+        pane_name : str
+            Name of the pane ("View", "Contrast", "ROI", "Analysis", "Export")
+        widget_name : str
+            Name of the widget to replace
+        new_widget : Widget
+            The new widget wrapper
         """
+        pane = self.panes.get(pane_name)
+        if pane is None:
+            return
 
-        tab_index, widget_dict = self.panel_tab_index_dict[tab_name]
+        # Update pane's internal widget reference
+        pane.replace_widget(widget_name, new_widget)
 
-        return self.app[0][tab_index][widget_dict[widget_name]]
-
-    def _set_app_widget(self, tab_name, widget_name, new_widget):
-        """
-        Replace a widget from the app by tab name and widget name.
-        """
-
-        tab_index, widget_dict = self.panel_tab_index_dict[tab_name]
-
-        self.app[0][tab_index][widget_dict[widget_name]] = new_widget
-
-    def _set_app_widget_attr(self, tab_name, widget_name, attr_name, new_attr):
-        """
-        Set an attribute of a widget from the app by tab name and widget name.
-        """
-
-        tab_index, widget_dict = self.panel_tab_index_dict[tab_name]
-
-        setattr(self.app[0][tab_index][widget_dict[widget_name]], attr_name, new_attr)
+        # Update the control panel display
+        if widget_name in pane._widget_order:
+            tab_index = self.tab_order.index(pane_name)
+            widget_idx = pane._widget_order.index(widget_name)
+            self.app[0][tab_index][widget_idx] = new_widget.get_widget()
 
     """
     Build Widgets for each tab
     """
 
-    def _init_view_pane_widgets(self) -> Dict[str, pn.widgets.Widget]:
+    def _init_view_pane(self) -> Pane:
         """
-        Returns a dictionary of widgets belonging to the "View" pane
+        Returns a Pane containing all View tab widgets.
         """
-
-        widgets = {}
+        pane = Pane("View", viewer=self)
 
         # Viewing Dimensions
-        widgets.update(self._build_vdim_widgets())
+        for widget in self._build_vdim_widgets():
+            pane.add_widget(widget)
 
         # Widgets for Slicing Dimensions
-        widgets.update(self._build_sdim_widgets())
+        for widget in self._build_sdim_widgets():
+            pane.add_widget(widget)
 
         # Other widgets on the viewing page
-        widgets.update(self._build_viewing_widgets())
+        for widget in self._build_viewing_widgets():
+            pane.add_widget(widget)
 
         # Single Toggle View widgets
-        widgets["single_toggle"] = self._build_single_toggle_widget()
+        pane.add_widget(self._build_single_toggle_widget())
 
-        widgets["im_display_desc"] = pn.widgets.StaticText(
-            name="Displayed Images",
+        # Display images description
+        im_display_desc = StaticText(
+            name="im_display_desc",
+            display_name="Displayed Images",
             value="Click names to toggle visibility.",
+            css_classes=["pyeyes-im-display-desc"],
+            viewer=self,
         )
+        pane.add_widget(im_display_desc)
 
-        widgets["im_display"] = self._build_display_images_widget()
+        # Display images widget
+        pane.add_widget(self._build_display_images_widget())
 
-        return widgets
+        return pane
 
-    def _init_contrast_pane_widgets(self) -> Dict[str, pn.widgets.Widget]:
+    def _init_contrast_pane(self) -> Pane:
         """
-        Returns a dictionary of widgets belonging to the "Contrast" pane
+        Returns a Pane containing all Contrast tab widgets.
         """
+        pane = Pane("Contrast", viewer=self)
 
-        widgets = {}
-
-        cplx_widget, clim_scale_widget = self._build_cplx_widget()
-
-        # Select which real-valued view of complex data to view
-        widgets["cplx_view"] = cplx_widget
+        # Complex view and autoscale widgets
+        cplx_widget, autoscale_widget = self._build_cplx_widgets()
+        pane.add_widget(cplx_widget)
 
         # Color map stuff
-        widgets.update(self._build_contrast_widgets())
+        for widget in self._build_contrast_widgets():
+            pane.add_widget(widget)
 
         # Auto-scaling button
-        widgets["autoscale"] = clim_scale_widget
+        pane.add_widget(autoscale_widget)
 
-        return widgets
+        return pane
 
-    def _init_roi_pane_widgets(self) -> Dict[str, pn.widgets.Widget]:
+    def _init_roi_pane(self) -> Pane:
         """
-        Returns a dictionary of widgets belonging to the "ROI" pane
+        Returns a Pane containing all ROI tab widgets.
         """
+        pane = Pane("ROI", viewer=self)
 
-        widgets = {}
+        for widget in self._build_roi_widgets():
+            pane.add_widget(widget)
 
-        widgets.update(self._build_roi_widgets())
+        return pane
 
-        return widgets
-
-    def _init_analysis_pane_widgets(self) -> Dict[str, pn.widgets.Widget]:
+    def _init_analysis_pane(self) -> Pane:
         """
-        Returns a dictionary of widgets belonging to the "Analysis" pane
+        Returns a Pane containing all Analysis tab widgets.
         """
+        pane = Pane("Analysis", viewer=self)
 
-        widgets = {}
+        for widget in self._build_analysis_widgets():
+            pane.add_widget(widget)
 
-        widgets.update(self._build_analysis_widgets())
+        return pane
 
-        return widgets
-
-    def _init_export_pane_widgets(self) -> Dict[str, pn.widgets.Widget]:
+    def _init_export_pane(self) -> Pane:
         """
-        Returns a dictionary of widgets belonging to the "Export" pane
+        Returns a Pane containing all Export tab widgets.
         """
+        pane = Pane("Export", viewer=self)
 
-        widgets = {}
+        for widget in self._build_export_widgets():
+            pane.add_widget(widget)
 
-        widgets.update(self._build_export_widgets())
+        return pane
 
-        return widgets
+    def _init_misc_pane(self) -> Pane:
+        """
+        Returns a Pane containing all misc. tab widgets.
+        """
+        pane = Pane("Misc", viewer=self)
+
+        for widget in self._build_misc_widgets():
+            pane.add_widget(widget)
+
+        return pane
 
     def _build_dataset(self, vdims: Sequence[str]) -> hv.Dataset:
         """
@@ -457,38 +523,51 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         return hv.Dataset((*dim_ranges, proc_data), ["ImgName"] + self.ndims, "Value")
 
-    def _build_vdim_widgets(self) -> Dict[str, pn.widgets.Widget]:
+    def _build_vdim_widgets(self) -> List:
         """
         Build selection widgets for 2 viewing dimensions.
+        Returns a list of Widget wrappers.
         """
 
-        vdim_horiz_widget = pn.widgets.Select(
-            name="L/R Viewing Dimension", options=self.noncat_dims, value=self.vdims[0]
+        @error.error_handler_decorator()
+        def vdim_horiz_callback(new_value):
+            if new_value != self.vdim_horiz:
+                vh_new = new_value
+                vv_new = (
+                    self.vdim_horiz if (vh_new == self.vdim_vert) else self.vdim_vert
+                )
+                self._update_vdims([vh_new, vv_new])
+
+        vdim_horiz = Select(
+            name="vdim_horiz",
+            display_name="L/R Viewing Dimension",
+            options=self.noncat_dims,
+            value=self.vdims[0],
+            css_classes=["pyeyes-vdim-lr"],
+            callback=vdim_horiz_callback,
+            viewer=self,
         )
 
         @error.error_handler_decorator()
-        def vdim_horiz_callback(event):
-            if event.new != event.old:
-                vh_new = event.new
-                vv_new = event.old if (vh_new == self.vdim_vert) else self.vdim_vert
+        def vdim_vert_callback(new_value):
+            if new_value != self.vdim_vert:
+                vv_new = new_value
+                vh_new = (
+                    self.vdim_vert if (vv_new == self.vdim_horiz) else self.vdim_horiz
+                )
                 self._update_vdims([vh_new, vv_new])
 
-        vdim_horiz_widget.param.watch(vdim_horiz_callback, "value")
-
-        vdim_vert_widget = pn.widgets.Select(
-            name="U/D Viewing Dimension", options=self.noncat_dims, value=self.vdims[1]
+        vdim_vert = Select(
+            name="vdim_vert",
+            display_name="U/D Viewing Dimension",
+            options=self.noncat_dims,
+            value=self.vdims[1],
+            css_classes=["pyeyes-vdim-ud"],
+            callback=vdim_vert_callback,
+            viewer=self,
         )
 
-        @error.error_handler_decorator()
-        def vdim_vert_callback(event):
-            if event.new != event.old:
-                vv_new = event.new
-                vh_new = event.old if (vv_new == self.vdim_horiz) else self.vdim_horiz
-                self._update_vdims([vh_new, vv_new])
-
-        vdim_vert_widget.param.watch(vdim_vert_callback, "value")
-
-        return {"vdim_horiz": vdim_horiz_widget, "vdim_vert": vdim_vert_widget}
+        return [vdim_horiz, vdim_vert]
 
     def _update_vdims(self, new_vdims):
         """
@@ -505,8 +584,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
             self.vdim_vert = new_vdims[1]
 
             # Update vdim widgets
-            self._set_app_widget_attr("View", "vdim_horiz", "value", new_vdims[0])
-            self._set_app_widget_attr("View", "vdim_vert", "value", new_vdims[1])
+            self.panes["View"].get_widget("vdim_horiz").value = new_vdims[0]
+            self.panes["View"].get_widget("vdim_vert").value = new_vdims[1]
 
             # Update Slicer
             old_vdims = self.slicer.vdims
@@ -514,66 +593,73 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
             # Update displayed widgets if interchange of vdim and sdims
             if set(old_vdims) != set(new_vdims):
-                new_sdim_widget_dict = self._build_sdim_widgets()
+                new_sdim_widgets = self._build_sdim_widgets()
 
-                for i, w in enumerate(list(new_sdim_widget_dict.keys())):
-                    self._set_app_widget("View", f"sdim{i}", new_sdim_widget_dict[w])
+                for i, widget in enumerate(new_sdim_widgets):
+                    self.replace_widget_in_app("View", f"sdim{i}", widget)
 
                 # update start/stop/step widgets
-                new_export_widget_dict = self._build_export_widgets()
-                range_widgets = [
-                    w for w in new_export_widget_dict.keys() if "_export_range" in w
-                ]
-                for i, w in enumerate(range_widgets):
-                    self._set_app_widget("Export", w, new_export_widget_dict[w])
+                new_export_widgets = self._build_export_widgets()
+                for widget in new_export_widgets:
+                    if "_export_range" in widget.name:
+                        self.replace_widget_in_app("Export", widget.name, widget)
 
             # Reset crops
-            self._set_app_widget_attr(
-                "View", "lr_crop", "bounds", (0, self.slicer.img_dims[0])
-            )
-            self._set_app_widget_attr(
-                "View", "ud_crop", "bounds", (0, self.slicer.img_dims[1])
-            )
-            self._set_app_widget_attr("View", "lr_crop", "value", self.slicer.lr_crop)
-            self._set_app_widget_attr("View", "ud_crop", "value", self.slicer.ud_crop)
+            lr_crop_widget = self.panes["View"].get_widget("lr_crop")
+            lr_crop_widget.bounds = (0, self.slicer.img_dims[0])
+            lr_crop_widget.value = self.slicer.lr_crop
+
+            ud_crop_widget = self.panes["View"].get_widget("ud_crop")
+            ud_crop_widget.bounds = (0, self.slicer.img_dims[1])
+            ud_crop_widget.value = self.slicer.ud_crop
 
         self.slicer.param.trigger("lr_crop", "ud_crop")
 
-    def _build_sdim_widgets(self) -> dict:
+    def _build_sdim_widgets(self) -> List:
         """
-        Return a dictionary of panel widgets to interactively control slicing.
+        Return a list of Widget wrappers for slicing dimensions.
         """
+        widgets = []
         num_interactable_dims = 0
-        sliders = {}
+
         for i, dim in enumerate(self.slicer.sdims):
+            # Create callback with closure over dim
+            def make_callback(this_dim):
+                def callback(new_value):
+                    self._update_sdim(this_dim, new_value)
+
+                return callback
+
             if dim in self.cat_dims.keys():
-                s = pn.widgets.Select(
-                    name=dim,
+                widget = Select(
+                    name=f"sdim{num_interactable_dims}",
+                    display_name=dim,
                     options=self.cat_dims[dim],
                     value=self.slicer.dim_indices[dim],
+                    css_classes=[f"pyeyes-sdim-{sanitize_css_class(dim)}"],
+                    callback=make_callback(dim),
+                    viewer=self,
                 )
             else:
                 if self.slicer.dim_sizes[dim] - 1 > 0:
-                    s = pn.widgets.EditableIntSlider(
-                        name=dim,
+                    widget = EditableIntSlider(
+                        name=f"sdim{num_interactable_dims}",
+                        display_name=dim,
                         start=0,
                         end=self.slicer.dim_sizes[dim] - 1,
                         value=self.slicer.dim_indices[dim],
+                        css_classes=[f"pyeyes-sdim-{sanitize_css_class(dim)}"],
+                        callback=make_callback(dim),
+                        viewer=self,
                     )
                 else:
                     # Singleton dimensions
                     continue
 
-            def _update_dim_indices(event, this_dim=dim):
-
-                self._update_sdim(this_dim, event.new)
-
-            s.param.watch(_update_dim_indices, "value")
-
-            sliders[f"sdim{num_interactable_dims}"] = s
+            widgets.append(widget)
             num_interactable_dims += 1
 
-        return sliders
+        return widgets
 
     @error.error_handler_decorator()
     def _update_sdim(self, sdim, new_dim_val):
@@ -584,6 +670,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
         with param.parameterized.discard_events(self.slicer):
 
             self.slicer.dim_indices[sdim] = new_dim_val
+
+            # Track last modified dimension for scroll behavior
+            self.slicer.scroll_dim = sdim
 
             # Assume we need to autoscale if dimension updated is categorical
             if sdim in self.cat_dims.keys():
@@ -596,124 +685,158 @@ class ComparativeViewer(Viewer, param.Parameterized):
         else:
             self.slicer.param.trigger("dim_indices")
 
-    def _build_viewing_widgets(self):
+    def _sync_sdim_widget_from_scroll(self, dim, dim_val):
         """
-        Return a dictionary of panel widgets to interactively control viewing.
-        """
+        Sync sdim widget values when dim_indices changes (e.g., from scroll).
 
-        sliders = {}
+        This callback is triggered by the slicer when dim_indices is updated.
+        It ensures the GUI widgets stay in sync with the slicer state.
+        """
+        if not hasattr(self, "panes") or "View" not in self.panes:
+            return
+
+        # Find the widget for the scroll dimension and update it
+        if dim is None:
+            return
+
+        if dim_val is None:
+            return
+
+        # Find the sdim widget by checking display_name
+        view_pane = self.panes["View"]
+        for widget_name, widget in view_pane.widgets.items():
+            if widget_name.startswith("sdim") and widget.display_name == dim:
+                if widget.value != dim_val:
+                    widget.value = dim_val
+
+    def _build_viewing_widgets(self) -> List:
+        """
+        Return a list of Widget wrappers for viewing controls.
+        """
+        widgets = []
 
         # Flip Widgets
-        ud_w = pn.widgets.Checkbox(name="Flip Image Up/Down", value=self.slicer.flip_ud)
-
         @error.error_handler_decorator()
-        def flip_ud_callback(event):
-            if event.new != event.old:
-                self.slicer.flip_ud = event.new
+        def flip_ud_callback(new_value):
+            self.slicer.flip_ud = new_value
 
-        ud_w.param.watch(flip_ud_callback, "value")
-        sliders["flip_ud"] = ud_w
-
-        lr_w = pn.widgets.Checkbox(
-            name="Flip Image Left/Right", value=self.slicer.flip_lr
+        flip_ud = Checkbox(
+            name="flip_ud",
+            display_name="Flip Image Up/Down",
+            value=self.slicer.flip_ud,
+            css_classes=["pyeyes-flip-ud"],
+            callback=flip_ud_callback,
+            viewer=self,
         )
+        widgets.append(flip_ud)
 
         @error.error_handler_decorator()
-        def flip_lr_callback(event):
-            if event.new != event.old:
-                self.slicer.flip_lr = event.new
+        def flip_lr_callback(new_value):
+            self.slicer.flip_lr = new_value
 
-        lr_w.param.watch(flip_lr_callback, "value")
-        sliders["flip_lr"] = lr_w
+        flip_lr = Checkbox(
+            name="flip_lr",
+            display_name="Flip Image Left/Right",
+            value=self.slicer.flip_lr,
+            css_classes=["pyeyes-flip-lr"],
+            callback=flip_lr_callback,
+            viewer=self,
+        )
+        widgets.append(flip_lr)
 
-        size_scale_widget = pn.widgets.EditableIntSlider(
-            name="Size Scale",
+        @error.error_handler_decorator()
+        def size_scale_callback(new_value):
+            self.slicer.size_scale = new_value
+
+        size_scale = EditableIntSlider(
+            name="size_scale",
+            display_name="Size Scale",
             start=self.slicer.param.size_scale.bounds[0],
             end=self.slicer.param.size_scale.bounds[1],
             value=self.slicer.size_scale,
             step=self.slicer.param.size_scale.step,
+            css_classes=["pyeyes-size-scale"],
+            callback=size_scale_callback,
+            viewer=self,
         )
+        widgets.append(size_scale)
 
-        @error.error_handler_decorator()
-        def size_scale_callback(event):
-            self.slicer.size_scale = event.new
+        def title_font_size_callback(new_value):
+            self.slicer.title_font_size = new_value
 
-        size_scale_widget.param.watch(size_scale_callback, "value")
-        sliders["size_scale"] = size_scale_widget
-
-        # Title font size
-        title_font_input = pn.widgets.EditableIntSlider(
-            name="Title Font Size",
+        title_font_size = EditableIntSlider(
+            name="title_font_size",
+            display_name="Title Font Size",
             start=self.slicer.param.title_font_size.bounds[0],
             end=self.slicer.param.title_font_size.bounds[1],
             value=self.slicer.title_font_size,
             step=self.slicer.param.title_font_size.step,
+            css_classes=["pyeyes-title-font-size"],
+            callback=title_font_size_callback,
+            viewer=self,
         )
+        widgets.append(title_font_size)
 
-        def _update_title_font_size(event):
-            self.slicer.title_font_size = event.new
+        def lr_crop_callback(new_value):
+            self.slicer.lr_crop = new_value
 
-        title_font_input.param.watch(_update_title_font_size, "value")
-        sliders["title_font_size"] = title_font_input
-
-        # bounding box crop for each L/R/U/D edge
-        lr_crop_slider = pn.widgets.IntRangeSlider(
-            name="L/R Display Range",
+        lr_crop = IntRangeSlider(
+            name="lr_crop",
+            display_name="L/R Display Range",
             start=self.slicer.param.lr_crop.bounds[0],
             end=self.slicer.param.lr_crop.bounds[1],
             value=(self.slicer.lr_crop[0], self.slicer.lr_crop[1]),
             step=self.slicer.param.lr_crop.step,
+            css_classes=["pyeyes-lr-crop"],
+            callback=lr_crop_callback,
+            viewer=self,
         )
+        widgets.append(lr_crop)
 
-        def _update_lr_slider(event):
-            self.slicer.lr_crop = event.new
+        def ud_crop_callback(new_value):
+            self.slicer.ud_crop = new_value
 
-        lr_crop_slider.param.watch(_update_lr_slider, "value")
-        sliders["lr_crop"] = lr_crop_slider
-
-        ud_crop_slider = pn.widgets.IntRangeSlider(
-            name="U/D Display Range",
+        ud_crop = IntRangeSlider(
+            name="ud_crop",
+            display_name="U/D Display Range",
             start=self.slicer.param.ud_crop.bounds[0],
             end=self.slicer.param.ud_crop.bounds[1],
             value=(self.slicer.ud_crop[0], self.slicer.ud_crop[1]),
             step=self.slicer.param.ud_crop.step,
+            css_classes=["pyeyes-ud-crop"],
+            callback=ud_crop_callback,
+            viewer=self,
         )
+        widgets.append(ud_crop)
 
-        def _update_ud_slider(event):
-            self.slicer.ud_crop = event.new
-
-        ud_crop_slider.param.watch(_update_ud_slider, "value")
-        sliders["ud_crop"] = ud_crop_slider
-
-        return sliders
+        return widgets
 
     def _build_single_toggle_widget(self):
-        # Single toggle view
-        single_toggle = pn.widgets.Checkbox(
-            name="Single View", value=self.single_image_toggle
-        )
+        """Build single view toggle widget."""
 
         @error.error_handler_decorator()
-        def single_toggle_callback(event):
-            if event.new != event.old:
-                self._update_toggle_single_view(event.new)
+        def single_toggle_callback(new_value):
+            self._update_toggle_single_view(new_value)
 
-        single_toggle.param.watch(single_toggle_callback, "value")
-
+        single_toggle = Checkbox(
+            name="single_toggle",
+            display_name="Single View",
+            value=self.single_image_toggle,
+            css_classes=["pyeyes-single-view"],
+            callback=single_toggle_callback,
+            viewer=self,
+        )
         return single_toggle
 
     def _update_toggle_single_view(self, new_single_toggle):
         """
         Only display one image at a time for toggling sake
         """
-
         self.single_image_toggle = new_single_toggle
 
-        # build new widget
+        # Build new widget and replace in pane
         new_display_images_widget = self._build_display_images_widget()
-
-        # update gui
-        self._set_app_widget("View", "im_display", new_display_images_widget)
+        self.replace_widget_in_app("View", "im_display", new_display_images_widget)
 
         if self.single_image_toggle:
             self.display_images = [self.display_images[0]]
@@ -724,43 +847,50 @@ class ComparativeViewer(Viewer, param.Parameterized):
         self.slicer.update_display_image_list(self.display_images)
 
     def _build_display_images_widget(self):
-
+        """Build display images widget (Radio or Check button group)."""
         len_names = np.sum([len(name) for name in self.img_names]).item()
         orientation = "vertical" if len_names > 30 else "vertical"
 
-        if self.single_image_toggle:
+        @error.error_handler_decorator()
+        def display_images_callback(new_value):
+            if not isinstance(new_value, str) and len(new_value) == 0:
+                pn.state.notifications.warning("Must select at least one image.")
+                # Restore previous value
+                if hasattr(self, "panes") and "View" in self.panes:
+                    widget = self.panes["View"].get_widget("im_display")
+                    if widget:
+                        widget.value = self.display_images
+                return
+            self._update_image_display(new_value)
 
-            display_images_widget = pn.widgets.RadioButtonGroup(
-                name="Displayed Images",
+        if self.single_image_toggle:
+            im_display = RadioButtonGroup(
+                name="im_display",
+                display_name="Displayed Images",
                 options=self.img_names,
                 value=self.img_names[0],
                 button_type="success",
                 button_style="outline",
                 orientation=orientation,
+                css_classes=["pyeyes-im-display-radio"],
+                callback=display_images_callback,
+                viewer=self,
             )
-
         else:
-            display_images_widget = pn.widgets.CheckButtonGroup(
-                name="Displayed Images",
+            im_display = CheckButtonGroup(
+                name="im_display",
+                display_name="Displayed Images",
                 options=self.img_names,
                 value=self.img_names,
                 button_type="primary",
                 button_style="outline",
                 orientation=orientation,
+                css_classes=["pyeyes-im-display-check"],
+                callback=display_images_callback,
+                viewer=self,
             )
 
-        @error.error_handler_decorator()
-        def display_images_callback(event):
-            if not isinstance(event.new, str) and len(event.new) == 0:
-                pn.state.notifications.warning("Must select at least one image.")
-                self._set_app_widget_attr("View", "im_display", "value", event.old)
-                return
-            if event.new != event.old:
-                self._update_image_display(event.new)
-
-        display_images_widget.param.watch(display_images_callback, "value")
-
-        return display_images_widget
+        return im_display
 
     def _update_image_display(self, new_display_images):
         """
@@ -774,10 +904,16 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         self.slicer.update_display_image_list(new_display_images)
 
-    def _build_cplx_widget(self):
+    def _build_cplx_widgets(self):
+        """Build complex view selector and autoscale button."""
 
-        cplx_widget = pn.widgets.RadioButtonGroup(
-            name="Complex Data",
+        @error.error_handler_decorator()
+        def cplx_callback(new_value):
+            self._update_cplx_view(new_value)
+
+        cplx_view = RadioButtonGroup(
+            name="cplx_view",
+            display_name="Complex Data",
             options=(
                 ["mag", "phase", "real", "imag"]
                 if self.is_complex_data
@@ -786,20 +922,21 @@ class ComparativeViewer(Viewer, param.Parameterized):
             value=self.slicer.cplx_view,
             button_type="primary",
             button_style="outline",
+            css_classes=["pyeyes-cplx-view"],
+            callback=cplx_callback,
+            viewer=self,
         )
 
-        @error.error_handler_decorator()
-        def cplx_callback(event):
-            if event.new != event.old:
-                self._update_cplx_view(event.new)
+        autoscale = Button(
+            name="autoscale",
+            display_name="Auto-Scale",
+            button_type="primary",
+            css_classes=["pyeyes-autoscale"],
+            on_click=self._autoscale_clim,
+            viewer=self,
+        )
 
-        cplx_widget.param.watch(cplx_callback, "value")
-
-        # Auto-scale for given slice
-        clim_scale_widget = pn.widgets.Button(name="Auto-Scale", button_type="primary")
-        clim_scale_widget.on_click(self._autoscale_clim)
-
-        return cplx_widget, clim_scale_widget
+        return cplx_view, autoscale
 
     def _update_cplx_view(self, new_cplx_view):
         """
@@ -811,21 +948,14 @@ class ComparativeViewer(Viewer, param.Parameterized):
             self.slicer.update_cplx_view(new_cplx_view)
 
             # Reset clim
-            self._set_app_widget_attr(
-                "Contrast", "clim", "start", self.slicer.param.vmin.bounds[0]
-            )
-            self._set_app_widget_attr(
-                "Contrast", "clim", "end", self.slicer.param.vmax.bounds[1]
-            )
-            self._set_app_widget_attr(
-                "Contrast", "clim", "value", (self.slicer.vmin, self.slicer.vmax)
-            )
-            self._set_app_widget_attr(
-                "Contrast", "clim", "step", self.slicer.param.vmin.step
-            )
+            clim_widget = self.panes["Contrast"].get_widget("clim")
+            clim_widget.start = self.slicer.param.vmin.bounds[0]
+            clim_widget.end = self.slicer.param.vmax.bounds[1]
+            clim_widget.value = (self.slicer.vmin, self.slicer.vmax)
+            clim_widget.step = self.slicer.param.vmin.step
 
             # Reset cmap value
-            self._set_app_widget_attr("Contrast", "cmap", "value", self.slicer.cmap)
+            self.panes["Contrast"].get_widget("cmap").value = self.slicer.cmap
 
         self.slicer.param.trigger("vmin", "vmax", "cmap")
 
@@ -846,37 +976,23 @@ class ComparativeViewer(Viewer, param.Parameterized):
         step : float
             Step size for incrementing bar.
         """
-        self._set_app_widget_attr(
-            "Contrast",
-            "clim",
-            "value",
-            (vmin, vmax),
-        )
-        self._set_app_widget_attr(
-            "Contrast",
-            "clim",
-            "start",
-            bound_min,
-        )
-        self._set_app_widget_attr(
-            "Contrast",
-            "clim",
-            "end",
-            bound_max,
-        )
-        self._set_app_widget_attr(
-            "Contrast",
-            "clim",
-            "step",
-            step,
-        )
+        clim_widget = self.panes["Contrast"].get_widget("clim")
+        clim_widget.value = (vmin, vmax)
+        clim_widget.start = bound_min
+        clim_widget.end = bound_max
+        clim_widget.step = step
 
-    def _update_clim(self, event):
+    def _update_clim(self, new_value):
         """
         Callback to update the clim of the slicer.
+
+        Parameters
+        ----------
+        new_value : tuple
+            New (vmin, vmax) values
         """
         with param.parameterized.discard_events(self.slicer):
-            vmin, vmax = event.new
+            vmin, vmax = new_value
 
             if vmin > vmax:
                 pn.state.notifications.warning("vmin > vmax. Setting vmin = vmax.")
@@ -895,69 +1011,78 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         self.slicer.param.trigger("vmin", "vmax")
 
-    def _build_contrast_widgets(self) -> Dict[str, pn.widgets.Widget]:
+    def _build_contrast_widgets(self) -> List:
+        """Build contrast-related widgets."""
+        widgets = []
 
-        widgets = {}
-
-        # vmin/vmax use different Range slider
-        range_slider = pn.widgets.EditableRangeSlider(
+        # Clim range slider
+        clim = EditableRangeSlider(
             name="clim",
+            display_name="clim",
             start=self.slicer.param.vmin.bounds[0],
             end=self.slicer.param.vmax.bounds[1],
             value=(self.slicer.vmin, self.slicer.vmax),
             step=self.slicer.param.vmin.step,
+            css_classes=["pyeyes-clim"],
+            callback=self._update_clim,
+            viewer=self,
         )
-
-        range_slider.param.watch(self._update_clim, "value")
-        widgets["clim"] = range_slider
+        widgets.append(clim)
 
         # Colormap
-        cmap_widget = pn.widgets.Select(
-            name="Color Map",
-            options=VALID_COLORMAPS,
-            value=self.slicer.cmap,
-        )
-
-        def _update_cmap(event):
-
+        def cmap_callback(new_value):
             with param.parameterized.discard_events(self.slicer):
-                self.slicer.cmap = event.new
+                self.slicer.cmap = new_value
                 self.slicer.update_colormap()
-
             self.slicer.param.trigger("cmap")
 
-        cmap_widget.param.watch(_update_cmap, "value")
-        widgets["cmap"] = cmap_widget
+        cmap = Select(
+            name="cmap",
+            display_name="Color Map",
+            options=VALID_COLORMAPS,
+            value=self.slicer.cmap,
+            css_classes=["pyeyes-cmap"],
+            callback=cmap_callback,
+            viewer=self,
+        )
+        widgets.append(cmap)
 
         # Colorbar toggle
-        colorbar_widget = pn.widgets.Checkbox(
-            name="Add Colorbar",
+        def colorbar_callback(new_value):
+            self.slicer.colorbar_on = new_value
+            # Update colorbar label disabled state
+            if hasattr(self, "panes") and "Contrast" in self.panes:
+                colorbar_label_widget = self.panes["Contrast"].get_widget(
+                    "colorbar_label"
+                )
+                if colorbar_label_widget:
+                    colorbar_label_widget.disabled = not new_value
+
+        colorbar = Checkbox(
+            name="colorbar",
+            display_name="Add Colorbar",
             value=self.slicer.colorbar_on,
+            css_classes=["pyeyes-colorbar"],
+            callback=colorbar_callback,
+            viewer=self,
         )
+        widgets.append(colorbar)
 
-        def _update_colorbar(event):
-            self.slicer.colorbar_on = event.new
+        # Colorbar label
+        def colorbar_label_callback(new_value):
+            self.slicer.colorbar_label = new_value
 
-        colorbar_widget.param.watch(_update_colorbar, "value")
-        widgets["colorbar"] = colorbar_widget
-
-        colorbar_label_widget = pn.widgets.TextInput(
-            name="Colorbar Label",
+        colorbar_label = TextInput(
+            name="colorbar_label",
+            display_name="Colorbar Label",
             value=self.slicer.colorbar_label,
+            css_classes=["pyeyes-colorbar-label"],
+            callback=colorbar_label_callback,
+            viewer=self,
         )
-
-        def _update_colorbar_label(event):
-            self.slicer.colorbar_label = event.new
-
-        colorbar_label_widget.param.watch(_update_colorbar_label, "value")
-
-        # disable colorbar label if colorbar is off
-        def _update_colorbar_label_disabled(x):
-            colorbar_label_widget.disabled = not x
-
-        pn.bind(_update_colorbar_label_disabled, colorbar_widget, watch=True)
-
-        widgets["colorbar_label"] = colorbar_label_widget
+        # Disable if colorbar is off
+        colorbar_label.disabled = not self.slicer.colorbar_on
+        widgets.append(colorbar_label)
 
         return widgets
 
@@ -970,161 +1095,187 @@ class ComparativeViewer(Viewer, param.Parameterized):
             self.update_clim_widget(vmin, vmax, bound_min, bound_max, step)
         self.slicer.param.trigger("vmin", "vmax")
 
-    def _build_roi_widgets(self) -> Dict[str, pn.widgets.Widget]:
+    def _build_roi_widgets(self) -> List:
+        """Build ROI-related widgets."""
+        widgets = []
 
-        widgets = {}
+        # ROI Overlay Enabled
+        def roi_mode_callback(new_value):
+            self.slicer.update_roi_mode(new_value)
 
-        # Option for ROI in-figure
-        roi_mode = pn.widgets.Checkbox(
-            name="ROI Overlay Enabled", value=bool(self.slicer.roi_mode.value)
+        roi_mode = Checkbox(
+            name="roi_mode",
+            display_name="ROI Overlay Enabled",
+            value=bool(self.slicer.roi_mode.value),
+            css_classes=["pyeyes-roi-mode"],
+            callback=roi_mode_callback,
+            viewer=self,
         )
+        widgets.append(roi_mode)
 
-        def _update_roi_mode(event):
-            self.slicer.update_roi_mode(event.new)
-
-        roi_mode.param.watch(_update_roi_mode, "value")
-        widgets["roi_mode"] = roi_mode
-
-        # ROI Button
-        roi_button = pn.widgets.Button(name="Draw ROI", button_type="primary")
-
-        def _draw_roi(event):
+        # Draw ROI Button
+        def draw_roi_callback(event):
             self.slicer.update_roi_state(ROI_STATE.FIRST_SELECTION)
 
-        roi_button.on_click(_draw_roi)
-        widgets["draw_roi"] = roi_button
+        draw_roi = Button(
+            name="draw_roi",
+            display_name="Draw ROI",
+            button_type="primary",
+            css_classes=["pyeyes-draw-roi"],
+            on_click=draw_roi_callback,
+            viewer=self,
+        )
+        widgets.append(draw_roi)
 
-        # Clear Button
-        clear_button = pn.widgets.Button(name="Clear ROI", button_type="warning")
-
-        def _clear_roi(event):
+        # Clear ROI Button
+        def clear_roi_callback(event):
             self.slicer.update_roi_state(ROI_STATE.INACTIVE)
 
-        # Enable only if roi is drawn
-        clear_button.on_click(_clear_roi)
-        clear_button.disabled = True
+        clear_roi = Button(
+            name="clear_roi",
+            display_name="Clear ROI",
+            button_type="warning",
+            css_classes=["pyeyes-clear-roi"],
+            on_click=clear_roi_callback,
+            viewer=self,
+        )
+        clear_roi.disabled = True
+        widgets.append(clear_roi)
 
-        widgets["clear_roi"] = clear_button
+        # ROI Colormap
+        def roi_cmap_callback(new_value):
+            self.slicer.update_roi_colormap(new_value)
 
-        # Colormap
-        roi_cmap_widget = pn.widgets.Select(
-            name="ROI Color Map",
+        roi_cmap = Select(
+            name="roi_cmap",
+            display_name="ROI Color Map",
             options=self.slicer.param.roi_cmap.objects,
             value=self.slicer.roi_cmap,
+            css_classes=["pyeyes-roi-cmap"],
+            callback=roi_cmap_callback,
+            viewer=self,
         )
-
-        def _update_cmap(event):
-            self.slicer.update_roi_colormap(event.new)
-
-        roi_cmap_widget.param.watch(_update_cmap, "value")
-        widgets["roi_cmap"] = roi_cmap_widget
+        roi_cmap.visible = False
+        widgets.append(roi_cmap)
 
         # Zoom Scale
-        zoom_scale_widget = pn.widgets.EditableFloatSlider(
-            name="Zoom Scale",
+        def zoom_scale_callback(new_value):
+            self.slicer.update_roi_zoom_scale(new_value)
+
+        zoom_scale = EditableFloatSlider(
+            name="zoom_scale",
+            display_name="Zoom Scale",
             start=1.0,
             end=10.0,
             value=self.slicer.ROI.zoom_scale,
             step=0.1,
+            css_classes=["pyeyes-zoom-scale"],
+            callback=zoom_scale_callback,
+            viewer=self,
         )
+        zoom_scale.visible = False
+        widgets.append(zoom_scale)
 
-        def _update_zoom_scale(event):
-            self.slicer.update_roi_zoom_scale(event.new)
+        # ROI Location
+        def roi_loc_callback(new_value):
+            self.slicer.update_roi_loc(new_value)
 
-        zoom_scale_widget.param.watch(_update_zoom_scale, "value")
-        widgets["zoom_scale"] = zoom_scale_widget
-
-        # Location
-        roi_loc_widget = pn.widgets.Select(
-            name="ROI Location",
+        roi_loc = Select(
+            name="roi_loc",
+            display_name="ROI Location",
             options=[loc.value for loc in ROI_LOCATION],
             value=self.slicer.ROI.roi_loc.value,
+            css_classes=["pyeyes-roi-loc"],
+            callback=roi_loc_callback,
+            viewer=self,
         )
+        roi_loc.visible = False
+        widgets.append(roi_loc)
 
-        def _update_roi_loc(event):
-            self.slicer.update_roi_loc(event.new)
+        # ROI L/R Crop
+        def roi_lr_crop_callback(new_value):
+            self.slicer.update_roi_lr_crop(new_value)
 
-        roi_loc_widget.param.watch(_update_roi_loc, "value")
-        widgets["roi_loc"] = roi_loc_widget
-
-        # add widget to adjust roi location
-        roi_lr_crop_slider = pn.widgets.EditableRangeSlider(
-            name="ROI L/R Crop",
+        roi_lr_crop = EditableRangeSlider(
+            name="roi_lr_crop",
+            display_name="ROI L/R Crop",
             value=(0, 1),
             start=0,
             end=100000,
             step=0.1,
+            css_classes=["pyeyes-roi-lr-crop"],
+            callback=roi_lr_crop_callback,
+            viewer=self,
         )
+        roi_lr_crop.visible = False
+        widgets.append(roi_lr_crop)
 
-        def _update_roi_lr_crop(event):
-            crop_lower, crop_upper = event.new
-            self.slicer.update_roi_lr_crop((crop_lower, crop_upper))
+        # ROI U/D Crop
+        def roi_ud_crop_callback(new_value):
+            self.slicer.update_roi_ud_crop(new_value)
 
-        roi_lr_crop_slider.param.watch(_update_roi_lr_crop, "value")
-        widgets["roi_lr_crop"] = roi_lr_crop_slider
-
-        roi_ud_crop_slider = pn.widgets.EditableRangeSlider(
-            name="ROI U/D Crop",
+        roi_ud_crop = EditableRangeSlider(
+            name="roi_ud_crop",
+            display_name="ROI U/D Crop",
             value=(0, 1),
             start=0,
             end=100000,
             step=0.1,
+            css_classes=["pyeyes-roi-ud-crop"],
+            callback=roi_ud_crop_callback,
+            viewer=self,
         )
+        roi_ud_crop.visible = False
+        widgets.append(roi_ud_crop)
 
-        def _update_roi_ud_crop(event):
-            crop_lower, crop_upper = event.new
-            self.slicer.update_roi_ud_crop((crop_lower, crop_upper))
+        # ROI Line Color
+        def roi_line_color_callback(new_value):
+            self.slicer.update_roi_line_color(new_value)
 
-        roi_ud_crop_slider.param.watch(_update_roi_ud_crop, "value")
-        widgets["roi_ud_crop"] = roi_ud_crop_slider
-
-        # Bounding box details
-        roi_line_color = pn.widgets.ColorPicker(
-            name="ROI Line Color",
+        roi_line_color = ColorPicker(
+            name="roi_line_color",
+            display_name="ROI Line Color",
             value=self.slicer.ROI.color,
+            css_classes=["pyeyes-roi-line-color"],
+            callback=roi_line_color_callback,
+            viewer=self,
         )
+        roi_line_color.visible = False
+        widgets.append(roi_line_color)
 
-        def _update_roi_line_color(event):
-            self.slicer.update_roi_line_color(event.new)
+        # ROI Line Width
+        def roi_line_width_callback(new_value):
+            self.slicer.update_roi_line_width(new_value)
 
-        roi_line_color.param.watch(_update_roi_line_color, "value")
-        widgets["roi_line_color"] = roi_line_color
-
-        roi_line_width = pn.widgets.IntSlider(
-            name="ROI Line Width",
+        roi_line_width = IntSlider(
+            name="roi_line_width",
+            display_name="ROI Line Width",
             start=1,
             end=10,
             value=self.slicer.ROI.line_width,
+            css_classes=["pyeyes-roi-line-width"],
+            callback=roi_line_width_callback,
+            viewer=self,
         )
+        roi_line_width.visible = False
+        widgets.append(roi_line_width)
 
-        def _update_roi_line_width(event):
-            self.slicer.update_roi_line_width(event.new)
+        # ROI Zoom Order
+        def roi_zoom_order_callback(new_value):
+            self.slicer.update_roi_zoom_order(new_value)
 
-        roi_line_width.param.watch(_update_roi_line_width, "value")
-        widgets["roi_line_width"] = roi_line_width
-
-        roi_zoom_order = pn.widgets.IntInput(
-            name="ROI Zoom Order",
+        roi_zoom_order = IntInput(
+            name="roi_zoom_order",
+            display_name="ROI Zoom Order",
             value=self.slicer.ROI.zoom_order,
             start=0,
             end=3,
+            css_classes=["pyeyes-roi-zoom-order"],
+            callback=roi_zoom_order_callback,
+            viewer=self,
         )
-
-        def _update_roi_zoom_order(event):
-            self.slicer.update_roi_zoom_order(event.new)
-
-        roi_zoom_order.param.watch(_update_roi_zoom_order, "value")
-        widgets["roi_zoom_order"] = roi_zoom_order
-
-        # Default not visible
-        widgets["roi_cmap"].visible = False
-        widgets["zoom_scale"].visible = False
-        widgets["roi_loc"].visible = False
-        widgets["roi_lr_crop"].visible = False
-        widgets["roi_ud_crop"].visible = False
-        widgets["roi_line_color"].visible = False
-        widgets["roi_line_width"].visible = False
-        widgets["roi_zoom_order"].visible = False
+        roi_zoom_order.visible = False
+        widgets.append(roi_zoom_order)
 
         return widgets
 
@@ -1135,10 +1286,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
         else:
             new_state = event
 
+        roi_pane = self.panes["ROI"]
+
         # Clear button enabled or not
-        self._set_app_widget_attr(
-            "ROI", "clear_roi", "disabled", new_state == ROI_STATE.INACTIVE
-        )
+        roi_pane.get_widget("clear_roi").disabled = new_state == ROI_STATE.INACTIVE
 
         with param.parameterized.discard_events(self.slicer):
             # update ranges of sliders upon completion of ROI
@@ -1152,87 +1303,109 @@ class ComparativeViewer(Viewer, param.Parameterized):
                 lr_step = self.slicer.param.lr_crop.step
                 ud_step = self.slicer.param.ud_crop.step
 
-                self._set_app_widget_attr("ROI", "roi_lr_crop", "start", lr_max[0])
-                self._set_app_widget_attr("ROI", "roi_lr_crop", "end", lr_max[1])
-                self._set_app_widget_attr("ROI", "roi_lr_crop", "value", (roi_l, roi_r))
-                self._set_app_widget_attr("ROI", "roi_lr_crop", "step", lr_step)
+                roi_lr_crop = roi_pane.get_widget("roi_lr_crop")
+                roi_lr_crop.start = lr_max[0]
+                roi_lr_crop.end = lr_max[1]
+                roi_lr_crop.value = (roi_l, roi_r)
+                roi_lr_crop.step = lr_step
 
-                self._set_app_widget_attr("ROI", "roi_ud_crop", "start", ud_max[0])
-                self._set_app_widget_attr("ROI", "roi_ud_crop", "end", ud_max[1])
-                self._set_app_widget_attr("ROI", "roi_ud_crop", "value", (roi_b, roi_t))
-                self._set_app_widget_attr("ROI", "roi_ud_crop", "step", ud_step)
+                roi_ud_crop = roi_pane.get_widget("roi_ud_crop")
+                roi_ud_crop.start = ud_max[0]
+                roi_ud_crop.end = ud_max[1]
+                roi_ud_crop.value = (roi_b, roi_t)
+                roi_ud_crop.step = ud_step
 
                 # Constrain Zoom scale
                 max_lr_zoom = abs(lr_max[1] - lr_max[0]) / abs(roi_r - roi_l)
                 max_ud_zoom = abs(ud_max[1] - ud_max[0]) / abs(roi_t - roi_b)
                 max_zoom = round(min(max_lr_zoom, max_ud_zoom), 1)
 
-                self._set_app_widget_attr("ROI", "zoom_scale", "start", 1.0)
-                self._set_app_widget_attr("ROI", "zoom_scale", "end", max_zoom)
+                zoom_scale = roi_pane.get_widget("zoom_scale")
+                zoom_scale.start = 1.0
+                zoom_scale.end = max_zoom
 
             active = new_state == ROI_STATE.ACTIVE
-            self._set_app_widget_attr("ROI", "roi_cmap", "visible", active)
-            self._set_app_widget_attr("ROI", "zoom_scale", "visible", active)
-            self._set_app_widget_attr("ROI", "roi_loc", "visible", active)
-            self._set_app_widget_attr("ROI", "roi_lr_crop", "visible", active)
-            self._set_app_widget_attr("ROI", "roi_ud_crop", "visible", active)
-            self._set_app_widget_attr("ROI", "roi_line_color", "visible", active)
-            self._set_app_widget_attr("ROI", "roi_line_width", "visible", active)
-            self._set_app_widget_attr("ROI", "roi_zoom_order", "visible", active)
+            roi_pane.get_widget("roi_cmap").visible = active
+            roi_pane.get_widget("zoom_scale").visible = active
+            roi_pane.get_widget("roi_loc").visible = active
+            roi_pane.get_widget("roi_lr_crop").visible = active
+            roi_pane.get_widget("roi_ud_crop").visible = active
+            roi_pane.get_widget("roi_line_color").visible = active
+            roi_pane.get_widget("roi_line_width").visible = active
+            roi_pane.get_widget("roi_zoom_order").visible = active
 
             # Enable certain widgets only if roi_mode = infigure
             is_sep = self.slicer.roi_mode == ROI_VIEW_MODE.Separate
-            self._set_app_widget_attr("ROI", "zoom_scale", "disabled", is_sep)
-            self._set_app_widget_attr("ROI", "roi_loc", "disabled", is_sep)
+            roi_pane.get_widget("zoom_scale").disabled = is_sep
+            roi_pane.get_widget("roi_loc").disabled = is_sep
 
-    def _build_analysis_widgets(self) -> Dict[str, pn.widgets.Widget]:
+    def _build_analysis_widgets(self) -> List:
+        """Build Analysis-related widgets."""
+        widgets = []
 
-        widgets = {}
+        # Reference Dataset
+        def reference_callback(new_value):
+            self.slicer.update_reference_dataset(new_value)
 
-        # Difference Map and Metrics Widgets
-        reference_widget = pn.widgets.Select(
-            name="Reference Dataset",
+        reference = Select(
+            name="reference",
+            display_name="Reference Dataset",
             options=self.img_names,
             value=self.slicer.metrics_reference,
+            css_classes=["pyeyes-reference-dataset"],
+            callback=reference_callback,
+            viewer=self,
         )
+        widgets.append(reference)
 
-        def _update_reference(event):
-            self.slicer.update_reference_dataset(event.new)
-
-        reference_widget.param.watch(_update_reference, "value")
-        widgets["reference"] = reference_widget
-
-        diff_map_type_widget = pn.widgets.Select(
-            name="Error Map Type",
+        # Error Map Type
+        diff_map_type = Select(
+            name="diff_map_type",
+            display_name="Error Map Type",
             options=metrics.MAPPABLE_METRICS,
             value=self.slicer.error_map_type,
+            css_classes=["pyeyes-error-map-type"],
+            callback=self._update_error_map_type,
+            viewer=self,
         )
-        diff_map_type_widget.param.watch(self._update_error_map_type, "value")
-        widgets["diff_map_type"] = diff_map_type_widget
+        widgets.append(diff_map_type)
 
-        text_description_widget = pn.widgets.StaticText(
-            name="Metrics", value="Select metrics to display in text."
+        # Text description
+        text_description = StaticText(
+            name="text_description",
+            display_name="Metrics",
+            value="Select metrics to display in text.",
+            css_classes=["pyeyes-metrics-text-description"],
+            viewer=self,
         )
-        widgets["text_description"] = text_description_widget
+        widgets.append(text_description)
 
-        text_metrics_widget = pn.widgets.CheckBoxGroup(
-            name="Metrics",
+        # Text Metrics Checkbox
+        def text_metrics_callback(new_value):
+            self.slicer.update_metrics_text_types(new_value)
+
+        text_metrics = CheckBoxGroup(
+            name="text_metrics",
+            display_name="Metrics",
             options=metrics.FULL_METRICS,
             value=self.slicer.metrics_text_types,
+            css_classes=["pyeyes-metrics-text-checkbox"],
+            callback=text_metrics_callback,
+            viewer=self,
         )
+        widgets.append(text_metrics)
 
-        def _update_text_metrics(event):
-            self.slicer.update_metrics_text_types(event.new)
-
-        text_metrics_widget.param.watch(_update_text_metrics, "value")
-        widgets["text_metrics"] = text_metrics_widget
-
-        text_description_widget = pn.widgets.StaticText(
-            name="Enable", value="Click to add 'Error map' or 'text metrics'."
+        # Button description
+        button_description = StaticText(
+            name="button_description",
+            display_name="Enable",
+            value="Click to add 'Error map' or 'text metrics'.",
+            css_classes=["pyeyes-metrics-text-button-description"],
+            viewer=self,
         )
-        widgets["button_description"] = text_description_widget
+        widgets.append(button_description)
 
-        # determine value
+        # Determine display options value
         if self.slicer.metrics_state == METRICS_STATE.ALL:
             display_options_value = ["Error Map", "Text"]
         elif self.slicer.metrics_state == METRICS_STATE.MAP:
@@ -1242,23 +1415,15 @@ class ComparativeViewer(Viewer, param.Parameterized):
         else:
             display_options_value = []
 
-        display_options = pn.widgets.CheckButtonGroup(
-            name="Display Metrics",
-            button_type="primary",
-            button_style="outline",
-            value=display_options_value,
-            options=["Error Map", "Text"],
-        )
-
-        def _update_displayed_metrics(event):
+        def display_options_callback(new_value):
             pn.state.notifications.clear()
             pn.state.notifications.info("Building...", duration=0)
 
-            if ("Error Map" in event.new) and ("Text" in event.new):
+            if ("Error Map" in new_value) and ("Text" in new_value):
                 new_state = METRICS_STATE.ALL
-            elif "Error Map" in event.new:
+            elif "Error Map" in new_value:
                 new_state = METRICS_STATE.MAP
-            elif "Text" in event.new:
+            elif "Text" in new_value:
                 new_state = METRICS_STATE.TEXT
             else:
                 new_state = METRICS_STATE.INACTIVE
@@ -1268,99 +1433,125 @@ class ComparativeViewer(Viewer, param.Parameterized):
             pn.state.notifications.clear()
             pn.state.notifications.info("Done!", duration=1000)
 
-        display_options.param.watch(_update_displayed_metrics, "value")
-        widgets["display_options"] = display_options
+        display_options = CheckButtonGroup(
+            name="display_options",
+            display_name="Display Metrics",
+            button_type="primary",
+            button_style="outline",
+            value=display_options_value,
+            options=["Error Map", "Text"],
+            css_classes=["pyeyes-metrics-text-button"],
+            callback=display_options_callback,
+            viewer=self,
+        )
+        widgets.append(display_options)
 
-        error_scale_widget = pn.widgets.EditableFloatSlider(
-            name="Error Scale",
+        # Error Scale
+        def error_scale_callback(new_value):
+            self.slicer.update_error_map_scale(new_value)
+
+        error_scale = EditableFloatSlider(
+            name="error_scale",
+            display_name="Error Scale",
             start=1.0,
             end=50.0,
             value=self.slicer.error_map_scale,
             step=0.1,
+            css_classes=["pyeyes-error-scale"],
+            callback=error_scale_callback,
+            viewer=self,
         )
+        widgets.append(error_scale)
 
-        def _update_error_scale(event):
-            self.slicer.update_error_map_scale(event.new)
+        # Normalize Error Map
+        def error_normalize_callback(new_value):
+            self.slicer.update_normalize_error_map(new_value)
 
-        error_scale_widget.param.watch(_update_error_scale, "value")
-        widgets["error_scale"] = error_scale_widget
-
-        error_normalize_widget = pn.widgets.Checkbox(
-            name="Normalize Error Map",
+        error_normalize = Checkbox(
+            name="error_normalize",
+            display_name="Normalize Error Map",
             value=self.slicer.normalize_error_map,
+            css_classes=["pyeyes-error-normalize"],
+            callback=error_normalize_callback,
+            viewer=self,
         )
+        widgets.append(error_normalize)
 
-        def _update_error_normalize(event):
-            self.slicer.update_normalize_error_map(event.new)
+        # Error Color Map
+        def error_cmap_callback(new_value):
+            self.slicer.update_error_map_cmap(new_value)
 
-        error_normalize_widget.param.watch(_update_error_normalize, "value")
-        widgets["error_normalize"] = error_normalize_widget
-
-        error_cmap_widget = pn.widgets.Select(
-            name="Error Map Color Map",
+        error_cmap = Select(
+            name="error_cmap",
+            display_name="Error Map Color Map",
             options=VALID_ERROR_COLORMAPS,
             value=self.slicer.error_map_cmap,
+            css_classes=["pyeyes-error-cmap"],
+            callback=error_cmap_callback,
+            viewer=self,
         )
+        widgets.append(error_cmap)
 
-        def _update_error_cmap(event):
-            self.slicer.update_error_map_cmap(event.new)
+        # Text Metrics Font Size
+        def metrics_text_font_size_callback(new_value):
+            self.slicer.update_metrics_text_font_size(new_value)
 
-        error_cmap_widget.param.watch(_update_error_cmap, "value")
-        widgets["error_cmap"] = error_cmap_widget
-
-        metrics_text_font_size_widget = pn.widgets.EditableIntSlider(
-            name="Text Metrics Font Size",
+        metrics_text_font_size = EditableIntSlider(
+            name="metrics_text_font_size",
+            display_name="Text Metrics Font Size",
             start=5,
             end=24,
             value=self.slicer.metrics_text_font_size,
             step=1,
+            css_classes=["pyeyes-metrics-text-font-size"],
+            callback=metrics_text_font_size_callback,
+            viewer=self,
         )
+        widgets.append(metrics_text_font_size)
 
-        def _update_metrics_text_font_size(event):
-            self.slicer.update_metrics_text_font_size(event.new)
+        # Text Metrics Location
+        def metrics_text_font_loc_callback(new_value):
+            self.slicer.update_metrics_text_location(ROI_LOCATION(new_value))
 
-        metrics_text_font_size_widget.param.watch(
-            _update_metrics_text_font_size, "value"
-        )
-        widgets["metrics_text_font_size"] = metrics_text_font_size_widget
-
-        metrics_text_font_loc_widget = pn.widgets.Select(
-            name="Text Metrics Location",
+        metrics_text_font_loc = Select(
+            name="metrics_text_font_loc",
+            display_name="Text Metrics Location",
             options=[loc.value for loc in ROI_LOCATION],
             value=self.slicer.metrics_text_location.value,
+            css_classes=["pyeyes-metrics-text-font-loc"],
+            callback=metrics_text_font_loc_callback,
+            viewer=self,
         )
+        widgets.append(metrics_text_font_loc)
 
-        def _update_metrics_text_loc(event):
-            self.slicer.update_metrics_text_location(ROI_LOCATION(event.new))
-
-        metrics_text_font_loc_widget.param.watch(_update_metrics_text_loc, "value")
-        widgets["metrics_text_font_loc"] = metrics_text_font_loc_widget
-
-        error_map_autoformat = pn.widgets.Button(
-            name="Autoformat Error Map",
+        # Autoformat Error Map Button
+        error_map_autoformat = Button(
+            name="error_map_autoformat",
+            display_name="Autoformat Error Map",
             button_type="primary",
+            css_classes=["pyeyes-error-map-autoformat"],
+            on_click=self._autoformat_error_map,
+            viewer=self,
         )
-        error_map_autoformat.on_click(self._autoformat_error_map)
-        widgets["error_map_autoformat"] = error_map_autoformat
+        widgets.append(error_map_autoformat)
 
         return widgets
 
-    def _update_error_map_type(self, event, autoformat=True):
+    def _update_error_map_type(self, new_type, autoformat=True):
         """
         Make sure error map gets the right formatting.
+
+        Parameters
+        ----------
+        new_type : str
+            New error map type
+        autoformat : bool
+            Whether to autoformat the error map
         """
-
-        if hasattr(event, "new"):
-            new_type = event.new
-        else:
-            new_type = event
-
         with param.parameterized.discard_events(self.slicer):
             self.slicer.update_error_map_type(new_type)
 
-        self._set_app_widget_attr(
-            "Analysis", "error_scale", "visible", new_type != "SSIM"
-        )
+        self.panes["Analysis"].get_widget("error_scale").visible = new_type != "SSIM"
 
         if self.slicer.metrics_state != METRICS_STATE.INACTIVE and autoformat:
             with param.parameterized.discard_events(self.slicer):
@@ -1377,122 +1568,292 @@ class ComparativeViewer(Viewer, param.Parameterized):
             self.slicer.autoformat_error_map()
 
             # Update gui
-            self._set_app_widget_attr(
-                "Analysis", "error_cmap", "value", (self.slicer.error_map_cmap)
-            )
-
-            self._set_app_widget_attr(
-                "Analysis", "error_scale", "value", (self.slicer.error_map_scale)
-            )
+            self.panes["Analysis"].get_widget(
+                "error_cmap"
+            ).value = self.slicer.error_map_cmap
+            self.panes["Analysis"].get_widget(
+                "error_scale"
+            ).value = self.slicer.error_map_scale
 
         self.slicer.param.trigger("error_map_scale")
 
-    def _build_export_widgets(self) -> Dict[str, pn.widgets.Widget]:
+    def _build_export_widgets(self) -> List:
+        """Build Export-related widgets."""
         # Default object width
         dwidth = pn.widgets.IntInput().width
         box_height = 50
         noncat_sdims = [d for d in self.slicer.sdims if d not in self.cat_dims.keys()]
 
-        widgets = {}
+        widgets = []
 
-        """
-        Export Config
-        """
-        widgets["export_path_desc"] = pn.widgets.StaticText(
-            name="Save Viewer Config",
-            value="Save config to yaml file. Use: Viewer(..., from_config=path).",
+        # Export Config description
+        export_path_desc = StaticText(
+            name="export_path_desc",
+            display_name="Save Viewer Config",
+            value="Save config to yaml file. Use: Viewer(..., config_path=path).",
             width=dwidth,
+            css_classes=["pyeyes-export-config-path-desc"],
+            viewer=self,
         )
+        widgets.append(export_path_desc)
 
-        widgets["export_path"] = pn.widgets.TextAreaInput(
-            name="Export Config Path",
+        # Export Config Path
+        def export_path_callback(new_value):
+            self.config_path = new_value
+
+        export_path = TextAreaInput(
+            name="export_path",
+            display_name="Export Config Path",
             value=self.config_path,
             placeholder="Enter path to export config file",
             height=box_height,
+            css_classes=["pyeyes-export-config-path"],
+            callback=export_path_callback,
+            viewer=self,
         )
+        widgets.append(export_path)
 
-        def _update_export_path(event):
-            self.config_path = event.new
-
-        widgets["export_path"].param.watch(_update_export_path, "value")
-
-        widgets["export_config_button"] = pn.widgets.Button(
-            name="Export Config",
+        # Export Config Button
+        export_config_button = Button(
+            name="export_config_button",
+            display_name="Export Config",
             button_type="primary",
             on_click=self._export_config,
+            css_classes=["pyeyes-export-config-button"],
+            viewer=self,
         )
+        widgets.append(export_config_button)
 
-        """
-        Select ranges for Viewable
-        """
-        widgets["export_ranges_line"] = pn.pane.HTML(
-            "<hr>",
-            width=dwidth,
+        # Separator line
+        export_ranges_line = RawPanelObject(
+            name="export_ranges_line",
+            panel_object=pn.pane.HTML("<hr>", width=dwidth),
+            viewer=self,
         )
+        widgets.append(export_ranges_line)
 
-        widgets["export_html_ranges_desc"] = pn.widgets.StaticText(
-            name="Select Ranges",
+        # Range description
+        export_html_ranges_desc = StaticText(
+            name="export_html_ranges_desc",
+            display_name="Select Ranges",
             value="range dims for data exports.",
             height=15,
             width=dwidth,
+            css_classes=["pyeyes-export-html-ranges-desc"],
+            viewer=self,
         )
-        # Make (start, stop, step) input for each non-cat sdim
+        widgets.append(export_html_ranges_desc)
+
+        # Range inputs for each non-cat sdim
         sss_margin = 5
         s_width = (dwidth - 45) // 3
         for i, dim in enumerate(noncat_sdims):
-            start = pn.widgets.IntInput(name=f"{dim}: start", value=0, width=s_width)
+            start = pn.widgets.IntInput(
+                name=f"{dim}: start",
+                value=0,
+                width=s_width,
+                css_classes=[
+                    f"pyeyes-export-html-range-start-{sanitize_css_class(dim)}"
+                ],
+            )
             stop = pn.widgets.IntInput(
-                name=f"{dim}: stop", value=self.slicer.dim_sizes[dim] - 1, width=s_width
+                name=f"{dim}: stop",
+                value=self.slicer.dim_sizes[dim] - 1,
+                width=s_width,
+                css_classes=[
+                    f"pyeyes-export-html-range-stop-{sanitize_css_class(dim)}"
+                ],
             )
-            step = pn.widgets.IntInput(name=f"{dim}: step", value=1, width=s_width)
-            widgets[f"dim{i}_export_range"] = pn.Row(
-                start, stop, step, margin=sss_margin
+            step = pn.widgets.IntInput(
+                name=f"{dim}: step",
+                value=1,
+                width=s_width,
+                css_classes=[
+                    f"pyeyes-export-html-range-step-{sanitize_css_class(dim)}"
+                ],
             )
+            dim_range = RawPanelObject(
+                name=f"dim{i}_export_range",
+                panel_object=pn.Row(
+                    start,
+                    stop,
+                    step,
+                    margin=sss_margin,
+                    css_classes=[f"pyeyes-export-html-range-{sanitize_css_class(dim)}"],
+                ),
+                viewer=self,
+            )
+            widgets.append(dim_range)
 
-        """
-        Export Static HTML
-        """
-        widgets["export_html_line"] = pn.pane.HTML(
-            "<hr>",
-            width=dwidth,
+        # HTML export separator
+        export_html_line = RawPanelObject(
+            name="export_html_line",
+            panel_object=pn.pane.HTML("<hr>", width=dwidth),
+            viewer=self,
         )
+        widgets.append(export_html_line)
 
-        widgets["export_html_desc"] = pn.widgets.StaticText(
-            name="Save Static HTML",
+        # HTML export description
+        export_html_desc = StaticText(
+            name="export_html_desc",
+            display_name="Save Static HTML",
             value="Save an interactive HTML. Interactively fast but memory \
                 intensive. Exports for every dim along ranges specified above.",
             width=dwidth,
+            css_classes=["pyeyes-export-html-line"],
+            viewer=self,
         )
+        widgets.append(export_html_desc)
 
-        widgets["export_html"] = pn.widgets.TextAreaInput(
-            name="HTML Save Path",
+        # HTML Save Path
+        def export_html_path_callback(new_value):
+            self.html_export_path = new_value
+
+        export_html = TextAreaInput(
+            name="export_html",
+            display_name="HTML Save Path",
             value=self.html_export_path,
             placeholder="Enter path to export viewer as interactive html",
             height=box_height,
+            css_classes=["pyeyes-export-html-path"],
+            callback=export_html_path_callback,
+            viewer=self,
         )
+        widgets.append(export_html)
 
-        def _update_export_path(event):
-            self.html_export_path = event.new
+        # HTML Page Name
+        def export_page_name_callback(new_value):
+            self.html_export_page_name = new_value
 
-        widgets["export_html"].param.watch(_update_export_path, "value")
-
-        widgets["export_html_page_name"] = pn.widgets.TextAreaInput(
-            name="Exported HTML Page Name",
+        export_html_page_name = TextAreaInput(
+            name="export_html_page_name",
+            display_name="Exported HTML Page Name",
             value=self.html_export_page_name,
             placeholder="Enter a name for the page of the exported HTML",
             height=box_height,
+            css_classes=["pyeyes-export-html-page-name"],
+            callback=export_page_name_callback,
+            viewer=self,
         )
+        widgets.append(export_html_page_name)
 
-        def _update_export_page(event):
-            self.html_export_page_name = event.new
-
-        widgets["export_html_page_name"].param.watch(_update_export_page, "value")
-
-        widgets["export_html_button"] = pn.widgets.Button(
-            name="Export HTML",
+        # Export HTML Button
+        export_html_button = Button(
+            name="export_html_button",
+            display_name="Export HTML",
             button_type="primary",
             on_click=self._export_html,
+            css_classes=["pyeyes-export-html-button"],
+            viewer=self,
         )
+        widgets.append(export_html_button)
+
+        return widgets
+
+    def _build_misc_widgets(self) -> List:
+        """Build Misc-related widgets."""
+        dwidth = pn.widgets.IntInput().width
+
+        widgets = []
+
+        def text_font_callback(new_value):
+            self.slicer.text_font = new_value
+            self.slicer.param.trigger("text_font")
+
+        text_font_input = Select(
+            name="text_font",
+            display_name="Text Font",
+            options=themes.VALID_FONTS,
+            value=self.slicer.text_font,
+            css_classes=["pyeyes-text-font"],
+            callback=text_font_callback,
+            viewer=self,
+        )
+        widgets.append(text_font_input)
+
+        def display_titles_checkbox_callback(new_value):
+            self.slicer.display_image_titles_visible = new_value
+            self.slicer.param.trigger("display_image_titles_visible")
+
+        # Display Image Titles
+        display_titles_checkbox = Checkbox(
+            name="display_titles_checkbox",
+            display_name="Display Image Titles",
+            value=self.slicer.display_image_titles_visible,
+            css_classes=["pyeyes-display-titles-checkbox"],
+            callback=display_titles_checkbox_callback,
+            viewer=self,
+        )
+        widgets.append(display_titles_checkbox)
+
+        def display_error_map_titles_checkbox_callback(new_value):
+            self.slicer.display_error_map_titles_visible = new_value
+            self.slicer.param.trigger("display_error_map_titles_visible")
+
+        display_error_map_titles_checkbox = Checkbox(
+            name="display_error_map_titles_checkbox",
+            display_name="Display Error Map Titles",
+            value=self.slicer.display_error_map_titles_visible,
+            css_classes=["pyeyes-display-error-map-titles-checkbox"],
+            callback=display_error_map_titles_checkbox_callback,
+            viewer=self,
+        )
+        widgets.append(display_error_map_titles_checkbox)
+
+        # Display Grid
+        def grid_visible_checkbox_callback(new_value):
+            self.slicer.grid_visible = new_value
+            self.slicer.param.trigger("grid_visible")
+
+        grid_visible_checkbox = Checkbox(
+            name="grid_visible_checkbox",
+            display_name="Display Grid",
+            value=self.slicer.grid_visible,
+            css_classes=["pyeyes-grid-visible-checkbox"],
+            callback=grid_visible_checkbox_callback,
+            viewer=self,
+        )
+        widgets.append(grid_visible_checkbox)
+
+        # Edit Display Image Titles
+
+        misc_line = RawPanelObject(
+            name="misc_line",
+            panel_object=pn.pane.HTML("<hr>", width=dwidth),
+            viewer=self,
+        )
+        widgets.append(misc_line)
+
+        title_desc = StaticText(
+            name="title_desc",
+            display_name="Edit Titles",
+            value="Edit titles of each image on viewer.",
+            width=dwidth,
+            css_classes=["pyeyes-title-desc"],
+            viewer=self,
+        )
+        widgets.append(title_desc)
+
+        # Add Text area input for each image title
+        for i, img_name in enumerate(self.img_names):
+
+            def make_title_callback(img_name):
+                def callback(new_value):
+                    self.slicer.display_image_titles[img_name] = new_value
+                    self.slicer.param.trigger("display_image_titles")
+
+                return callback
+
+            act_img_name = self.slicer.display_image_titles[img_name]
+            title_input = TextInput(
+                name=f"replace_name_{i}",
+                display_name=f'Rename Dataset "{img_name}"',
+                value=act_img_name,
+                css_classes=["pyeyes-export-config-path"],
+                callback=make_title_callback(img_name),
+                viewer=self,
+            )
+            widgets.append(title_input)
 
         return widgets
 
@@ -1588,7 +1949,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
         for i, dim in enumerate(sdims):
             curr_dim = dim
 
-            dim_range_widget = self._get_app_widget("Export", f"dim{i}_export_range")
+            dim_range_widget = (
+                self.panes["Export"].get_widget(f"dim{i}_export_range").get_widget()
+            )
             start = dim_range_widget[0].value
             stop = dim_range_widget[1].value
             step = dim_range_widget[2].value
@@ -1659,6 +2022,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         path: Union[Path, str],
         num_slices_to_keep: Union[int, Dict[str, int]] | None = None,
         subsampling: Union[int, Dict[str, int]] = 1,
+        silent: bool = False,
     ):
         """
         Save a compressed .npz of the (optionally subsampled) image data plus
@@ -1730,7 +2094,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         np.savez_compressed(data_file, **saved_data)
         self._save_config(path.with_suffix(".json"))
 
-        self._create_launcher_script(path)
+        self._create_launcher_script(path, silent=silent)
 
         # Make launcher executable
         os.chmod(path, 0o755)
@@ -1772,7 +2136,17 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         return step_map
 
-    def _create_launcher_script(self, path: Path):
+    def _create_launcher_script(self, path: Path, silent: bool = False):
+        # for debugging
+        if silent:
+            sstr = """
+server = viewer.launch(show=False, threaded=True, verbose=False)
+import time
+time.sleep(0.5)
+server.stop()"""
+        else:
+            sstr = "viewer.launch()"
+
         """Create the standalone launcher script."""
         script = f"""#!/usr/bin/env python3
 import numpy as np
@@ -1795,7 +2169,7 @@ viewer = cv(
     cat_dims=cat_dims,
     config_path=config_path,
 )
-viewer.launch()
+{sstr}
 """
         with open(path, "w") as f:
             f.write(script)

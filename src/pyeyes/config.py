@@ -16,6 +16,7 @@ UNSERIALIZED_OBJECTS_KEYS = [
     "error_map_type",
     "error_map_cmap",
     "metrics_text_types",
+    "text_font",
 ]
 
 

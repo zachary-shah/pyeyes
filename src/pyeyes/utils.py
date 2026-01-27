@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Dict, List, Optional, Sequence, Union
 
 import holoviews as hv
 import numpy as np
@@ -114,7 +114,16 @@ def get_effective_location(
     """
 
     effective_loc = loc
-    if flip_lr:
+    if flip_lr and flip_ud:
+        if loc == ROI_LOCATION.TOP_LEFT:
+            effective_loc = ROI_LOCATION.BOTTOM_RIGHT
+        elif loc == ROI_LOCATION.TOP_RIGHT:
+            effective_loc = ROI_LOCATION.BOTTOM_LEFT
+        elif loc == ROI_LOCATION.BOTTOM_LEFT:
+            effective_loc = ROI_LOCATION.TOP_RIGHT
+        elif loc == ROI_LOCATION.BOTTOM_RIGHT:
+            effective_loc = ROI_LOCATION.TOP_LEFT
+    elif flip_lr:
         if loc == ROI_LOCATION.TOP_LEFT:
             effective_loc = ROI_LOCATION.TOP_RIGHT
         elif loc == ROI_LOCATION.TOP_RIGHT:
@@ -123,7 +132,7 @@ def get_effective_location(
             effective_loc = ROI_LOCATION.BOTTOM_RIGHT
         elif loc == ROI_LOCATION.BOTTOM_RIGHT:
             effective_loc = ROI_LOCATION.BOTTOM_LEFT
-    if flip_ud:
+    elif flip_ud:
         if loc == ROI_LOCATION.TOP_LEFT:
             effective_loc = ROI_LOCATION.BOTTOM_LEFT
         elif loc == ROI_LOCATION.TOP_RIGHT:
@@ -226,6 +235,96 @@ def round_str(x: float, ndec: int = 1) -> str:
     nrem_div = 10 ** (ndec - nz)
 
     return f"{float(float(xi) / nrem_div):.{(ndec - nz)}f}"
+
+
+def parse_dimensional_input(
+    input: Optional[Union[Sequence[str], str]], N: int
+) -> List[str]:
+    """
+    Parse dimensional input into a list of strings.
+    """
+    VALID_DELIMTERS = [",", ";", "-", "_"]
+
+    if isinstance(input, str):
+        # Case where input is a string of N characters
+        if len(input) == N:
+            return list(input)
+
+        # input is character delimited
+        for delim in VALID_DELIMTERS:
+            if delim in input:
+                inp_list = input.split(delim)
+                inp_list = [i.replace(" ", "") for i in inp_list]
+                assert (
+                    len(inp_list) == N
+                ), f"Number of specified dimensions must match number of dimensions in data (N={N})."
+                return inp_list
+
+        # input is space delimited
+        if " " in input:
+            inp_list = input.split(" ")
+            inp_list = [i.replace(" ", "") for i in inp_list]
+            assert (
+                len(inp_list) == N
+            ), f"Number of specified dimensions must match number of dimensions in data (N={N})."
+            return inp_list
+
+        raise ValueError(f"Invalid dimensional input: {input}")
+    elif isinstance(input, Sequence):
+        input = [str(s) for s in input]
+        assert (
+            len(input) == N
+        ), f"Number of specified dimensions must match number of dimensions in data (N={N})."
+        return input
+
+    elif input is not None:
+        raise ValueError(f"Invalid dimensional input: {input}")
+
+    # Default case
+    return [f"Dim {i}" for i in range(N)]
+
+
+def sanitize_css_class(name: str) -> str:
+    """
+    Make a string safe for use as a CSS class.
+    """
+    BAD_CHARS = [
+        " ",
+        ".",
+        ":",
+        ";",
+        "<",
+        ">",
+        "[",
+        "]",
+        "{",
+        "}",
+        "|",
+        "\\",
+        "/",
+        "?",
+        "!",
+        "@",
+        "#",
+        "$",
+        "%",
+        "^",
+        "&",
+        "*",
+        "(",
+        ")",
+        "=",
+        "+",
+        "~",
+        "`",
+        "'",
+        '"',
+    ]
+
+    for badchar in BAD_CHARS:
+        name = name.replace(badchar, "-")
+
+    return name
 
 
 # Complex view mapping
