@@ -1,3 +1,8 @@
+import shutil
+import string
+import subprocess
+import sys
+import warnings
 from dataclasses import dataclass
 
 import holoviews as hv
@@ -10,22 +15,25 @@ hv.extension("bokeh")
 class Theme:
     background_color: str
     text_color: str
-    text_font: str = "roboto"  # TODO: allow flexibility in user parameterization
+    accent_color: str
 
 
 # Intsantiate themes
 dark_theme = Theme(
     background_color="#000000",
     text_color="#FFFFFF",
+    accent_color="#303030",
 )
 dark_soft_theme = Theme(
     background_color="#121212",
     text_color="#E0E0E0",
+    accent_color="#363636",
 )
 
 light_theme = Theme(
     background_color="#FFFFFF",
     text_color="#000000",
+    accent_color="#C2C2C2",
 )
 
 SUPPORTED_THEMES = {
@@ -66,3 +74,44 @@ def set_theme(theme_str: str) -> None:
 
     # Update the global theme
     VIEW_THEME = SUPPORTED_THEMES[theme_str]
+
+
+DEFAULT_FONT = "Times"
+
+
+def get_font_list():
+    # determine if fc-list is available
+    if not shutil.which("fc-list"):
+        warnings.warn(
+            "System fonts could not be listed, as fc-list is not available. Please install the fontconfig package."
+        )
+        valid_fonts = [
+            "Times",
+            "Helvetica",
+            "Verdana",
+            "Courier",
+            "Arial",
+            "Monospace",
+        ]
+    else:
+        result = subprocess.run(
+            ["fc-list", ":", "family", "|", "sort", "|", "uniq"],
+            capture_output=True,
+            text=True,
+        )
+        fonts = result.stdout.splitlines()
+        valid_font_character_set = string.ascii_letters + string.whitespace
+        valid_fonts = [
+            font
+            for font in fonts
+            if all(char in valid_font_character_set for char in font)
+        ]
+
+    if DEFAULT_FONT not in valid_fonts:
+        valid_fonts.append(DEFAULT_FONT)
+
+    valid_fonts.sort()
+    return valid_fonts
+
+
+VALID_FONTS = get_font_list()

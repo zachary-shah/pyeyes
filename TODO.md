@@ -163,38 +163,39 @@ Finally, we will update the instantiated widgets in `viewers.py` given this refa
 ## ComparativeViewer Bug Fix List
 TASK 5
 - [x] Issue with overlay displays and flipping image dimensions. When both "Flip Image Up/Down" and "Flip Image Left/Right" are checked, and metrics display is enabled, the location of the metrics flips sides and goes outside the viewed window. This is the case for any location of the metrics, and only happens when both flips are enabled. This also happens with ROI overlay. When both flips are enabled, the ROI location flips L/R relative to where it should be (Displays in "bottom right" corner when "bottom left" is checked).
-- [ ] Ensure widgets can't be incremented out of bounds (like incrementing sdims below 0 or above max)
+- [x] Ensure widgets can't be incremented out of bounds (like incrementing sdims below 0 or above max)
 - [ ] ensure slice is non-zero when computing metrics
-- [ ] Issue with L/R and U/D display range in terms of crops
 
 ## ComparativeViewer Feature Request Log
-TASK 6
-- [ ] `mouse_scroll`: This feature should allow the user to scroll through a slice of images when moving the mouse scroll wheel when the mouse is over the display image.
+
+- [x] `mouse_scroll`: This feature should allow the user to scroll through a slice of images when moving the mouse scroll wheel when the mouse is over the display image.
     - this should automatically scroll along the last modified sliceable dimension, or by default the first dimension in the list of sliceable dims.
     - Every time the view_dims is updated, this scrollable dimension should be updated to the first dimension in sliceable dims
     - categorical dimensions should also be scrollable
     - this may require disabling some of the scroll-based interactive features in the default Bokeh window
-TASK 7
-- [ ] Add widgets on the `Export` tab to support exporting the dynamic runnable format of the viewer
-TASK 8
-- [ ] Add toggle for "Single View" mode on display images to be short-cutted by keyboard inputs (possibly up/down arrows or left-right arrows?). If the user has checked `Single View` button, then clicking the up/down buttons on the keyboard will trigger moving along the list of possible displayed images.
-TASK 9
-- [ ] Add checkbox widget to toggle if titles are displayed or not.
-TASK 10
-- [ ] Add option to normalize DisplayImages to reference on the Analysis tab, similarly to how the Error maps are optionally normalized.
-- [ ] Allow renaming of Display Image titles / names. This can be edited by a set of text boxes. This should alos be combined with allowing the user to modify the order of display images by dragging and dropping names along the list.
-TASK 11
-- [ ] For the error bars, if the scale of the image is either: (a) max value less than 0.1, or (b) max value above 100, then display the colorbar labels in scientific notation with 1 decimal. Otherwise, display in float notation with exactly 3 digits max (including integer component)
-TASK 12
+    - [ ] TODO: add `advanced` tab and calibrate mouse_scroll
+
 - [ ] `popup-pixel`: If the user clicks their mouse anywhere on a display image, a popup should then display the value of the pixel where they clicked their mouse, for all display images at that pixel location.
-TASK 13
+
+- [ ] Add toggle for "Single View" mode on display images to be short-cutted by keyboard inputs (possibly up/down arrows or left-right arrows?). If the user has checked `Single View` button, then clicking the up/down buttons on the keyboard will trigger moving along the list of possible displayed images.
+
+- [x] Add checkbox widget to toggle if titles are displayed or not.
+
+- [x] Expose text font modification
+
+- [ ] Add option to normalize DisplayImages to reference on the Analysis tab, similarly to how the Error maps are optionally normalized.
+
+- [x] Allow renaming of Display Image titles / names. This can be edited by a set of text boxes. This should alos be combined with allowing the user to modify the order of display images by dragging and dropping names along the list.
+    - Added in `Misc` Tab
+    - [ ] For future: make all references to name in viewer sync to updated names (displayed name widgets, ref picker, etc)
+
+- [ ] For the error bars, if the scale of the image is either: (a) max value less than 0.1, or (b) max value above 100, then display the colorbar labels in scientific notation with 1 decimal. Otherwise, display in float notation with exactly 3 digits max (including integer component)
+
 - [ ] On the `Analysis` Tab, add a widget which specifies to what precision the metrics should be displayed. Also add a widget that allows the metrics to instead be displayed in scientific notation, which is just a toggle (always set to 3 sig figs for scientific notation)
-TASK 14
-- [ ] Add an "Auto-crop" button to set the L/R and U/D crops such that white-space in the image is cut. This can be overfit to the displayed slice and done with a simple energy measurement.
-TASK 15
+
 - [ ] Support masking, where if some pixels in the input image are "nan", then display these as transparent.
-TASK 16
-- [ ] Add option to add borders for gridspec layout. This would be controlled with a button on the "View" panel.
+
+- [x] Add option to add borders for gridspec layout. This would be controlled with a button on the "View" panel.
 
 Other tasks
 - [ ] quantitative map cache clim properties?

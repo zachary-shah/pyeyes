@@ -276,11 +276,12 @@ class ComparativeViewer(Viewer, param.Parameterized):
             "Contrast": self._init_contrast_pane(),
             "ROI": self._init_roi_pane(),
             "Analysis": self._init_analysis_pane(),
+            "Misc": self._init_misc_pane(),
             "Export": self._init_export_pane(),
         }
 
         # order of tabs
-        self.tab_order = ["View", "Contrast", "ROI", "Analysis", "Export"]
+        self.tab_order = ["View", "Contrast", "ROI", "Analysis", "Misc", "Export"]
 
         # Build Control Panel from Panes
         control_panel = pn.Tabs(
@@ -484,6 +485,17 @@ class ComparativeViewer(Viewer, param.Parameterized):
         pane = Pane("Export", viewer=self)
 
         for widget in self._build_export_widgets():
+            pane.add_widget(widget)
+
+        return pane
+
+    def _init_misc_pane(self) -> Pane:
+        """
+        Returns a Pane containing all misc. tab widgets.
+        """
+        pane = Pane("Misc", viewer=self)
+
+        for widget in self._build_misc_widgets():
             pane.add_widget(widget)
 
         return pane
@@ -1735,6 +1747,113 @@ class ComparativeViewer(Viewer, param.Parameterized):
             viewer=self,
         )
         widgets.append(export_html_button)
+
+        return widgets
+
+    def _build_misc_widgets(self) -> List:
+        """Build Misc-related widgets."""
+        dwidth = pn.widgets.IntInput().width
+
+        widgets = []
+
+        def text_font_callback(new_value):
+            self.slicer.text_font = new_value
+            self.slicer.param.trigger("text_font")
+
+        text_font_input = Select(
+            name="text_font",
+            display_name="Text Font",
+            options=themes.VALID_FONTS,
+            value=self.slicer.text_font,
+            css_classes=["pyeyes-text-font"],
+            callback=text_font_callback,
+            viewer=self,
+        )
+        widgets.append(text_font_input)
+
+        def display_titles_checkbox_callback(new_value):
+            self.slicer.display_image_titles_visible = new_value
+            self.slicer.param.trigger("display_image_titles_visible")
+
+        # Display Image Titles
+        display_titles_checkbox = Checkbox(
+            name="display_titles_checkbox",
+            display_name="Display Image Titles",
+            value=self.slicer.display_image_titles_visible,
+            css_classes=["pyeyes-display-titles-checkbox"],
+            callback=display_titles_checkbox_callback,
+            viewer=self,
+        )
+        widgets.append(display_titles_checkbox)
+
+        def display_error_map_titles_checkbox_callback(new_value):
+            self.slicer.display_error_map_titles_visible = new_value
+            self.slicer.param.trigger("display_error_map_titles_visible")
+
+        display_error_map_titles_checkbox = Checkbox(
+            name="display_error_map_titles_checkbox",
+            display_name="Display Error Map Titles",
+            value=self.slicer.display_error_map_titles_visible,
+            css_classes=["pyeyes-display-error-map-titles-checkbox"],
+            callback=display_error_map_titles_checkbox_callback,
+            viewer=self,
+        )
+        widgets.append(display_error_map_titles_checkbox)
+
+        # Display Grid
+        def grid_visible_checkbox_callback(new_value):
+            self.slicer.grid_visible = new_value
+            self.slicer.param.trigger("grid_visible")
+
+        grid_visible_checkbox = Checkbox(
+            name="grid_visible_checkbox",
+            display_name="Display Grid",
+            value=self.slicer.grid_visible,
+            css_classes=["pyeyes-grid-visible-checkbox"],
+            callback=grid_visible_checkbox_callback,
+            viewer=self,
+        )
+        widgets.append(grid_visible_checkbox)
+
+        # Edit Display Image Titles
+
+        misc_line = RawPanelObject(
+            name="misc_line",
+            panel_object=pn.pane.HTML("<hr>", width=dwidth),
+            viewer=self,
+        )
+        widgets.append(misc_line)
+
+        title_desc = StaticText(
+            name="title_desc",
+            display_name="Edit Titles",
+            value="Edit titles of each image on viewer.",
+            width=dwidth,
+            css_classes=["pyeyes-title-desc"],
+            viewer=self,
+        )
+        widgets.append(title_desc)
+
+        # Add Text area input for each image title
+        for i, img_name in enumerate(self.img_names):
+
+            def make_title_callback(img_name):
+                def callback(new_value):
+                    self.slicer.display_image_titles[img_name] = new_value
+                    self.slicer.param.trigger("display_image_titles")
+
+                return callback
+
+            act_img_name = self.slicer.display_image_titles[img_name]
+            title_input = TextInput(
+                name=f"replace_name_{i}",
+                display_name=f'Rename Dataset "{img_name}"',
+                value=act_img_name,
+                css_classes=["pyeyes-export-config-path"],
+                callback=make_title_callback(img_name),
+                viewer=self,
+            )
+            widgets.append(title_input)
 
         return widgets
 
