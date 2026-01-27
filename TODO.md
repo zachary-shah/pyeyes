@@ -164,7 +164,6 @@ Finally, we will update the instantiated widgets in `viewers.py` given this refa
 TASK 5
 - [x] Issue with overlay displays and flipping image dimensions. When both "Flip Image Up/Down" and "Flip Image Left/Right" are checked, and metrics display is enabled, the location of the metrics flips sides and goes outside the viewed window. This is the case for any location of the metrics, and only happens when both flips are enabled. This also happens with ROI overlay. When both flips are enabled, the ROI location flips L/R relative to where it should be (Displays in "bottom right" corner when "bottom left" is checked).
 - [x] Ensure widgets can't be incremented out of bounds (like incrementing sdims below 0 or above max)
-- [ ] ensure slice is non-zero when computing metrics
 
 ## ComparativeViewer Feature Request Log
 
@@ -174,28 +173,21 @@ TASK 5
     - categorical dimensions should also be scrollable
     - this may require disabling some of the scroll-based interactive features in the default Bokeh window
     - [ ] TODO: add `advanced` tab and calibrate mouse_scroll
-
-- [ ] `popup-pixel`: If the user clicks their mouse anywhere on a display image, a popup should then display the value of the pixel where they clicked their mouse, for all display images at that pixel location.
-
-- [ ] Add toggle for "Single View" mode on display images to be short-cutted by keyboard inputs (possibly up/down arrows or left-right arrows?). If the user has checked `Single View` button, then clicking the up/down buttons on the keyboard will trigger moving along the list of possible displayed images.
-
 - [x] Add checkbox widget to toggle if titles are displayed or not.
-
 - [x] Expose text font modification
-
-- [ ] Add option to normalize DisplayImages to reference on the Analysis tab, similarly to how the Error maps are optionally normalized.
-
 - [x] Allow renaming of Display Image titles / names. This can be edited by a set of text boxes. This should alos be combined with allowing the user to modify the order of display images by dragging and dropping names along the list.
     - Added in `Misc` Tab
     - [ ] For future: make all references to name in viewer sync to updated names (displayed name widgets, ref picker, etc)
-
-- [ ] For the error bars, if the scale of the image is either: (a) max value less than 0.1, or (b) max value above 100, then display the colorbar labels in scientific notation with 1 decimal. Otherwise, display in float notation with exactly 3 digits max (including integer component)
-
-- [ ] On the `Analysis` Tab, add a widget which specifies to what precision the metrics should be displayed. Also add a widget that allows the metrics to instead be displayed in scientific notation, which is just a toggle (always set to 3 sig figs for scientific notation)
-
-- [ ] Support masking, where if some pixels in the input image are "nan", then display these as transparent.
-
 - [x] Add option to add borders for gridspec layout. This would be controlled with a button on the "View" panel.
+
+TODO before final pyeyes update
+- [ ] `popup-pixel`: If the user clicks their mouse anywhere on a display image, a popup should then display the value of the pixel where they clicked their mouse, for all display images at that pixel location.
+- [ ] Add option to normalize DisplayImages to reference on the Analysis tab, similarly to how the Error maps are optionally normalized.
+- [ ] Add toggle for "Single View" mode on display images to be short-cutted by keyboard inputs (possibly up/down arrows or left-right arrows?). If the user has checked `Single View` button, then clicking the up/down buttons on the keyboard will trigger moving along the list of possible displayed images.
+- [ ] On the `Analysis` Tab, add a widget which specifies to what precision the metrics should be displayed. Also add a widget that allows the metrics to instead be displayed in scientific notation, which is just a toggle (always set to 3 sig figs for scientific notation)
+- [ ] For the error bars, if the scale of the image is either: (a) max value less than 0.1, or (b) max value above 100, then display the colorbar labels in scientific notation with 1 decimal. Otherwise, display in float notation with exactly 3 digits max (including integer component)
+- [ ] Support masking, where if some pixels in the input image are "nan", then display these as transparent.
+- [ ] ensure slice is non-zero when computing metrics
 
 Other tasks
 - [ ] quantitative map cache clim properties?
