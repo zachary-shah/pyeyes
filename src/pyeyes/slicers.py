@@ -21,6 +21,7 @@ from .cmap.cmap import (
     QuantitativeColorMap,
 )
 from .enums import METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
+from .gui.scroll import ScrollHandler, _bokeh_disable_wheel_zoom_tool
 from .metrics import ERROR_TOL, TOL
 from .utils import CPLX_VIEW_MAP, round_str
 
@@ -181,6 +182,11 @@ class NDSlicer(param.Parameterized):
     # Rebuilding figure
     rebuild_figure_flag = param.Boolean(default=False)
 
+    # Mouse scroll dimension
+    scroll_dim = param.String(
+        default=None, doc="Dimension to scroll through with mouse wheel"
+    )
+
     def __init__(
         self,
         data: hv.Dataset,
@@ -189,6 +195,7 @@ class NDSlicer(param.Parameterized):
         clabs: Optional[Sequence[str]] = None,
         cat_dims: Optional[Dict[str, List]] = None,
         cfg: Optional[Dict[str, str]] = None,
+        viewer: Optional["Viewer"] = None,  # noqa : F821
         **params,
     ):
         """
@@ -208,7 +215,16 @@ class NDSlicer(param.Parameterized):
 
         super().__init__(**params)
 
+        # Currently hard-coded but TODO make more robust
+        self._BASE_SCROLL_BUFFER_TIME = 50  # [ms], default
+
+        # Set up scroll handler
+        self.scroller = ScrollHandler(
+            callback_func=self._handle_scroll,
+        )
+
         with param.parameterized.discard_events(self):
+            self.viewer = viewer
             self.data = data
             self.cat_dims = cat_dims
 
@@ -512,7 +528,11 @@ class NDSlicer(param.Parameterized):
             invert_yaxis=self.flip_ud,
             invert_xaxis=self.flip_lr,
             fontscale=(self.title_font_size / 12),
-            hooks=[_format_image],
+            hooks=[
+                _format_image,
+                _bokeh_disable_wheel_zoom_tool,
+                self.scroller.make_scroll_hook(),  # Bind the scroller to the plot
+            ],
             **shared_opts,
         )
 
@@ -531,7 +551,10 @@ class NDSlicer(param.Parameterized):
             roi_opts.update(
                 dict(
                     shared_axes=False,
-                    hooks=[_format_image],
+                    hooks=[
+                        _format_image,
+                        _bokeh_disable_wheel_zoom_tool,
+                    ],
                 )
             )
 
@@ -554,6 +577,7 @@ class NDSlicer(param.Parameterized):
             ),  # div by 12 because fontscale=1 is font=12pt
             hooks=[
                 _format_image,
+                _bokeh_disable_wheel_zoom_tool,
                 _hide_image,
                 _format_colorbar,
             ],  # Hide the dummy glyph
@@ -885,6 +909,8 @@ class NDSlicer(param.Parameterized):
         # Set attributes
         self.Figure = row
 
+        self._update_scroll_buffer_time()
+
     def _add_metrics_overlay(self, base_plot, metrics, bounds, key):
         """
         Overlay text metrics on a given plot element.
@@ -1048,6 +1074,9 @@ class NDSlicer(param.Parameterized):
 
             # sliceable dimensions
             self.sdims = [d for d in self.ndims if d not in self.non_sdims]
+
+            # Reset scroll dimension to first sdim when view dims change
+            self.scroll_dim = self.sdims[0] if self.sdims else None
 
             # Update scaling for height and width ranges
             self.img_dims = np.array([self.dim_sizes[vd] for vd in self.vdims])
@@ -1583,3 +1612,79 @@ class NDSlicer(param.Parameterized):
         error_np[np.isnan(error_np)] = 0
 
         return np.percentile(error_np, 99.9)
+
+    def _num_display_items(self):
+        """
+        Determine number of display items in the figure.
+        """
+        Ntype = 1
+
+        try:
+            roi_state = ROI_STATE(self.roi_state)
+        except ValueError:
+            roi_state = ROI_STATE.INACTIVE
+
+        try:
+            metrics_state = self.metrics_state
+        except ValueError:
+            metrics_state = METRICS_STATE.INACTIVE
+
+        if roi_state == ROI_STATE.ACTIVE:
+            Ntype += 1
+        if metrics_state != METRICS_STATE.INACTIVE:
+            Ntype += 1
+
+        try:
+            nimg = len(self._image_pipes)
+        except ValueError:
+            nimg = 1
+
+        return Ntype * nimg
+
+    def _update_scroll_buffer_time(self):
+        """
+        Set scroll buffer time based on time it takes to update the figure.
+        """
+        buff_time = self._BASE_SCROLL_BUFFER_TIME * self._num_display_items()
+        print(f"New scroll buffer time: {buff_time} ms")
+        self.scroller.update_buffer_time(buff_time)
+
+    def _handle_scroll(self, delta: float):
+        """
+        Handle mouse wheel scroll to change slice index along scroll_dim.
+
+        Parameters
+        ----------
+        delta : float
+            Scroll delta from MouseWheel event. Positive = scroll up, negative = scroll down.
+        """
+
+        if self.scroll_dim is None or self.scroll_dim not in self.sdims:
+            return
+
+        # Determine scroll direction (positive delta = scroll up = increment)
+        move_amt = 1 if (abs(delta) > 1e-2) else 0
+        direction = 1 if delta > 0 else -1
+        move_amt = move_amt * direction
+        move_amt = int(round(move_amt))
+
+        # Handle categorical vs numeric dimensions
+        if self.scroll_dim in self.cat_dims:
+            # Cycle through categorical options
+            options = self.cat_dims[self.scroll_dim]
+            current_value = self.dim_indices[self.scroll_dim]
+            try:
+                current_idx = options.index(current_value)
+            except ValueError:
+                current_idx = 0
+            new_idx = (current_idx + direction) % len(options)
+            new_value = options[new_idx]
+        else:
+            # Numeric dimension - increment/decrement with bounds checking
+            current = self.dim_indices[self.scroll_dim]
+            max_val = self.dim_sizes[self.scroll_dim] - 1
+            new_value = max(0, min(max_val, current + move_amt))
+
+        # Only update if value changed
+        if new_value != self.dim_indices[self.scroll_dim]:
+            self.viewer._sync_sdim_widget_from_scroll(self.scroll_dim, new_value)

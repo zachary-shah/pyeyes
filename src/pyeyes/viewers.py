@@ -261,6 +261,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             clabs=img_names,
             cat_dims=cat_dims,
             cfg=cfg,
+            viewer=self,
         )
 
         # Attach watcher variables to slicer attributes that need GUI updates
@@ -315,6 +316,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             The Panel server instance (can be used to stop the server)
         """
         server = pn.serve(self.app, title=title, show=show, **kwargs)
+
         return server
 
     def load_from_config(self, config_path: str):
@@ -657,6 +659,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
             self.slicer.dim_indices[sdim] = new_dim_val
 
+            # Track last modified dimension for scroll behavior
+            self.slicer.scroll_dim = sdim
+
             # Assume we need to autoscale if dimension updated is categorical
             if sdim in self.cat_dims.keys():
                 self.slicer.update_colormap()
@@ -667,6 +672,30 @@ class ComparativeViewer(Viewer, param.Parameterized):
             self.slicer.param.trigger("cmap")
         else:
             self.slicer.param.trigger("dim_indices")
+
+    def _sync_sdim_widget_from_scroll(self, dim, dim_val):
+        """
+        Sync sdim widget values when dim_indices changes (e.g., from scroll).
+
+        This callback is triggered by the slicer when dim_indices is updated.
+        It ensures the GUI widgets stay in sync with the slicer state.
+        """
+        if not hasattr(self, "panes") or "View" not in self.panes:
+            return
+
+        # Find the widget for the scroll dimension and update it
+        if dim is None:
+            return
+
+        if dim_val is None:
+            return
+
+        # Find the sdim widget by checking display_name
+        view_pane = self.panes["View"]
+        for widget_name, widget in view_pane.widgets.items():
+            if widget_name.startswith("sdim") and widget.display_name == dim:
+                if widget.value != dim_val:
+                    widget.value = dim_val
 
     def _build_viewing_widgets(self) -> List:
         """

@@ -3,6 +3,7 @@ GUI module for pyeyes widget abstractions.
 """
 
 from .pane import Pane
+from .scroll import ScrollHandler, _bokeh_disable_wheel_zoom_tool
 from .widget import (
     Button,
     Checkbox,
@@ -44,4 +45,6 @@ __all__ = [
     "ColorPicker",
     "RawPanelObject",
     "Pane",
+    "_bokeh_disable_wheel_zoom_tool",
+    "ScrollHandler",
 ]
