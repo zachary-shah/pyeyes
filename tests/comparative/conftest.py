@@ -108,7 +108,10 @@ def cplx_slc_data():
 @pytest.fixture
 def data_path():
     """Path to the tracked test data directory."""
-    return Path(__file__).parent.parent / "test-data"
+    test_data_folder = Path(__file__).parent.parent / "test-data"
+    if not test_data_folder.exists():
+        raise FileNotFoundError(f"Test data folder not found at {test_data_folder}")
+    return test_data_folder
 
 
 @pytest.fixture
