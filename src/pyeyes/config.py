@@ -3,6 +3,7 @@ Initial prototype of config class for current factoring of project.
 """
 
 import enum
+import warnings
 
 import numpy as np
 import param
@@ -114,6 +115,22 @@ def deserialize_parameters(obj: param.Parameterized, serialized: dict):
             elif isinstance(p, (param.ObjectSelector, param.ListSelector)):
                 if name not in UNSERIALIZED_OBJECTS_KEYS:
                     p.objects = param_info["objects"]
+                if isinstance(p, param.ObjectSelector):
+                    if value not in p.objects:
+                        warnings.warn(
+                            f"Config value {value} for {name} not supported. Using default: {p.default}"
+                        )
+                        value = p.default
+                elif isinstance(p, param.ListSelector):
+                    valid_list = []
+                    for v in value:
+                        if v in p.objects:
+                            valid_list.append(v)
+                        else:
+                            warnings.warn(
+                                f"Config value {v} for param {name} not in supported object list."
+                            )
+                    value = valid_list
 
             if isinstance(p, (param.Range)):
                 value = tuple(value)

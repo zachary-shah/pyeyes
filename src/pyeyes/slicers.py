@@ -330,14 +330,6 @@ class NDSlicer(param.Parameterized):
                         img_name: img_name for img_name in self.display_images
                     }
 
-                if "text_font" in cfg["slicer_config"]:
-                    tf = cfg["slicer_config"]["text_font"]["value"]
-                    if not (tf in themes.VALID_FONTS):
-                        warnings.warn(
-                            f"Config contains invalid text font: {tf}. Using default font."
-                        )
-                        self.text_font = themes.DEFAULT_FONT
-
                 self.ROI = roi.ROI(config=cfg["roi_config"])
                 self.update_cplx_view(
                     self.cplx_view, recompute_min_max=False, pre_cache=False
