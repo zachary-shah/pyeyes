@@ -39,6 +39,7 @@ from .gui import (
     TextAreaInput,
     TextInput,
 )
+from .gui.scroll import ScrollHandler
 from .slicers import NDSlicer
 from .utils import parse_dimensional_input, sanitize_css_class, tonp
 
@@ -253,6 +254,13 @@ class ComparativeViewer(Viewer, param.Parameterized):
         # Instantiate dataset for intial view dims
         self.dataset = self._build_dataset(self.vdims)
 
+        # Initiate scroll handler (creates JS->Python bridge source)
+        self.scroll_handler = ScrollHandler(
+            callback_func=self._handle_scroll,
+            buffer_time=10,  # [ms]
+        )
+        self.scroll_handle_lock = False
+
         # Instantiate slicer
         self.slicer = NDSlicer(
             self.dataset,
@@ -261,7 +269,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
             clabs=img_names,
             cat_dims=cat_dims,
             cfg=cfg,
-            viewer=self,
+            plot_hooks=[
+                self.scroll_handler.build_bokeh_scroll_hook(),  # make the plot the src of scroll event
+            ],
         )
 
         # Attach watcher variables to slicer attributes that need GUI updates
@@ -685,29 +695,23 @@ class ComparativeViewer(Viewer, param.Parameterized):
         else:
             self.slicer.param.trigger("dim_indices")
 
-    def _sync_sdim_widget_from_scroll(self, dim, dim_val):
-        """
-        Sync sdim widget values when dim_indices changes (e.g., from scroll).
+    def _handle_scroll(self, delta: float):
 
-        This callback is triggered by the slicer when dim_indices is updated.
-        It ensures the GUI widgets stay in sync with the slicer state.
-        """
-        if not hasattr(self, "panes") or "View" not in self.panes:
-            return
+        if self.scroll_handle_lock:
+            return  # don't scroll if we are already handling a scroll
 
-        # Find the widget for the scroll dimension and update it
-        if dim is None:
-            return
+        self.scroll_handle_lock = True
 
-        if dim_val is None:
-            return
+        sdim, new_dim_val = self.slicer._compute_scroll_delta(delta)
 
         # Find the sdim widget by checking display_name
         view_pane = self.panes["View"]
         for widget_name, widget in view_pane.widgets.items():
-            if widget_name.startswith("sdim") and widget.display_name == dim:
-                if widget.value != dim_val:
-                    widget.value = dim_val
+            if widget_name.startswith("sdim") and widget.display_name == sdim:
+                if widget.value != new_dim_val:
+                    widget.value = new_dim_val
+
+        self.scroll_handle_lock = False
 
     def _build_viewing_widgets(self) -> List:
         """
