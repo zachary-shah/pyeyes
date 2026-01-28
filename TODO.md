@@ -13,7 +13,7 @@ The `ComparativeViewer` class allows the user to easily parse and view equally d
 
 The viewer was designed specifically for MRI researchers with a focus on comparative analysis between different acquisition and reconstruction techniques for a given dataset.
 
-The GUI currently contains 5 Tabs: "View", "Contrast", "ROI", "Analysis", and "Export", each with interactive widgets of different functionality based on their names.
+The GUI currently contains 6 Tabs: "View", "Contrast", "ROI", "Analysis", "Misc", and "Export", each with interactive widgets of different functionality based on their names.
 
 ### Main "View" Functionalities
 - [x] Given a dataset, select view dimensions (default x, y). This is specified as a L/R and U/D viewing dimension
@@ -172,7 +172,6 @@ TASK 5
     - Every time the view_dims is updated, this scrollable dimension should be updated to the first dimension in sliceable dims
     - categorical dimensions should also be scrollable
     - this may require disabling some of the scroll-based interactive features in the default Bokeh window
-    - [ ] TODO: add `advanced` tab and calibrate mouse_scroll
 - [x] Add checkbox widget to toggle if titles are displayed or not.
 - [x] Expose text font modification
 - [x] Allow renaming of Display Image titles / names. This can be edited by a set of text boxes. This should alos be combined with allowing the user to modify the order of display images by dragging and dropping names along the list.
