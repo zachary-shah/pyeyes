@@ -42,6 +42,8 @@ SUPPORTED_THEMES = {
     "light": light_theme,
 }
 
+BOKEH_WIDGET_COLOR = "#006dae"
+
 # Set default theme to dark mode
 VIEW_THEME = dark_theme
 

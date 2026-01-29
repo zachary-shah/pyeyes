@@ -18,7 +18,7 @@ from holoviews import opts
 
 from . import config, error, metrics, themes
 from .cmap.cmap import VALID_COLORMAPS, VALID_ERROR_COLORMAPS
-from .enums import METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
+from .enums import METRICS_STATE, POPUP_LOCATION, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
 from .gui import (
     Button,
     Checkbox,
@@ -1819,14 +1819,109 @@ class ComparativeViewer(Viewer, param.Parameterized):
         )
         widgets.append(grid_visible_checkbox)
 
-        # Edit Display Image Titles
-
         misc_line = RawPanelObject(
             name="misc_line",
             panel_object=pn.pane.HTML("<hr>", width=dwidth),
             viewer=self,
         )
         widgets.append(misc_line)
+
+        popup_desc = StaticText(
+            name="popup_desc",
+            display_name="Popup Pixel Inspection",
+            value="Click on an image to inspect a pixel value.",
+            width=dwidth,
+            css_classes=["pyeyes-popup-desc"],
+            viewer=self,
+        )
+        widgets.append(popup_desc)
+
+        # enable popup
+        def popup_pixel_enabled_callback(new_value):
+            old_val = self.slicer.popup_pixel_enabled
+            if old_val and not new_value:
+                self.slicer.clear_popup_pixel()
+            if old_val != new_value:
+                self.slicer.popup_pixel_enabled = new_value
+                self.slicer.param.trigger("popup_pixel_enabled")
+
+        popup_pixel_enabled_checkbox = Checkbox(
+            name="popup_pixel_enabled_checkbox",
+            display_name="Enable Popup Pixel Inspection",
+            value=self.slicer.popup_pixel_enabled,
+            css_classes=["pyeyes-popup-pixel-enabled-checkbox"],
+            callback=popup_pixel_enabled_callback,
+            viewer=self,
+        )
+        widgets.append(popup_pixel_enabled_checkbox)
+
+        # show popup location
+        def show_popup_location_callback(new_value):
+            self.slicer.popup_pixel_show_location = new_value
+            self.slicer.param.trigger("popup_pixel_show_location")
+
+        show_popup_location_checkbox = Checkbox(
+            name="show_popup_location_checkbox",
+            display_name="Display Pixel Coordinates",
+            value=self.slicer.popup_pixel_show_location,
+            css_classes=["pyeyes-show-popup-location-checkbox"],
+            callback=show_popup_location_callback,
+            viewer=self,
+        )
+        widgets.append(show_popup_location_checkbox)
+
+        # enable popup on error maps
+        def popup_on_error_maps_callback(new_value):
+            self.slicer.popup_pixel_on_error_maps = new_value
+            self.slicer.param.trigger("popup_pixel_on_error_maps")
+
+        popup_on_error_maps_checkbox = Checkbox(
+            name="popup_on_error_maps_checkbox",
+            display_name="Enable Popup on Error Maps",
+            value=self.slicer.popup_pixel_on_error_maps,
+            css_classes=["pyeyes-popup-on-error-maps-checkbox"],
+            callback=popup_on_error_maps_callback,
+            viewer=self,
+        )
+        widgets.append(popup_on_error_maps_checkbox)
+
+        # popup location picker
+        def popup_location_picker_callback(new_value):
+            self.slicer.popup_pixel_location = POPUP_LOCATION(new_value)
+            self.slicer.param.trigger("popup_pixel_location")
+
+        popup_location_picker = Select(
+            name="popup_loc",
+            display_name="Popup Location",
+            options=[loc.value for loc in POPUP_LOCATION],
+            value=self.slicer.popup_pixel_location.value,
+            callback=popup_location_picker_callback,
+            viewer=self,
+        )
+        widgets.append(popup_location_picker)
+
+        # clear popup
+        def clear_popup_callback(event):
+            self.slicer.clear_popup_pixel()
+
+        clear_popup_button = Button(
+            name="clear_popup_button",
+            display_name="Clear Popup",
+            button_type="primary",
+            on_click=clear_popup_callback,
+            css_classes=["pyeyes-clear-popup-button"],
+            viewer=self,
+        )
+        widgets.append(clear_popup_button)
+
+        # Edit Display Image Titles
+
+        misc_line2 = RawPanelObject(
+            name="misc_line2",
+            panel_object=pn.pane.HTML("<hr>", width=dwidth),
+            viewer=self,
+        )
+        widgets.append(misc_line2)
 
         title_desc = StaticText(
             name="title_desc",
