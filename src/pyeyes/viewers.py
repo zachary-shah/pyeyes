@@ -1119,6 +1119,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # Draw ROI Button
         def draw_roi_callback(event):
+            if self.slicer.roi_state == ROI_STATE.ACTIVE:
+                return # do nothing if ROI is already active
+
             self.slicer.update_roi_state(ROI_STATE.FIRST_SELECTION)
 
         draw_roi = Button(
@@ -1841,11 +1844,38 @@ class ComparativeViewer(Viewer, param.Parameterized):
         # enable popup
         def popup_pixel_enabled_callback(new_value):
             old_val = self.slicer.popup_pixel_enabled
-            if old_val and not new_value:
-                self.slicer.clear_popup_pixel()
-            if old_val != new_value:
-                self.slicer.popup_pixel_enabled = new_value
-                self.slicer.param.trigger("popup_pixel_enabled")
+            if old_val == new_value:
+                return # no chang
+            
+            if new_value:
+                msg = "Enabling popup pixel inspection..."
+            else:
+                msg = "Disabling popup pixel inspection..."
+            pn.state.notifications.info(msg, duration=1000)
+
+            # update widget visibility
+            misc_pane = self.panes["Misc"]
+            misc_pane.get_widget("show_popup_location_checkbox").visible = new_value
+            misc_pane.get_widget("popup_on_error_maps_checkbox").visible = new_value
+            misc_pane.get_widget("popup_loc").visible = new_value
+            misc_pane.get_widget("clear_popup_button").visible = new_value
+
+            # update slicer
+            self.slicer.update_popup_pixel_enabled(new_value)
+
+            # pn.state.notifications.clear()
+            if new_value:
+                pn.state.notifications.success(
+                    "Pixel inspection enabled. \
+                    Click on a pixel in the left-most image to display \
+                    that pixel's value for all displayed images.",
+                    duration=5000,
+                )
+            else:
+                pn.state.notifications.success(
+                    "Pixel inspection turned off.",
+                    duration=3000,
+                )
 
         popup_pixel_enabled_checkbox = Checkbox(
             name="popup_pixel_enabled_checkbox",
@@ -1870,6 +1900,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             callback=show_popup_location_callback,
             viewer=self,
         )
+        show_popup_location_checkbox.visible = self.slicer.popup_pixel_enabled
         widgets.append(show_popup_location_checkbox)
 
         # enable popup on error maps
@@ -1885,6 +1916,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             callback=popup_on_error_maps_callback,
             viewer=self,
         )
+        popup_on_error_maps_checkbox.visible = self.slicer.popup_pixel_enabled
         widgets.append(popup_on_error_maps_checkbox)
 
         # popup location picker
@@ -1900,6 +1932,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             callback=popup_location_picker_callback,
             viewer=self,
         )
+        popup_location_picker.visible = self.slicer.popup_pixel_enabled
         widgets.append(popup_location_picker)
 
         # clear popup
@@ -1914,6 +1947,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             css_classes=["pyeyes-clear-popup-button"],
             viewer=self,
         )
+        clear_popup_button.visible = self.slicer.popup_pixel_enabled
         widgets.append(clear_popup_button)
 
         # Edit Display Image Titles

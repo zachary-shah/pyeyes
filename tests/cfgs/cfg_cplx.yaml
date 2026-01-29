@@ -297,12 +297,12 @@
         },
         "popup_pixel_enabled": {
             "type": "Boolean",
-            "value": true,
-            "default": true
+            "value": false,
+            "default": false
         },
         "popup_pixel_show_location": {
             "type": "Boolean",
-            "value": true,
+            "value": false,
             "default": true
         },
         "popup_pixel_location": {
@@ -316,14 +316,14 @@
         },
         "popup_pixel_coordinate_x": {
             "type": "Number",
-            "value": 150.86069749530992,
+            "value": -1,
             "default": -1,
             "bounds": null,
             "step": null
         },
         "popup_pixel_coordinate_y": {
             "type": "Number",
-            "value": 172.9319268270256,
+            "value": -1,
             "default": -1,
             "bounds": null,
             "step": null

@@ -283,7 +283,7 @@ class NDSlicer(param.Parameterized):
 
     # Popup pixel inspection
     popup_pixel_enabled = param.Boolean(
-        default=True,
+        default=False, # off by default
         doc="If True, clicking on an image shows a popup with pixel values.",
     )
     popup_pixel_show_location = param.Boolean(
@@ -1224,7 +1224,7 @@ class NDSlicer(param.Parameterized):
                 ymin, ymax = slc_.range(ykey)
                 xh = (xmax + xmin) / 2
                 yh = (ymax + ymin) / 2
-                if xidx < xh:
+                if xidx > xh:
                     halign = "right"
                 if yidx > yh:
                     valign = "top"
@@ -1278,7 +1278,10 @@ class NDSlicer(param.Parameterized):
 
         # decide on pop-up location
         if self.popup_pixel_location == POPUP_LOCATION.DEFAULT:
-            pass
+            if self.flip_lr:
+                halign = "right" if halign == "left" else "left"
+            if self.flip_ud:
+                valign = "top" if valign == "bottom" else "bottom"
         else:
             if self.popup_pixel_location == POPUP_LOCATION.TOP_LEFT:
                 halign = "right"
@@ -1292,6 +1295,7 @@ class NDSlicer(param.Parameterized):
             elif self.popup_pixel_location == POPUP_LOCATION.BOTTOM_RIGHT:
                 halign = "left"
                 valign = "top"
+            
 
         txt = "\n".join(lines)
         text = hv.Text(
@@ -1326,15 +1330,6 @@ class NDSlicer(param.Parameterized):
             show_legend=False,
         )
         return text * marker
-
-    def clear_popup_pixel(self):
-        # Clear the popup pixel object
-        rebuild = self._popout_active
-        self._popout_active = False
-        self.popup_pixel_coordinate_x = -1
-        self.popup_pixel_coordinate_y = -1
-        if rebuild:
-            self.rebuild_figure()
 
     def update_figure(self, input_data: Dict[str, dict]):
         """
@@ -1958,6 +1953,24 @@ class NDSlicer(param.Parameterized):
         self.metrics_text_location = new_loc
         if self.metrics_state in [METRICS_STATE.TEXT, METRICS_STATE.ALL]:
             self.param.trigger("metrics_state")
+
+    def clear_popup_pixel(self):
+        self._popout_active = False
+        self.popup_pixel_coordinate_x = -1
+        self.popup_pixel_coordinate_y = -1
+        self.param.trigger("popup_pixel_enabled")
+
+    def update_popup_pixel_enabled(self, new_val: bool):
+        old_val = self.popup_pixel_enabled
+        if old_val == new_val:
+            return # no change
+
+        self.popup_pixel_enabled = new_val
+        if (not new_val):
+            with param.parameterized.discard_events(self):
+                self.clear_popup_pixel()
+
+        self.param.trigger("popup_pixel_enabled")
 
     def autoformat_error_map(self):
         """
