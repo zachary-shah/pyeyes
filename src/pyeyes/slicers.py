@@ -11,8 +11,8 @@ import numpy as np
 import panel as pn
 import param
 from bokeh.core.properties import value as bokeh_value
-from bokeh.events import MouseWheel
-from bokeh.models import CustomJS, WheelZoomTool
+from bokeh.models import WheelZoomTool
+from bokeh.models.formatters import BasicTickFormatter
 from holoviews import streams
 
 from . import config, error, metrics, profilers, roi, themes, utils
@@ -23,9 +23,9 @@ from .cmap.cmap import (
     ColorMap,
     QuantitativeColorMap,
 )
-from .enums import METRICS_STATE, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
+from .enums import METRICS_STATE, POPUP_LOCATION, ROI_LOCATION, ROI_STATE, ROI_VIEW_MODE
 from .metrics import ERROR_TOL, TOL
-from .utils import CPLX_VIEW_MAP, round_str
+from .utils import CPLX_VIEW_MAP, pprint_str, round_str
 
 hv.extension("bokeh")
 
@@ -117,7 +117,29 @@ def _hide_image(plot, element):
     plot.state.outline_line_alpha = 0
 
 
-def _get_format_colorbar(text_font: str):
+def _get_format_colorbar(
+    text_font: str,
+    im_scale: Optional[float] = None,
+    power_limit_high: Optional[int] = 5,
+    power_limit_low: Optional[int] = -2,
+):
+    """
+    Get colorbar formatting hook with customizable tick label formatting.
+
+    Parameters
+    ----------
+    text_font : str
+        Font for colorbar text
+    precision : int, optional
+        Number of digits of precision. If None, uses default.
+    use_scientific : bool, optional
+        Whether to use scientific notation. If None, uses default.
+    power_limit_high : int, optional
+        Use scientific notation when log(x) >= power_limit_high. Default is 5.
+    power_limit_low : int, optional
+        Use scientific notation when log(x) <= power_limit_low. Default is -3.
+    """
+
     def _format_colorbar(plot, element):
         """
         Colorbar formatting. Just need to ensure that colorbar scales with plot height.
@@ -159,6 +181,34 @@ def _get_format_colorbar(text_font: str):
         p.major_tick_line_alpha = 1.0
         p.major_tick_line_dash_offset = 0
         p.major_tick_line_width = 1
+
+        # Apply tick formatter for custom number formatting
+        tick_args = {}
+
+        use_scientific = None
+        precision = 2
+        if im_scale is not None:
+            # determine precision based on im_slale
+            im_scale_log = np.log10(im_scale)
+            im_scale_log = int(im_scale_log)
+            if im_scale_log >= power_limit_high or im_scale_log <= power_limit_low:
+                use_scientific = True
+                precision = 1
+            else:
+                use_scientific = False
+
+        if precision is not None:
+            tick_args["precision"] = precision
+        if use_scientific is not None:
+            tick_args["use_scientific"] = use_scientific
+        if power_limit_high is not None:
+            tick_args["power_limit_high"] = power_limit_high
+        if power_limit_low is not None:
+            tick_args["power_limit_low"] = power_limit_low
+
+        formatter = BasicTickFormatter(**tick_args)
+        if hasattr(p, "formatter"):
+            p.formatter = formatter
 
     return _format_colorbar
 
@@ -231,6 +281,25 @@ class NDSlicer(param.Parameterized):
         default=None, doc="Dimension to scroll through with mouse wheel"
     )
 
+    # Popup pixel inspection
+    popup_pixel_enabled = param.Boolean(
+        default=True,
+        doc="If True, clicking on an image shows a popup with pixel values.",
+    )
+    popup_pixel_show_location = param.Boolean(
+        default=True,
+        doc="If True, shows the location of the pixel in the popup.",
+    )
+    popup_pixel_location = param.ObjectSelector(
+        default=POPUP_LOCATION.DEFAULT, objects=POPUP_LOCATION
+    )
+    popup_pixel_on_error_maps = param.Boolean(
+        default=True,
+        doc="If True, enables popup pixel inspection on error maps.",
+    )
+    popup_pixel_coordinate_x = param.Number(default=-1)
+    popup_pixel_coordinate_y = param.Number(default=-1)
+
     def __init__(
         self,
         data: hv.Dataset,
@@ -259,13 +328,15 @@ class NDSlicer(param.Parameterized):
 
         super().__init__(**params)
 
-        # Currently hard-coded but TODO make more robust
-        self._BASE_SCROLL_BUFFER_TIME = 50  # [ms], default
-
         # additional hooks to add to the plot (for comms from slicer to viewer)
         self.plot_hooks = plot_hooks
         if self.plot_hooks is None:
             self.plot_hooks = []
+
+        # initialize internal tracker of slice data
+        self._popout_active = False
+        self._curr_slice_data = None
+        self._pixel_warning_shown = False
 
         with param.parameterized.discard_events(self):
             self.data = data
@@ -341,6 +412,16 @@ class NDSlicer(param.Parameterized):
                     self.display_image_titles = {
                         img_name: img_name for img_name in self.display_images
                     }
+
+                for k in self.clabs:
+                    if k not in self.display_image_titles:
+                        warnings.warn(
+                            f'"{k}" not in config display titles. Using defaults.'
+                        )
+                        self.display_image_titles = {
+                            img_name: img_name for img_name in self.display_images
+                        }
+                        break
 
                 self.ROI = roi.ROI(config=cfg["roi_config"])
                 self.update_cplx_view(
@@ -543,6 +624,9 @@ class NDSlicer(param.Parameterized):
 
         out_dict["img"] = imgs
 
+        # keep access to current slice data
+        self._curr_slice_data = out_dict
+
         return out_dict
 
     def _build_figure_opts(self):
@@ -591,6 +675,7 @@ class NDSlicer(param.Parameterized):
                 _bokeh_disable_wheel_zoom_tool,
                 *self.plot_hooks,
             ],
+            # tools=['hover'],
             **shared_opts,
         )
 
@@ -642,7 +727,7 @@ class NDSlicer(param.Parameterized):
                 ),
                 _bokeh_disable_wheel_zoom_tool,
                 _hide_image,
-                _get_format_colorbar(self.text_font),
+                _get_format_colorbar(self.text_font, im_scale=self.vmax),
             ],  # Hide the dummy glyph
             **shared_opts,
         )
@@ -680,7 +765,9 @@ class NDSlicer(param.Parameterized):
             ),
             _bokeh_disable_wheel_zoom_tool,
             _hide_image,
-            _get_format_colorbar(self.text_font),
+            _get_format_colorbar(
+                self.text_font, im_scale=self.vmax / self.error_map_scale
+            ),
         ]
         diff_cbar_opts["clim"] = diff_opts["clim"]
         diff_cbar_opts.pop("colorbar_opts")
@@ -724,6 +811,19 @@ class NDSlicer(param.Parameterized):
             hv.Image(img_dict[fig_image_names[0]]).opts(**opts["im_opts"]).bounds.lbrt()
         )
 
+        # Initialize popup-pixel overlay loc and tap streams
+        self._popout_active = bool(self.popup_pixel_enabled) and self.roi_state not in (
+            ROI_STATE.FIRST_SELECTION,
+            ROI_STATE.SECOND_SELECTION,
+        )
+        if self._popout_active:
+            popup_tap_stream = streams.SingleTap(
+                x=self.popup_pixel_coordinate_x,
+                y=self.popup_pixel_coordinate_y,
+            )
+        else:
+            popup_tap_stream = None
+
         # Reorder images. TODO: maybe put ref at end instead of beginning? or parameterize?
         if self.metrics_reference is not None and (
             self.metrics_reference in fig_image_names
@@ -743,6 +843,7 @@ class NDSlicer(param.Parameterized):
         # build images and pipes
         self._image_pipes = {}
         self._metrics_pipe = {}
+        self._popup_pixel_pipes = {}
         imgs = []
         img_labels = {}
         for k in fig_image_names:
@@ -782,6 +883,25 @@ class NDSlicer(param.Parameterized):
                 self._metrics_pipe[k] = streams.Pipe(data=metrics_dict[k])
                 imgs[-1] = self._add_metrics_overlay(
                     imgs[-1], metrics_dict[k], main_lbrt, k
+                )
+
+            # Popup-pixel: attach shared tap listener to this image plot
+            if self._popout_active:
+                self._popup_pixel_pipes[k] = streams.Pipe(
+                    data=None
+                )  # for triggering updates
+                imgs[-1] = imgs[-1] * hv.DynamicMap(
+                    lambda x, y, key=k, data=None: self._popup_pixel_text(
+                        x,
+                        y,
+                        key=key,
+                        is_error=False,
+                        data=data,
+                    ),
+                    streams=[
+                        popup_tap_stream,
+                        self._popup_pixel_pipes[k],
+                    ],
                 )
 
         # To start
@@ -913,6 +1033,7 @@ class NDSlicer(param.Parameterized):
             # Build difference map
             diff_imgs = []
             self._diffmap_pipes = {}
+            self._diffmap_popup_pixel_pipes = {}
             for k in fig_image_names:
                 name = self.display_image_titles[k]
                 diff_pipe = streams.Pipe(data=error_dict[k])
@@ -936,11 +1057,6 @@ class NDSlicer(param.Parameterized):
                     if self.error_map_type == "SSIM":
                         label = f"{name} (SSIM)"
                     else:
-                        # ems = int(self.error_map_scale * 10)
-                        # if ems % 10 == 0:
-                        #     lb_ems = f"{int(ems/10)}"
-                        # else:
-                        #     lb_ems = f"{float(float(ems)/10):0.1f}"
                         label = f"Diff ({round_str(self.error_map_scale, ndec=3)}x)"
 
                     def _diff_callback(data):
@@ -967,6 +1083,27 @@ class NDSlicer(param.Parameterized):
                     self._metrics_pipe[k] = streams.Pipe(data=metrics_dict[k])
                     diff_imgs[-1] = self._add_metrics_overlay(
                         diff_imgs[-1], metrics_dict[k], main_lbrt, k
+                    )
+
+                # Popup-pixel: attach shared tap listener to error-map plot
+                if (
+                    self._popout_active
+                    and self.popup_pixel_on_error_maps
+                    and not (k == self.metrics_reference)
+                ):
+                    self._diffmap_popup_pixel_pipes[k] = streams.Pipe(data=None)
+                    diff_imgs[-1] = diff_imgs[-1] * hv.DynamicMap(
+                        lambda x, y, key=k, data=None: self._popup_pixel_text(
+                            x,
+                            y,
+                            key=key,
+                            data=data,
+                            is_error=True,
+                        ),
+                        streams=[
+                            popup_tap_stream,
+                            self._diffmap_popup_pixel_pipes[k],
+                        ],
                     )
 
             diff_row = hv.Layout(diff_imgs)
@@ -1015,7 +1152,9 @@ class NDSlicer(param.Parameterized):
         valign = self.metrics_text_location.value.split(" ")[0].lower()
 
         def _text_callback(data, tx=tx, ty=ty, halign=halign, valign=valign):
-            txt = "\n".join(f"{mk}: {mv:.2f}" for mk, mv in data.items())
+            txt = "\n".join(
+                f"{mk}: {pprint_str(mv, D=4, E=2)}" for mk, mv in data.items()
+            )
             return hv.Text(
                 tx,
                 ty,
@@ -1034,16 +1173,187 @@ class NDSlicer(param.Parameterized):
 
         return base_plot * dyn
 
+    def _popup_pixel_text(self, x, y, key, is_error=False, data=None):
+
+        def get_dummy():
+            dtext = hv.Text(0, 0, "").opts(text_alpha=0)
+            dtext2 = hv.Text(0, 0, "").opts(text_alpha=0)
+            return dtext * dtext2
+
+        # ignore initial sentinel values
+        if x is None or y is None:
+            return get_dummy()
+        try:
+            x = float(x)
+            y = float(y)
+        except Exception:
+            return get_dummy()
+
+        if x < 0 or y < 0:
+            return get_dummy()
+
+        # set new popup location
+        self.popup_pixel_coordinate_x = x
+        self.popup_pixel_coordinate_y = y
+        xidx = int(round(x))
+        yidx = int(round(y))
+        xkey = self.vdims[0]
+        ykey = self.vdims[1]
+
+        if is_error:
+            if "error_map" in self._curr_slice_data:
+                slc_ = self._curr_slice_data["error_map"][key]
+            else:
+                slc_ = None
+        else:
+            if "img" in self._curr_slice_data:
+                slc_ = self._curr_slice_data["img"][key]
+            else:
+                slc_ = None
+
+        value = "N/A"
+        halign = "left"
+        valign = "bottom"
+        xmin, xmax = None, None
+        ymin, ymax = None, None
+
+        # Determine value and align location
+        if slc_ is not None:
+            try:
+                xmin, xmax = slc_.range(xkey)
+                ymin, ymax = slc_.range(ykey)
+                xh = (xmax + xmin) / 2
+                yh = (ymax + ymin) / 2
+                if xidx < xh:
+                    halign = "right"
+                if yidx > yh:
+                    valign = "top"
+                # check if out of range
+                if xidx < xmin or xidx > xmax or yidx < ymin or yidx > ymax:
+                    if not self._pixel_warning_shown:
+                        pn.state.notifications.warning(
+                            "Detected out of range click, clearing popup.",
+                            duration=3000,
+                        )
+                        self._pixel_warning_shown = True
+                    return get_dummy()
+
+                value = float(slc_[xidx, yidx])
+
+            except Exception:
+                pass
+
+        # format value
+        if isinstance(value, float) and not np.isnan(value):
+            value = pprint_str(value, D=6, E=3)
+
+        # format label
+        vlabel = "Value"
+        if is_error:
+            # label with unit of error map
+            vlabel = self.error_map_type
+        else:
+            pass
+            # case 1: quantitative map category
+            qmaptype = self._infer_quantitative_maptype()
+            if qmaptype is not None:
+                vlabel = qmaptype
+            # case 2: first categorical map category
+            elif self.cat_dims is not None and len(self.cat_dims.keys()) > 0:
+                cdk = list(self.cat_dims.keys())[0]
+                vlabel = self.dim_indices[cdk]
+
+            # case 2: user has given a label to the colorbar
+            elif self.colorbar_label is not None and len(self.colorbar_label) > 0:
+                lab_raw = self.colorbar_label.lower().replace(" ", "").replace(".", "")
+                if len(lab_raw) > 0 and lab_raw not in ["au", "na", "none"]:
+                    vlabel = self.colorbar_label
+
+        value_line = f"  {vlabel}: {value}  "
+        if self.popup_pixel_show_location:
+            header = f"  ({xkey}={xidx}, {ykey}={yidx})  "
+            lines = [header, value_line]
+        else:
+            lines = [value_line]
+
+        # decide on pop-up location
+        if self.popup_pixel_location == POPUP_LOCATION.DEFAULT:
+            pass
+        else:
+            if self.popup_pixel_location == POPUP_LOCATION.TOP_LEFT:
+                halign = "right"
+                valign = "bottom"
+            elif self.popup_pixel_location == POPUP_LOCATION.TOP_RIGHT:
+                halign = "left"
+                valign = "bottom"
+            elif self.popup_pixel_location == POPUP_LOCATION.BOTTOM_LEFT:
+                halign = "right"
+                valign = "top"
+            elif self.popup_pixel_location == POPUP_LOCATION.BOTTOM_RIGHT:
+                halign = "left"
+                valign = "top"
+
+        txt = "\n".join(lines)
+        text = hv.Text(
+            x,
+            y,
+            txt,
+            halign=halign,
+            valign=valign,
+            fontsize=8,
+        ).opts(
+            text_font=bokeh_value(self.text_font),
+            text_color=themes.VIEW_THEME.text_color,
+            text_alpha=1.0,
+            background_fill_alpha=0.9,
+            background_fill_color=themes.VIEW_THEME.accent_color,
+            border_line_width=1.5,
+            border_line_color=themes.BOKEH_WIDGET_COLOR,
+            border_radius=8,
+            border_line_alpha=0.6,
+            show_legend=False,
+        )
+
+        marker = hv.Points(
+            np.array([[x, y]]),
+        ).opts(
+            size=5,
+            alpha=1,
+            color=themes.BOKEH_WIDGET_COLOR,
+            marker="o",
+            line_color=themes.BOKEH_WIDGET_COLOR,
+            line_width=1.5,
+            show_legend=False,
+        )
+        return text * marker
+
+    def clear_popup_pixel(self):
+        # Clear the popup pixel object
+        rebuild = self._popout_active
+        self._popout_active = False
+        self.popup_pixel_coordinate_x = -1
+        self.popup_pixel_coordinate_y = -1
+        if rebuild:
+            self.rebuild_figure()
+
     def update_figure(self, input_data: Dict[str, dict]):
         """
         Update the figure data in-place given the current slice indices.
         """
         assert self._image_pipes is not None, "Figure not initialized"
 
+        pipe_popouts = (
+            self._popout_active
+            and self.popup_pixel_coordinate_x > 0
+            and self.popup_pixel_coordinate_y > 0
+        )
         # Send image data through pipes
         imgs_dict = input_data["img"]
         for k in imgs_dict.keys():
             self._image_pipes[k].send(imgs_dict[k])
+
+            if pipe_popouts:
+                self._popup_pixel_pipes[k].send(None)
 
             # Send ROI data
             if self.roi_state == ROI_STATE.ACTIVE:
@@ -1055,6 +1365,9 @@ class NDSlicer(param.Parameterized):
                 and k != self.metrics_reference
             ):
                 self._diffmap_pipes[k].send(input_data["error_map"][k])
+                if pipe_popouts and self.popup_pixel_on_error_maps:
+                    self._diffmap_popup_pixel_pipes[k].send(None)
+
             if (
                 self.metrics_state in [METRICS_STATE.TEXT, METRICS_STATE.ALL]
                 and k != self.metrics_reference
@@ -1083,6 +1396,10 @@ class NDSlicer(param.Parameterized):
         "metrics_state",
         "title_font_size",
         "text_font",
+        "popup_pixel_enabled",
+        "popup_pixel_show_location",
+        "popup_pixel_location",
+        "popup_pixel_on_error_maps",
         watch=True,
     )
     @error.error_handler_decorator()
@@ -1146,6 +1463,8 @@ class NDSlicer(param.Parameterized):
             self.update_cache()
 
         with param.parameterized.discard_events(self):
+            self.clear_popup_pixel()
+
             vdims = list(vdims)
 
             self.vdims = vdims

@@ -237,6 +237,49 @@ def round_str(x: float, ndec: int = 1) -> str:
     return f"{float(float(xi) / nrem_div):.{(ndec - nz)}f}"
 
 
+def pprint_str(x: float, D: int = 5, E: int = 1) -> str:
+    """
+    Pretty print a string representation of a number.
+
+    Rules:
+    If the number is an integer, return the integer as a string.
+    If the number is <1e-(D-1) or >1e(D-1), return the number in scientific notation with D-1 decimal places.
+    Otherwise, return the number in float notation with exactly D digits max (including integer component).
+    """
+
+    if isinstance(x, int):
+        return str(x)
+
+    if D == 0:
+        return str(int(round(x)))
+
+    if not (np.isfinite(x)):
+        return "NaN"
+
+    # approx integer
+    is_int = False
+    if (x > 1e-8) and np.isclose(round(x) - x, 0):
+        x = int(round(x))
+        is_int = True
+
+    Dact = max(D - 2, 1)
+
+    small_tol = 10 ** (-(Dact))
+    big_tol = 10 ** ((Dact))
+    if abs(x) < small_tol or abs(x) > big_tol:
+        if is_int:
+            return f"{x:0.0e}"
+        else:
+            return f"{x:0.{E}e}"
+
+    # determine number of digits after decimal point
+    if is_int:
+        return str(x)
+    else:
+        ndec = D - len(str(int(x)))
+        return f"{x:.{ndec}f}"
+
+
 def parse_dimensional_input(
     input: Optional[Union[Sequence[str], str]], N: int
 ) -> List[str]:

@@ -1603,6 +1603,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # Export Config Path
         def export_path_callback(new_value):
+            new_value = new_value.replace("\n", "")
             self.config_path = new_value
 
         export_path = TextAreaInput(
@@ -1711,6 +1712,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # HTML Save Path
         def export_html_path_callback(new_value):
+            new_value = new_value.replace("\n", "")
             self.html_export_path = new_value
 
         export_html = TextAreaInput(

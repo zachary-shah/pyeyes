@@ -2,19 +2,19 @@ import numpy as np
 from skimage.metrics import structural_similarity as compare_ssim
 
 FULL_METRICS = [
+    "RelativeL1",
     "L1Diff",
     "RMSE",
     "NRMSE",
     "PSNR",
     "SSIM",
-    "RelativeL1",
 ]
 
 MAPPABLE_METRICS = [
+    "RelativeL1",
     "L1Diff",
     "L2Diff",
     "SSIM",
-    "RelativeL1",
     "Diff",
 ]
 
@@ -204,12 +204,12 @@ def PSNR(
 
 
 METRIC_CALLABLES = {
+    "RelativeL1": RelativeL1,
     "L1Diff": L1Diff,
     "L2Diff": RMSE,
     "RMSE": RMSE,
     "NRMSE": NRMSE,
     "PSNR": PSNR,
     "SSIM": SSIM,
-    "RelativeL1": RelativeL1,
     "Diff": diff,
 }

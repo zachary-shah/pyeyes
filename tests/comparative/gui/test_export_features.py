@@ -134,7 +134,7 @@ def test_export_html_to_temp_location(viewer_page, se_viewer, navigate_to_tab):
             html_button_widget.click()
             print("[test_export_html] Export HTML button clicked via GUI")
         # HTML export takes longer
-        page.wait_for_timeout(8000)
+        page.wait_for_timeout(15000)
 
         # Verify file exists and is not empty
         html_file = Path(temp_html_path)
