@@ -1,6 +1,8 @@
 # pyeyes
 
-Pyeyes is a n-dimensional data visualization tool for comparing images. Especially designed as an MRI visualization tool, inspired by FSLEyes. Built on top of [Holoviews](https://holoviews.org/) and [Bokeh](https://bokeh.org/) for interative plotting.
+Pyeyes is an n-dimensional data visualization tool for comparing images, especially designed for MRI and built on [Holoviews](https://holoviews.org/), [Bokeh](https://bokeh.org/), and [Panel](https://panel.holoviz.org/) for interactive plotting. *(v0.4.0)*
+
+**For full documentation (GUI overview, v0.4.0 features, roadmap, API), see [Documentation](docs/user_guide.md).**
 
 ---
 
@@ -20,8 +22,8 @@ Pyeyes is a n-dimensional data visualization tool for comparing images. Especial
 
 ## Features
 
-**Interactive Slicing:** Seemlessly navigate through MRI volumes of arbitrary dimensionality.
-**Dynamic Contrast Adjustment:** Toggle through different color maps, color limits, and more on the fly.
+**Interactive Slicing:** Seamlessly navigate through MRI volumes of arbitrary dimensionality.
+**Dynamic Contrast Adjustment:** Toggle color maps, color limits, and more on the fly.
 
 ![viewer demo](./doc/viewer_gif.gif "Demo")
 
@@ -39,6 +41,8 @@ Pyeyes is a n-dimensional data visualization tool for comparing images. Especial
 ![save demo](./doc/save_config.gif "Save")
 
 **Export:** Save figures with built-in Bokeh toolbar.
+
+**Pixel inspection (v0.4.0):** Click on an image to show a popup with the pixel value; enable from the Misc tab.
 
 ![save demo](./doc/download.gif "Save")
 
@@ -64,8 +68,8 @@ mamba activate pyeyes
 
 ## Examples
 
-### Reccomended Usage
-Pyeyes viewer takes basic specifications on the shape of the data, all of which are optional, but helpful for making navigating your data easier!
+### Recommended Usage
+Pyeyes viewer takes basic specifications on the shape of the data, all of which are optional, but helpful for navigating your data.
 
 
 ```python
@@ -91,9 +95,8 @@ view_dims = ["y", "z"]
 # Allow categorial dimensions to be specified.
 cat_dims = {"Contrast": ["SE", "MPRAGE", "FLAIR"]}
 
-# Once launched, viewer config can be saved to config
-# path for repeating view with same or different data
-config_path = "/your/config/path/here.yaml"
+# Save config from the Export tab; load it here to repeat the same view
+config_path = "./config.json"
 
 # Initialize
 Viewer = ComparativeViewer(
@@ -152,9 +155,10 @@ ComparativeViewer(
 ```
 
 
-# Contributing
+## Contributing
 
-Before contributing, run
+Before contributing, run:
 ```bash
 pre-commit install
 ```
+See the [user guide](docs/user_guide.md) for more on development and tests.
