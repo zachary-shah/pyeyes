@@ -1120,7 +1120,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         # Draw ROI Button
         def draw_roi_callback(event):
             if self.slicer.roi_state == ROI_STATE.ACTIVE:
-                return # do nothing if ROI is already active
+                return  # do nothing if ROI is already active
 
             self.slicer.update_roi_state(ROI_STATE.FIRST_SELECTION)
 
@@ -1470,18 +1470,37 @@ class ComparativeViewer(Viewer, param.Parameterized):
         )
         widgets.append(error_scale)
 
+        # Normalize displayed images fully
+        def display_normalize_callback(new_value):
+            # disable error map normalization if displayed images are normalized
+            analysis_pane = self.panes["Analysis"]
+            analysis_pane.get_widget("error_normalize").disabled = new_value
+            self.slicer.normalize_for_display = new_value
+            self.slicer.param.trigger("normalize_for_display")
+
+        display_normalize = Checkbox(
+            name="display_normalize",
+            display_name="Normalize Images",
+            value=self.slicer.normalize_for_display,
+            css_classes=["pyeyes-display-normalize"],
+            callback=display_normalize_callback,
+            viewer=self,
+        )
+        widgets.append(display_normalize)
+
         # Normalize Error Map
         def error_normalize_callback(new_value):
             self.slicer.update_normalize_error_map(new_value)
 
         error_normalize = Checkbox(
             name="error_normalize",
-            display_name="Normalize Error Map",
+            display_name="Normalize for Error Metrics Only",
             value=self.slicer.normalize_error_map,
             css_classes=["pyeyes-error-normalize"],
             callback=error_normalize_callback,
             viewer=self,
         )
+        error_normalize.disabled = self.slicer.normalize_for_display
         widgets.append(error_normalize)
 
         # Error Color Map
@@ -1604,7 +1623,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         )
         widgets.append(export_path_desc)
 
-        # Export Config Path
+        # Export Config Paths
         def export_path_callback(new_value):
             new_value = new_value.replace("\n", "")
             self.config_path = new_value
@@ -1845,8 +1864,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
         def popup_pixel_enabled_callback(new_value):
             old_val = self.slicer.popup_pixel_enabled
             if old_val == new_value:
-                return # no chang
-            
+                return  # no chang
+
             if new_value:
                 msg = "Enabling popup pixel inspection..."
             else:

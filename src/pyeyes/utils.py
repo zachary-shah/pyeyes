@@ -106,6 +106,23 @@ def normalize(shifted, target, ofs=True, mag=False, eps=1e-12):
     return out
 
 
+def normalize_scale(shifted, target, eps=1e-10, scale_tol=1e-5):
+    """
+    Faster way to normalize 2 images by using image scaling rather than lstsq.
+    """
+
+    # If input scale is too small, then fall back to lstsq normalization computation for robustness
+    inp_scale = np.max(np.abs(shifted))
+    if inp_scale < scale_tol:
+        return normalize(shifted, target, ofs=False, mag=np.iscomplexobj(shifted))
+
+    a = np.sum(np.abs(shifted) * np.abs(target)) / (
+        (np.linalg.norm(shifted) ** 2) + eps
+    )
+
+    return shifted * a
+
+
 def get_effective_location(
     loc: ROI_LOCATION, flip_lr: bool, flip_ud: bool
 ) -> ROI_LOCATION:

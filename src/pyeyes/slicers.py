@@ -267,6 +267,7 @@ class NDSlicer(param.Parameterized):
         default="inferno", objects=VALID_ERROR_COLORMAPS
     )
     normalize_error_map = param.Boolean(default=True)
+    normalize_for_display = param.Boolean(default=False)
     metrics_text_types = param.ListSelector(default=[], objects=metrics.FULL_METRICS)
     metrics_text_location = param.ObjectSelector(
         default=ROI_LOCATION.TOP_LEFT, objects=ROI_LOCATION
@@ -283,7 +284,7 @@ class NDSlicer(param.Parameterized):
 
     # Popup pixel inspection
     popup_pixel_enabled = param.Boolean(
-        default=False, # off by default
+        default=False,  # off by default
         doc="If True, clicking on an image shows a popup with pixel values.",
     )
     popup_pixel_show_location = param.Boolean(
@@ -570,14 +571,11 @@ class NDSlicer(param.Parameterized):
 
                 tar_img = np.copy(imgs[k].data["Value"])
 
-                # Don't normalize with quantitative maps - we care about absolute
-                if (
-                    self._infer_quantitative_maptype() is None
-                    and self.cplx_view != "phase"
-                    and self.normalize_error_map
-                ):
-                    tar_img = utils.normalize(
-                        tar_img, ref_img, ofs=True, mag=np.iscomplexobj(tar_img)
+                # NOTE: forced un-normalization for qmaps depreciated. option exposed to user.
+                if self.normalize_error_map or self.normalize_for_display:
+                    tar_img = utils.normalize_scale(
+                        tar_img,
+                        ref_img,  # ofs=True, mag=np.iscomplexobj(tar_img)
                     )
 
                 if self.metrics_state in [METRICS_STATE.TEXT, METRICS_STATE.ALL]:
@@ -597,7 +595,13 @@ class NDSlicer(param.Parameterized):
                         isphase=self.cplx_view == "phase",
                     )
                     error_map = self.DifferenceColorMapper.preprocess_data(error_map)
+
+                    # handle nan values returned bc of small pixel values
                     error_maps[k] = utils.clone_dataset(imgs[k], error_map, link=False)
+
+                # normalize displayed images
+                if self.normalize_for_display:
+                    imgs[k].data["Value"] = tar_img
 
             # Ref
             error_maps[self.metrics_reference] = utils.clone_dataset(
@@ -675,7 +679,7 @@ class NDSlicer(param.Parameterized):
                 _bokeh_disable_wheel_zoom_tool,
                 *self.plot_hooks,
             ],
-            # tools=['hover'],
+            # tools=["hover"],
             **shared_opts,
         )
 
@@ -1295,7 +1299,6 @@ class NDSlicer(param.Parameterized):
             elif self.popup_pixel_location == POPUP_LOCATION.BOTTOM_RIGHT:
                 halign = "left"
                 valign = "top"
-            
 
         txt = "\n".join(lines)
         text = hv.Text(
@@ -1395,6 +1398,7 @@ class NDSlicer(param.Parameterized):
         "popup_pixel_show_location",
         "popup_pixel_location",
         "popup_pixel_on_error_maps",
+        "normalize_for_display",
         watch=True,
     )
     @error.error_handler_decorator()
@@ -1963,10 +1967,10 @@ class NDSlicer(param.Parameterized):
     def update_popup_pixel_enabled(self, new_val: bool):
         old_val = self.popup_pixel_enabled
         if old_val == new_val:
-            return # no change
+            return  # no change
 
         self.popup_pixel_enabled = new_val
-        if (not new_val):
+        if not new_val:
             with param.parameterized.discard_events(self):
                 self.clear_popup_pixel()
 
