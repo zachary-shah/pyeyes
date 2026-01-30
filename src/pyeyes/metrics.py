@@ -21,6 +21,7 @@ MAPPABLE_METRICS = [
 # small tol
 TOL = 1e-14
 ERROR_TOL = 1e-12
+SCALE_TOL = 1e-8
 
 
 def diff(recon: np.ndarray, true: np.ndarray, return_map=False, isphase=False) -> float:
@@ -53,7 +54,11 @@ def L1Diff(
         if np.max(l1_diff) < TOL:
             return np.zeros_like(l1_diff)
 
-        l1_diff[l1_diff < TOL] = np.nan
+        im_mask = (np.abs(true) - np.min(np.abs(true))) < SCALE_TOL * np.max(
+            np.abs(true)
+        )
+
+        l1_diff[(l1_diff < TOL) & im_mask] = np.nan
         return l1_diff
 
     return np.mean(l1_diff)
