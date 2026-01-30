@@ -1,11 +1,11 @@
 from .cmap import (
-    ColorMap,
-    QuantitativeColorMap,
+    QUANTITATIVE_MAPTYPES,
     VALID_COLORMAPS,
     VALID_ERROR_COLORMAPS,
-    QUANTITATIVE_MAPTYPES,
-    relaxation_color_map,
+    ColorMap,
+    QuantitativeColorMap,
     color_log_remap,
+    relaxation_color_map,
 )
 
 __all__ = [
