@@ -39,7 +39,7 @@
         },
         "config_path": {
             "type": "String",
-            "value": "./cfgs/cplx_config.yaml",
+            "value": "./cfgs/cfg_cplx.yaml",
             "default": "./config.yaml"
         },
         "html_export_path": {
@@ -126,6 +126,34 @@
                 "4avg",
                 "1avg"
             ]
+        },
+        "display_image_titles": {
+            "type": "Dict",
+            "value": {
+                "4avg": "4avg",
+                "1avg": "1avg"
+            },
+            "default": {}
+        },
+        "display_image_titles_visible": {
+            "type": "Boolean",
+            "value": true,
+            "default": true
+        },
+        "display_error_map_titles_visible": {
+            "type": "Boolean",
+            "value": false,
+            "default": false
+        },
+        "grid_visible": {
+            "type": "Boolean",
+            "value": false,
+            "default": false
+        },
+        "text_font": {
+            "type": "ObjectSelector",
+            "value": "Times",
+            "default": "Times"
         },
         "cmap": {
             "type": "ObjectSelector",
@@ -261,6 +289,44 @@
             "type": "Boolean",
             "value": false,
             "default": false
+        },
+        "scroll_dim": {
+            "type": "String",
+            "value": "z",
+            "default": null
+        },
+        "popup_pixel_enabled": {
+            "type": "Boolean",
+            "value": false,
+            "default": false
+        },
+        "popup_pixel_show_location": {
+            "type": "Boolean",
+            "value": false,
+            "default": true
+        },
+        "popup_pixel_location": {
+            "value": "Bottom Left",
+            "enum_class": "POPUP_LOCATION"
+        },
+        "popup_pixel_on_error_maps": {
+            "type": "Boolean",
+            "value": false,
+            "default": true
+        },
+        "popup_pixel_coordinate_x": {
+            "type": "Number",
+            "value": -1,
+            "default": -1,
+            "bounds": null,
+            "step": null
+        },
+        "popup_pixel_coordinate_y": {
+            "type": "Number",
+            "value": -1,
+            "default": -1,
+            "bounds": null,
+            "step": null
         }
     },
     "roi_config": {

@@ -42,21 +42,20 @@ SUPPORTED_THEMES = {
     "light": light_theme,
 }
 
+BOKEH_WIDGET_COLOR = "#006dae"
+
 # Set default theme to dark mode
 VIEW_THEME = dark_theme
 
 
 def set_theme(theme_str: str) -> None:
     """
-    Update internal viewing theme across the package.
+    Set package-wide viewing theme (holoviews/panel).
 
-    Parameters:
-        theme (str): The theme to set. Currently supported themes are:
-            - "dark": A dark theme with white text.
-            - "soft_dark": A dark theme with light gray text.
-            - "light": A light theme with black text.
-        Default: "dark"
-
+    Parameters
+    ----------
+    theme_str : str
+        One of "dark", "soft_dark", "light".
     """
     global VIEW_THEME
 
@@ -80,7 +79,7 @@ DEFAULT_FONT = "Times"
 
 
 def get_font_list():
-    # determine if fc-list is available
+    """Return sorted list of valid font family names (fc-list or fallback list)."""
     if not shutil.which("fc-list"):
         warnings.warn(
             "System fonts could not be listed, as fc-list is not available. Please install the fontconfig package."
