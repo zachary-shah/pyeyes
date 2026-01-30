@@ -1959,6 +1959,13 @@ class NDSlicer(param.Parameterized):
             self.param.trigger("metrics_state")
 
     def clear_popup_pixel(self):
+        if (
+            not self._popout_active
+            and self.popup_pixel_coordinate_x < 0
+            and self.popup_pixel_coordinate_y < 0
+        ):
+            return
+
         self._popout_active = False
         self.popup_pixel_coordinate_x = -1
         self.popup_pixel_coordinate_y = -1
