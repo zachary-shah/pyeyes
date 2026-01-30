@@ -45,42 +45,30 @@ QUANTITATIVE_MAPTYPES = [
 
 
 class ColorMap:
-    """
-    Abstract class for colormap generation.
-    """
+    """Base colormap: pass-through preprocess_data and get_cmap by name or ListedColormap."""
 
     def __init__(self, cmap: Union[mcolors.ListedColormap, str]):
-        self.cmap = cmap
-
-    def preprocess_data(self, x: np.ndarray) -> np.ndarray:
         """
-        Pre-process data for display, if needed (e.g. clipping)
+        Store colormap (name or ListedColormap).
 
         Parameters
         ----------
-        x : np.ndarray
-            Data to be processed
-
-        Returns
-        -------
-        np.ndarray
-            Processed data of same shape
+        cmap : str or matplotlib.colors.ListedColormap
+            Colormap name (e.g. 'gray') or instance.
         """
+        self.cmap = cmap
+
+    def preprocess_data(self, x: np.ndarray) -> np.ndarray:
+        """Preprocess array for display (base: no-op). Returns same shape."""
         return x
 
     def get_cmap(self) -> Union[mcolors.ListedColormap, str]:
-        """
-        Get the colormap for display.
-
-        Returns
-        -------
-        Union[matplotlib.colors.ListedColormap, str]
-            Colormap for display. Can be a string or ListedColormap.
-        """
+        """Return colormap for display (name or ListedColormap)."""
         return self.cmap
 
 
 class QuantitativeColorMap(ColorMap):
+    """Colormap for quantitative maps (T1, T2, etc.) with log-like remap and clipping."""
 
     def __init__(
         self,
@@ -89,9 +77,15 @@ class QuantitativeColorMap(ColorMap):
         upLev: float,
     ):
         """
-        General colormap for quantitative data.
-        """
+        Build quantitative colormap from maptype and level range.
 
+        Parameters
+        ----------
+        maptype : str
+            One of QUANTITATIVE_MAPTYPES (e.g. 'T1', 'T2', 'R1').
+        loLev, upLev : float
+            Lower and upper display levels (clip and colormap range).
+        """
         self.maptype = maptype
         self.loLev = loLev
         self.upLev = upLev
@@ -105,6 +99,7 @@ class QuantitativeColorMap(ColorMap):
         super().__init__(self.cmap)
 
     def preprocess_data(self, x):
+        """Clip values below loLev and clamp invalid/edge for display."""
         return np.where(
             x < self.eps,
             self.loLev - self.eps,
@@ -114,11 +109,20 @@ class QuantitativeColorMap(ColorMap):
 
 def relaxation_color_map(maptype, loLev, upLev):
     """
-    Acts in two ways:
-    1. Generates a colormap to be used on display, given the image type.
-    2. Generates standard deviation for 'clipping' image, where values are clipped to the lower level.
-    """
+    Load quantitative LUT for maptype and remap to [loLev, upLev]; return (lut, eps).
 
+    Parameters
+    ----------
+    maptype : str
+        One of QUANTITATIVE_MAPTYPES (e.g. T1, T2, R1).
+    loLev, upLev : float
+        Display range for log remap.
+
+    Returns
+    -------
+    tuple
+        (lut_cmap array, eps for clipping below loLev).
+    """
     # Load the colormap depending on the map type
     maptype = maptype.capitalize()
 
@@ -154,9 +158,7 @@ def relaxation_color_map(maptype, loLev, upLev):
 
 
 def color_log_remap(ori_cmap, loLev, upLev):
-    """
-    Lookup of the original color map table according to a 'log-like' curve.
-    """
+    """Remap colormap table by log-like curve over [loLev, upLev]. Returns array."""
     assert upLev > 0, "Upper level must be positive"
     assert upLev > loLev, "Upper level must be larger than lower level"
 
@@ -194,8 +196,8 @@ def color_log_remap(ori_cmap, loLev, upLev):
     return log_cmap
 
 
-# Unused: will use in the future
 def get_jet_black_cmp(ap=1.2):
+    """Return jet colormap with black at center (unused; reserved for future)."""
     jet = plt.get_cmap("jet", 256)
     jet_colors = jet(np.linspace(0, 1, 256))
     jet_colors[0] = np.array([0.1, 0.1, 1, 1])

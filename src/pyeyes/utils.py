@@ -18,12 +18,23 @@ from .enums import ROI_LOCATION
 
 
 def rescale01(image):
+    """Rescale array to [0, 1] using min/max."""
     return (image - image.min()) / (image.max() - image.min())
 
 
 def tonp(x: Union[np.ndarray, list, tuple]) -> np.ndarray:
     """
-    Convert to numpy array
+    Convert tensor, list, or tuple to numpy array; pass-through for ndarray.
+
+    Parameters
+    ----------
+    x : np.ndarray, list, or tuple
+        Input to convert.
+
+    Returns
+    -------
+    np.ndarray
+        Numpy array (complex tensors get resolve_conj on CPU).
     """
     if TORCH_IMPORTED:
         if torch.is_tensor(x):
@@ -46,31 +57,26 @@ def tonp(x: Union[np.ndarray, list, tuple]) -> np.ndarray:
 
 def normalize(shifted, target, ofs=True, mag=False, eps=1e-12):
     """
-    Assumes the following scaling/shifting offset:
+    Fit shifted = a * target + b (optionally magnitude-only) and return corrected data.
 
-    shifted = a * target + b
-
-    solves for a, b and returns the corrected data
-
-    Parameters:
-    -----------
-    shifted : array
-        data to be corrected
-    target : array
-        reference data
+    Parameters
+    ----------
+    shifted : array-like
+        Data to correct.
+    target : array-like
+        Reference data.
     ofs : bool
-        include b offset in the correction
+        Include offset b in fit.
     mag : bool
-        use magnitude of data for correction
+        Fit on magnitudes only; phase preserved.
+    eps : float
+        Tolerance for lstsq.
 
-    Returns:
-    --------
-    array
-        corrected data
-
-    TODO: batch function so it is faster
+    Returns
+    -------
+    np.ndarray
+        a * shifted + b (or magnitude-scaled complex).
     """
-
     shifted = tonp(shifted)
     target = tonp(target)
 
@@ -108,9 +114,17 @@ def normalize(shifted, target, ofs=True, mag=False, eps=1e-12):
 
 def normalize_scale(shifted, target, eps=1e-10, scale_tol=1e-5):
     """
-    Faster way to normalize 2 images by using image scaling rather than lstsq.
-    """
+    Normalize shifted to target by a single scale factor (no offset); fallback to lstsq if small.
 
+    Parameters
+    ----------
+    shifted, target : array-like
+        Images to align (scale only).
+    eps : float
+        Regularization for scale denominator.
+    scale_tol : float
+        Below this max|shifted|, use normalize() instead.
+    """
     # If input scale is too small, then fall back to lstsq normalization computation for robustness
     inp_scale = np.max(np.abs(shifted))
     if inp_scale < scale_tol:
@@ -127,9 +141,20 @@ def get_effective_location(
     loc: ROI_LOCATION, flip_lr: bool, flip_ud: bool
 ) -> ROI_LOCATION:
     """
-    Given plot window flips, determine the real location of the plot.
-    """
+    Map ROI location to effective corner after L/R and U/D flips.
 
+    Parameters
+    ----------
+    loc : ROI_LOCATION
+        Nominal corner (e.g. TOP_LEFT).
+    flip_lr, flip_ud : bool
+        Whether plot is flipped.
+
+    Returns
+    -------
+    ROI_LOCATION
+        Effective corner in displayed coordinates.
+    """
     effective_loc = loc
     if flip_lr and flip_ud:
         if loc == ROI_LOCATION.TOP_LEFT:
@@ -167,17 +192,22 @@ def clone_dataset(
     link=False,
 ):
     """
-    Clones an existing hv.Dataset, replacing its data with new_data.
+    Clone an hv.Dataset, replacing its "Value" data with new_value.
 
-    Parameters:
-    - original_dataset (hv.Dataset): The original dataset to clone.
-    - new_value (np.ndarray or similar): The new "Value" data to replace the original data.
-    - link: Link streams / pipes to original dataset (probably don't want this).
+    Parameters
+    ----------
+    original_dataset : hv.Dataset
+        Dataset to clone.
+    new_value : np.ndarray
+        New "Value" array (same shape as original).
+    link : bool
+        If True, link to original (default False).
 
-    Returns:
-    - hv.Dataset: A new dataset with the same properties as original_dataset but with new_data.
+    Returns
+    -------
+    hv.Dataset
+        New dataset with same kdims/vdims and new Value.
     """
-
     assert new_value.shape == original_dataset.data["Value"].shape
 
     ddims = [k for k in list(original_dataset.data.keys()) if k != "Value"]
@@ -189,9 +219,13 @@ def clone_dataset(
 
 def debug_imshow(data_dict: Dict[str, hv.Dataset]):
     """
-    Given a dictionary of hv.Datasets with Value as vdim,, display them in a grid for debugging purposes.
-    """
+    Display dict of hv.Datasets in a shared-axis grid (debugging).
 
+    Parameters
+    ----------
+    data_dict : dict of hv.Dataset
+        Keys = labels; each dataset has 2D kdims and Value vdim.
+    """
     img_keys = list(data_dict.keys())
     vdims = list(data_dict[img_keys[0]].vdims)
     kdims_all = list(data_dict[img_keys[0]].kdims)[:2]
@@ -217,9 +251,7 @@ def debug_imshow(data_dict: Dict[str, hv.Dataset]):
 
 
 def masked_angle(x, thresh=1e-2):
-    """
-    Display angle of any array where magnitude is above threshold
-    """
+    """Return angle of x where magnitude >= thresh * max; elsewhere 0."""
     mask = np.abs(x) / np.max(np.abs(x)) < thresh
     x = np.angle(x)
     x[mask] = 0
@@ -228,7 +260,19 @@ def masked_angle(x, thresh=1e-2):
 
 def round_str(x: float, ndec: int = 1) -> str:
     """
-    Return string of x rounded to ndec decimal places.
+    Format x rounded to ndec decimal places, trimming trailing zeros.
+
+    Parameters
+    ----------
+    x : float
+        Value to format.
+    ndec : int
+        Max decimal places (0 < ndec < 30).
+
+    Returns
+    -------
+    str
+        Rounded string (e.g. "1.2", "3").
     """
     MAXR = 30
     assert 0 < ndec < MAXR, f"ndec must be between 0 and {MAXR}."
@@ -256,14 +300,22 @@ def round_str(x: float, ndec: int = 1) -> str:
 
 def pprint_str(x: float, D: int = 5, E: int = 1) -> str:
     """
-    Pretty print a string representation of a number.
+    Format number: int as-is; very small/large in scientific (E decimals); else float (D digits).
 
-    Rules:
-    If the number is an integer, return the integer as a string.
-    If the number is <1e-(D-1) or >1e(D-1), return the number in scientific notation with D-1 decimal places.
-    Otherwise, return the number in float notation with exactly D digits max (including integer component).
+    Parameters
+    ----------
+    x : float
+        Value to format.
+    D : int
+        Max total digits for float; exponent threshold ~ 10^-(D-1) to 10^(D-1).
+    E : int
+        Decimal places in scientific notation.
+
+    Returns
+    -------
+    str
+        Formatted string.
     """
-
     if isinstance(x, int):
         return str(x)
 
@@ -301,7 +353,19 @@ def parse_dimensional_input(
     input: Optional[Union[Sequence[str], str]], N: int
 ) -> List[str]:
     """
-    Parse dimensional input into a list of strings.
+    Parse dimension names from string or sequence into list of N strings.
+
+    Parameters
+    ----------
+    input : str, sequence of str, or None
+        N chars, or N delimited tokens (e.g. "x,y,z"), or sequence of length N.
+    N : int
+        Expected number of dimensions.
+
+    Returns
+    -------
+    list of str
+        Dimension names; default ["Dim 0", ..., "Dim N-1"] if input is None.
     """
     VALID_DELIMTERS = [",", ";", "-", "_"]
 
@@ -345,9 +409,7 @@ def parse_dimensional_input(
 
 
 def sanitize_css_class(name: str) -> str:
-    """
-    Make a string safe for use as a CSS class.
-    """
+    """Replace characters invalid in CSS class names with '-'."""
     BAD_CHARS = [
         " ",
         ".",

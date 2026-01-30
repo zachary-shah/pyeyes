@@ -6,7 +6,7 @@
 
 In `pyeyes`, a dataset is designated as a array-like input with `N` input dimensions. The dataset can be described by `N` `named_dims`, of which a subset of these designated `view_dims` (or `vdims`) can be viewed fully at a time. All other dimensions, designated `slice_dims` (or `sdims` for short), can then be sliced through using widgets like sliders for display of other 2D slices along these views in real time.
 
-The goal of `pyeyes` as a repository is to support multiple modes of GUI-based interactive data `Viewers`, which are classes for creating various views on a given dataset. Currently, only one viewer, `ComparativeViewer`, is supported, which is meant for comparing multiple image datasets of the same dimensionality and shape. 
+The goal of `pyeyes` as a repository is to support multiple modes of GUI-based interactive data `Viewers`, which are classes for creating various views on a given dataset. Currently, only one viewer, `ComparativeViewer`, is supported, which is meant for comparing multiple image datasets of the same dimensionality and shape.
 
 ## ComparativeViewer
 The `ComparativeViewer` class allows the user to easily parse and view equally dimensioned datasets (e.g. three 4-D spatio-temporal MRI datasets) which may be complex valued, described by a set of named dimensions. The user can select a single 2D view of the datasets to view simultaneously and update in real-time. This is facilitated by a GUI built primarily with `panel` and `HoloViews` to allow interaction with the datasets via `panel` widgets. Data can be easily navigated in arbitrary dimensions, compared against a designated reference, viewed with focus on specific sub-regions of interest, and exported / configured for easy re-examination on similar tasks.
@@ -90,7 +90,7 @@ TODO: describe pytest, tests/ztest_* being runnable demos but not part of auto-t
     - this automatically scrolls along the last modified sliceable dimension (including categorial dimensions), or by default the first dimension in the list of sliceable dims.
     - Every time the view_dims is updated, this scrollable dimension updates to the first dimension in sliceable dims
     - this required disabling bokeh-default scroll-based zoom
-- [x] Image normalization options now exposed on interface in `Analysis` tab. 
+- [x] Image normalization options now exposed on interface in `Analysis` tab.
     - [x] `Normalize Images` option: Will normalize all images to selected reference dataset, as well as display error maps after image normalization
     - [x] `Normalize for Error Metrics Only`: (previously `Normalize Error Maps`): will not normalize display images, but does display error maps computed after image normalization
 - [x] Exposed more display and interaction features in `Misc` tab
@@ -105,7 +105,7 @@ TODO: describe pytest, tests/ztest_* being runnable demos but not part of auto-t
         - [x] Button to clear popup
     - [x] Editing of each image name as it is displayed on figure
 
-### Bug Fixes 
+### Bug Fixes
 - [x] Issue with overlay behaviour related to flipping or cropping image dimensions resolved.
 - [x] Issue with in-figure overlays having inconsistent locations for different image flips
 - [x] Ensured widgets can't be incremented out of bounds (like incrementing sdims below 0 or above max)

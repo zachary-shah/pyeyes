@@ -25,7 +25,7 @@ SCALE_TOL = 1e-8
 
 
 def diff(recon: np.ndarray, true: np.ndarray, return_map=False, isphase=False) -> float:
-
+    """Mean difference (or diff map) between recon and true; phase-aware if isphase."""
     assert recon.shape == true.shape, "Input array dimensions mismatch."
 
     if isphase:
@@ -42,7 +42,7 @@ def diff(recon: np.ndarray, true: np.ndarray, return_map=False, isphase=False) -
 def L1Diff(
     recon: np.ndarray, true: np.ndarray, return_map=False, isphase=False
 ) -> float:
-
+    """L1 difference (mean or map); phase-aware if isphase."""
     assert recon.shape == true.shape, "Input array dimensions mismatch."
 
     diff_map = diff(recon, true, return_map=True, isphase=isphase)
@@ -70,7 +70,7 @@ def RelativeL1(
     return_map=False,
     isphase=False,
 ) -> float:
-
+    """Relative L1 (|recon-true|/|true|); mean or map; phase-aware if isphase."""
     assert recon.shape == true.shape, "Input array dimensions mismatch."
 
     diff_map = diff(recon, true, return_map=True, isphase=isphase)
@@ -93,14 +93,7 @@ def RelativeL1(
 
 
 def RMSE(recon: np.ndarray, true: np.ndarray, return_map=False, isphase=False) -> float:
-    """
-    alias for L2Diff
-
-    Given 2 complex arrays of the same shape, recon (g) and true (f), compute the RMSE between arrays
-        RMSE = SQRT(|f-g|^2)
-        NRMSE = SQRT(|f-g|^2 / |f|^2)
-    """
-
+    """RMSE = sqrt(mean(|recon-true|^2)); return scalar or map; phase-aware if isphase."""
     assert recon.shape == true.shape, "Input array dimensions mismatch."
 
     diff_map = diff(recon, true, return_map=True, isphase=isphase)
@@ -123,11 +116,7 @@ def RMSE(recon: np.ndarray, true: np.ndarray, return_map=False, isphase=False) -
 def NRMSE(
     recon: np.ndarray, true: np.ndarray, return_map=False, isphase=False
 ) -> float:
-    """
-    Given 2 complex arrays of the same shape, recon (g) and true (f), compute the NRMSE between arrays
-        NRMSE = SQRT(|f-g|^2 / |f|^2)
-    """
-
+    """NRMSE = sqrt(mean(|recon-true|^2) / mean(|true|^2)); scalar or map; phase-aware if isphase."""
     assert recon.shape == true.shape, "Input array dimensions mismatch."
 
     diff_map = diff(recon, true, return_map=True, isphase=isphase)
@@ -156,10 +145,7 @@ def SSIM(
     isphase=False,
     percentiles=[0.5, 99.5],
 ) -> float:
-    """
-    Compute the Structural Similarity Index (SSIM) between two images.
-    """
-
+    """Structural similarity index (skimage); data_range from percentiles of |true|."""
     assert recon.shape == true.shape, "Input array dimensions mismatch."
 
     if isphase:
@@ -187,10 +173,7 @@ def SSIM(
 def PSNR(
     recon: np.ndarray, true: np.ndarray, isphase=False, max_percentile=99.5
 ) -> float:
-    """
-    Compute the Peak Signal-to-Noise Ratio (PSNR) between two images.
-    """
-
+    """PSNR in dB using max_percentile of |true| as peak; RMSE for error."""
     assert recon.shape == true.shape, "Input array dimensions mismatch."
 
     max_val = np.percentile(np.abs(true), max_percentile)

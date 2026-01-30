@@ -65,10 +65,10 @@ class Viewer:
         """
         Generic class for viewing image data.
 
-        Parameters:
-        -----------
-        data : dict[np.ndarray]
-            Image data
+        Parameters
+        ----------
+        data : dict of np.ndarray
+            Image data keyed by name.
         """
         self.data = data
 
@@ -97,9 +97,7 @@ class Viewer:
             error.uninstall_pyeyes_error_handler()
 
     def _launch(self, title="Viewer", show=True, **kwargs):
-        """
-        Launch the viewer.
-        """
+        """Launch the viewer (override in subclass)."""
         raise NotImplementedError
 
 
@@ -127,34 +125,68 @@ class ComparativeViewer(Viewer, param.Parameterized):
         config_path: Optional[str] = None,
     ):
         """
-        Viewer for comparing n-dimensional image data.
+        Viewer for comparing n-dimensional image data with linked slicing and metrics.
 
-        Parameters:
-        -----------
+        Builds an interactive MRI/viewer app: multiple images share the same slice indices,
+        viewing dimensions (which 2D plane to show), contrast (clim, colormap), ROI, and
+        optional difference maps / text metrics. Data can be a single array or a dict of
+        arrays (e.g. different reconstructions or image types) with the same shape.
+        Dimension names drive slice widgets and axis labels; categorical dimensions use
+        dropdowns instead of sliders (e.g. "Map Type" with options T1, T2, PD).
+
+        Parameters
+        ----------
         data : Union[Dict[str, np.ndarray], np.ndarray]
-            Single image or dictionary of images.
-            If dictionary, keys should be strings which name each image,
-            and values should be numpy arrays of equivalent size.
+            Single image or dict of images. If dict, keys are display names and values
+            are numpy arrays of the same shape. Single array is treated as {"Image": array}.
         named_dims : Optional[Sequence[str]]
-            String name for each dimension of the image data, with the same ordering as
-            the array dimensions. Highly recommended to provide this for easier use.
-            Input format options include:
-            - List of strings equal in length to number of dimensions
-            - Character string with number of characters equal to num dims
-            - Single character string delimited by spaces or commas
-            If not provided, default is ["Dim 0", "Dim 1", ...].
+            Name for each dimension in order of array axes (length must equal data.ndim).
+            Accepted formats:
+            - List of strings: e.g. ["x", "y", "z"] or ["Phase", "Read", "Slice"].
+            - String of N characters: e.g. "xyz" for 3D (each character is one dim name).
+            - Delimited string: space, comma, semicolon, hyphen, or underscore, e.g.
+              "Phase, Read, Slice" or "x y z" (must produce exactly N tokens).
+            If None, defaults to ["Dim 0", "Dim 1", ...].
         view_dims : Optional[Sequence[str]]
-            Initial dimensions to view, should be a subset of dimension_names.
-            Default is ['x', 'y'] if in dimension_names else first 2 dimensions.
+            Which two dimensions form the initial 2D view (must be in named_dims and
+            non-categorical, non-singleton). If None: uses ["x", "y"] when those names
+            exist in named_dims, otherwise the first two sliceable dimensions.
         cat_dims : Optional[Dict[str, List]]
-            Dictionary of categorical dimensions. Keys should be strings which name each
-            categorical dimension, and values should be lists of strings which name each
-            category for that dimension. Must be a subset of dimension_names.
+            Categorical dimensions: key = dimension name (must be in named_dims), value =
+            list of option labels (e.g. {"Map Type": ["T1", "T2", "PD"]}). These dimensions
+            use dropdowns instead of integer sliders.
         config_path : Optional[str]
-            Path to a config file to load viewer settings from. If not provided, viewer
-            will be initialized with default settings. Config should be generated from
-            "Export Config" button in Export pane of the Viewer. Limited set of settings
-            are also transferrable to different datasets or different shapes.
+            Path to a JSON config file saved from the viewer's Export pane. Loads viewer,
+            slicer, and ROI settings (e.g. view dims, clim, colormap, ROI box). A subset
+            of settings can be applied to different datasets or shapes; incompatible
+            image sets or dimension names are handled with warnings and fallbacks.
+
+        Examples
+        --------
+        **Simple — single 3D array, default dim names and xy view:**
+
+        >>> arr = np.random.randn(64, 64, 24)
+        >>> viewer = ComparativeViewer(arr)
+        >>> viewer.launch()
+
+        **Moderate — dict of 3D images, short dim names, auto xy view:**
+
+        >>> data = {"Recon": recon_xyz, "Reference": ref_xyz}  # each (H, W, D)
+        >>> viewer = ComparativeViewer(data, named_dims="xyz")
+        >>> # view_dims not supplied → defaults to ["x", "y"]; slice over z
+
+        **Complex — named/view dims as list, categorical dim, and config:**
+
+        >>> # 4D array: (Map Type, Phase, Read, Slice) with 3 map types
+        >>> quant = np.stack([t1_vol, t2_vol, pd_vol], axis=0)  # (3, H, W, D)
+        >>> viewer = ComparativeViewer(
+        ...     {"Quantitative": quant},
+        ...     named_dims=["Map Type", "Phase", "Read", "Slice"],
+        ...     view_dims=["Phase", "Read"],
+        ...     cat_dims={"Map Type": ["T1", "T2", "PD"]},
+        ...     config_path="./my_viewer_config.json",
+        ... )
+        >>> viewer.launch()
         """
 
         from_config = config_path is not None and os.path.exists(config_path)
@@ -310,32 +342,25 @@ class ComparativeViewer(Viewer, param.Parameterized):
             self._autoscale_clim(event=None)
 
     def _launch(self, title="MRI Viewer", show=True, **kwargs):
-        """
-        Launch the viewer.
-
-        Parameters
-        ----------
-        title : str
-            Title for the viewer
-        show : bool
-            If True, opens browser. If False, server runs silently
-        **kwargs
-            Additional arguments for pn.serve (e.g., port, threaded)
-
-        Returns
-        -------
-        server : panel.server.Server or None
-            The Panel server instance (can be used to stop the server)
-        """
+        """Serve the viewer app with pn.serve."""
         server = pn.serve(self.app, title=title, show=show, **kwargs)
 
         return server
 
     def load_from_config(self, config_path: str):
         """
-        Load config from json dict.
-        """
+        Load viewer/slicer/ROI settings from a JSON config file.
 
+        Parameters
+        ----------
+        config_path : str
+            Path to JSON file (e.g. from Export Config).
+
+        Returns
+        -------
+        dict
+            Loaded config dict (with metadata for image/dim compatibility).
+        """
         with open(config_path, "r") as f:
             cfg = json.load(f)
 
@@ -380,21 +405,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
     Widget Management
     """
 
-    def replace_widget_in_app(
+    def _replace_widget_in_app(
         self, pane_name: str, widget_name: str, new_widget
     ) -> None:
-        """
-        Replace a widget in both the pane and the control panel display.
-
-        Parameters
-        ----------
-        pane_name : str
-            Name of the pane ("View", "Contrast", "ROI", "Analysis", "Export")
-        widget_name : str
-            Name of the widget to replace
-        new_widget : Widget
-            The new widget wrapper
-        """
+        """Replace a widget in the pane and control panel display."""
         pane = self.panes.get(pane_name)
         if pane is None:
             return
@@ -413,9 +427,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
     """
 
     def _init_view_pane(self) -> Pane:
-        """
-        Returns a Pane containing all View tab widgets.
-        """
+        """Build Pane with all View tab widgets."""
         pane = Pane("View", viewer=self)
 
         # Viewing Dimensions
@@ -449,9 +461,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         return pane
 
     def _init_contrast_pane(self) -> Pane:
-        """
-        Returns a Pane containing all Contrast tab widgets.
-        """
+        """Build Pane with all Contrast tab widgets."""
         pane = Pane("Contrast", viewer=self)
 
         # Complex view and autoscale widgets
@@ -468,9 +478,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         return pane
 
     def _init_roi_pane(self) -> Pane:
-        """
-        Returns a Pane containing all ROI tab widgets.
-        """
+        """Build Pane with all ROI tab widgets."""
         pane = Pane("ROI", viewer=self)
 
         for widget in self._build_roi_widgets():
@@ -479,9 +487,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         return pane
 
     def _init_analysis_pane(self) -> Pane:
-        """
-        Returns a Pane containing all Analysis tab widgets.
-        """
+        """Build Pane with all Analysis tab widgets."""
         pane = Pane("Analysis", viewer=self)
 
         for widget in self._build_analysis_widgets():
@@ -490,9 +496,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         return pane
 
     def _init_export_pane(self) -> Pane:
-        """
-        Returns a Pane containing all Export tab widgets.
-        """
+        """Build Pane with all Export tab widgets."""
         pane = Pane("Export", viewer=self)
 
         for widget in self._build_export_widgets():
@@ -501,9 +505,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         return pane
 
     def _init_misc_pane(self) -> Pane:
-        """
-        Returns a Pane containing all misc. tab widgets.
-        """
+        """Build Pane with all Misc tab widgets."""
         pane = Pane("Misc", viewer=self)
 
         for widget in self._build_misc_widgets():
@@ -512,12 +514,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         return pane
 
     def _build_dataset(self, vdims: Sequence[str]) -> hv.Dataset:
-        """
-        Build the dataset for a specific set of viewing dimensions.
-
-        Convert from dictionary of np arrays to a HoloViews Dataset.
-        """
-
+        """Build HoloViews Dataset from raw_data for given viewing dimensions."""
         img_list = list(self.raw_data.values())
 
         proc_data = np.stack(img_list, axis=0)
@@ -535,10 +532,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         return hv.Dataset((*dim_ranges, proc_data), ["ImgName"] + self.ndims, "Value")
 
     def _build_vdim_widgets(self) -> List:
-        """
-        Build selection widgets for 2 viewing dimensions.
-        Returns a list of Widget wrappers.
-        """
+        """Build L/R and U/D viewing dimension selector widgets."""
 
         @error.error_handler_decorator()
         def vdim_horiz_callback(new_value):
@@ -581,10 +575,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         return [vdim_horiz, vdim_vert]
 
     def _update_vdims(self, new_vdims):
-        """
-        Routine to run to update the viewing dimensions of the data.
-        """
-
+        """Update viewing dimensions and sync slicer/widgets."""
         assert len(new_vdims) == 2, "Must provide exactly 2 viewing dimensions."
 
         with param.parameterized.discard_events(self.slicer):
@@ -600,20 +591,20 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
             # Update Slicer
             old_vdims = self.slicer.vdims
-            self.slicer._set_volatile_dims(new_vdims)
+            self.slicer.set_volatile_dims(new_vdims)
 
             # Update displayed widgets if interchange of vdim and sdims
             if set(old_vdims) != set(new_vdims):
                 new_sdim_widgets = self._build_sdim_widgets()
 
                 for i, widget in enumerate(new_sdim_widgets):
-                    self.replace_widget_in_app("View", f"sdim{i}", widget)
+                    self._replace_widget_in_app("View", f"sdim{i}", widget)
 
                 # update start/stop/step widgets
                 new_export_widgets = self._build_export_widgets()
                 for widget in new_export_widgets:
                     if "_export_range" in widget.name:
-                        self.replace_widget_in_app("Export", widget.name, widget)
+                        self._replace_widget_in_app("Export", widget.name, widget)
 
             # Reset crops
             lr_crop_widget = self.panes["View"].get_widget("lr_crop")
@@ -627,9 +618,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         self.slicer.param.trigger("lr_crop", "ud_crop")
 
     def _build_sdim_widgets(self) -> List:
-        """
-        Return a list of Widget wrappers for slicing dimensions.
-        """
+        """Build widgets for each slicing dimension (sliders or selectors)."""
         widgets = []
         num_interactable_dims = 0
 
@@ -674,10 +663,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
     @error.error_handler_decorator()
     def _update_sdim(self, sdim, new_dim_val):
-        """
-        Callback to update a specific slicing dimension.
-        """
-
+        """Callback to set one slicing dimension and trigger redraw."""
         with param.parameterized.discard_events(self.slicer):
 
             self.slicer.dim_indices[sdim] = new_dim_val
@@ -697,13 +683,13 @@ class ComparativeViewer(Viewer, param.Parameterized):
             self.slicer.param.trigger("dim_indices")
 
     def _handle_scroll(self, delta: float):
-
+        """Apply scroll delta to slicer and sync sdim widget value."""
         if self.scroll_handle_lock:
             return  # don't scroll if we are already handling a scroll
 
         self.scroll_handle_lock = True
 
-        sdim, new_dim_val = self.slicer._compute_scroll_delta(delta)
+        sdim, new_dim_val = self.slicer.compute_scroll_delta(delta)
 
         # Find the sdim widget by checking display_name
         view_pane = self.panes["View"]
@@ -715,9 +701,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         self.scroll_handle_lock = False
 
     def _build_viewing_widgets(self) -> List:
-        """
-        Return a list of Widget wrappers for viewing controls.
-        """
+        """Build flip, scale, crop, and related viewing control widgets."""
         widgets = []
 
         # Flip Widgets
@@ -834,14 +818,12 @@ class ComparativeViewer(Viewer, param.Parameterized):
         return single_toggle
 
     def _update_toggle_single_view(self, new_single_toggle):
-        """
-        Only display one image at a time for toggling sake
-        """
+        """Toggle single-image mode and refresh display images widget."""
         self.single_image_toggle = new_single_toggle
 
         # Build new widget and replace in pane
         new_display_images_widget = self._build_display_images_widget()
-        self.replace_widget_in_app("View", "im_display", new_display_images_widget)
+        self._replace_widget_in_app("View", "im_display", new_display_images_widget)
 
         if self.single_image_toggle:
             self.display_images = [self.display_images[0]]
@@ -898,10 +880,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         return im_display
 
     def _update_image_display(self, new_display_images):
-        """
-        Update which image to display based on if single view is toggled or not.
-        """
-
+        """Update displayed image set and notify slicer."""
         if isinstance(new_display_images, str):
             new_display_images = [new_display_images]
 
@@ -944,10 +923,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         return cplx_view, autoscale
 
     def _update_cplx_view(self, new_cplx_view):
-        """
-        Routine to run to update the viewing dimensions of the data.
-        """
-
+        """Update complex view (mag/phase/real/imag) and reset clim/cmap."""
         # Update Slicer
         with param.parameterized.discard_events(self.slicer):
             self.slicer.update_cplx_view(new_cplx_view)
@@ -964,23 +940,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         self.slicer.param.trigger("vmin", "vmax", "cmap")
 
-    def update_clim_widget(self, vmin, vmax, bound_min, bound_max, step):
-        """
-        Set the values for the clim widget.
-
-        Parameters
-        ----------
-        vmin : float
-            Desired min value in the bar.
-        vmax : float
-            Desired max value in the bar.
-        bound_min : float
-            Lower end bound of the bar.
-        bound_max : float
-            Upper end bound of the bar.
-        step : float
-            Step size for incrementing bar.
-        """
+    def _update_clim_widget(self, vmin, vmax, bound_min, bound_max, step):
+        """Sync clim slider value, bounds, and step."""
         clim_widget = self.panes["Contrast"].get_widget("clim")
         clim_widget.value = (vmin, vmax)
         clim_widget.start = bound_min
@@ -988,14 +949,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         clim_widget.step = step
 
     def _update_clim(self, new_value):
-        """
-        Callback to update the clim of the slicer.
-
-        Parameters
-        ----------
-        new_value : tuple
-            New (vmin, vmax) values
-        """
+        """Callback to set slicer vmin/vmax from clim widget."""
         with param.parameterized.discard_events(self.slicer):
             vmin, vmax = new_value
 
@@ -1012,7 +966,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
                 vmax=vmax,
             )
 
-            self.update_clim_widget(vmin, vmax, bound_min, bound_max, step)
+            self._update_clim_widget(vmin, vmax, bound_min, bound_max, step)
 
         self.slicer.param.trigger("vmin", "vmax")
 
@@ -1097,12 +1051,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
         return widgets
 
     def _autoscale_clim(self, event):
-        """
-        Routine to automatically scale clim of the slicer.
-        """
+        """Autoscale slicer clim and update clim widget."""
         with param.parameterized.discard_events(self.slicer):
             vmin, vmax, bound_min, bound_max, step = self.slicer.autoscale_clim()
-            self.update_clim_widget(vmin, vmax, bound_min, bound_max, step)
+            self._update_clim_widget(vmin, vmax, bound_min, bound_max, step)
         self.slicer.param.trigger("vmin", "vmax")
 
     def _build_roi_widgets(self) -> List:
@@ -1293,7 +1245,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         return widgets
 
     def _roi_state_watcher(self, event):
-
+        """Sync ROI pane widgets and visibility when roi_state changes."""
         if hasattr(event, "new"):
             new_state = event.new
         else:
@@ -1571,16 +1523,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         return widgets
 
     def _update_error_map_type(self, new_type, autoformat=True):
-        """
-        Make sure error map gets the right formatting.
-
-        Parameters
-        ----------
-        new_type : str
-            New error map type
-        autoformat : bool
-            Whether to autoformat the error map
-        """
+        """Set error map type and optionally autoformat scale/cmap."""
         with param.parameterized.discard_events(self.slicer):
             self.slicer.update_error_map_type(new_type)
 
@@ -1592,10 +1535,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             self.slicer.param.trigger("metrics_state")
 
     def _autoformat_error_map(self, event):
-        """
-        Autoformat the error map.
-        """
-
+        """Autoformat error map and sync Analysis widgets."""
         # Update Slicer
         with param.parameterized.discard_events(self.slicer):
             self.slicer.autoformat_error_map()
@@ -2030,9 +1970,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
     @error.error_handler_decorator()
     def _export_config(self, event):
-        """
-        Export the current configuration as a JSON.
-        """
+        """Export current viewer/slicer/ROI config to JSON at config_path."""
         if self.config_path is None:
             pn.state.notifications.warning("No path provided to export config.")
             return
@@ -2042,6 +1980,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         pn.state.notifications.success(f"Config saved to {self.config_path}")
 
     def _save_config(self, path: Union[Path, str]):
+        """Write viewer, slicer, and ROI config to JSON file."""
         if isinstance(path, str):
             path = Path(path)
 
@@ -2067,6 +2006,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
             json.dump(config_dict, f, indent=4, default=config.json_serial)
 
     def _export_html(self, event, step_override=None):
+        """Export static HTML with sliders over slice dimensions."""
         if self.html_export_path is None:
             pn.state.notifications.warning("No path provided to export html to.")
             return
@@ -2196,21 +2136,18 @@ class ComparativeViewer(Viewer, param.Parameterized):
         silent: bool = False,
     ):
         """
-        Save a compressed .npz of the (optionally subsampled) image data plus
-        a small standalone launcher script at `path` that reloads & launches
-        the viewer with the same dims and categories.
+        Save .npz (optionally subsampled) and launcher script to reload viewer.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         path : Union[Path, str]
-            Path where to save the launcher script
+            Path for launcher script (.py); .npz and .json written alongside.
         num_slices_to_keep : Union[int, Dict[str, int]] | None
-            Number of slices to keep per dimension. If int, applies to all subsampleable
-            dimensions. If dict, maps dimension names to slice counts. Takes precedence
-            over subsampling parameter.
+            Slices per dimension (int or dict by dim). Overrides subsampling.
         subsampling : Union[int, Dict[str, int]]
-            Step size for subsampling. If int, applies to all subsampleable dimensions.
-            If dict, maps dimension names to step sizes. Only used if num_slices_to_keep is None.
+            Subsampling step (int or dict by dim). Used if num_slices_to_keep is None.
+        silent : bool
+            If True, launcher uses show=False for testing.
 
         Example:
         --------
@@ -2220,9 +2157,6 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # Use step size of 2 for all subsampleable dimensions
         viewer.export_reloadable_pyeyes("./viewer.py", subsampling=2)
-
-        TODO: add option to save this on GUI
-        ```
         """
 
         if isinstance(path, str):
@@ -2284,7 +2218,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         num_slices_to_keep: Union[int, Dict[str, int]] | None,
         subsampling: Union[int, Dict[str, int]] = 1,
     ) -> Dict[str, int]:
-        """Calculate step sizes for subsampling based on input parameters."""
+        """Compute per-dimension step for subsampling or num_slices_to_keep."""
         step_map = {}
         data_shape = self.raw_data[list(self.raw_data.keys())[0]].shape
 
@@ -2308,6 +2242,7 @@ class ComparativeViewer(Viewer, param.Parameterized):
         return step_map
 
     def _create_launcher_script(self, path: Path, silent: bool = False):
+        """Write standalone Python launcher script that loads npz and config."""
         # for debugging
         if silent:
             sstr = """
@@ -2318,7 +2253,6 @@ server.stop()"""
         else:
             sstr = "viewer.launch()"
 
-        """Create the standalone launcher script."""
         script = f"""#!/usr/bin/env python3
 import numpy as np
 import json
@@ -2355,12 +2289,24 @@ def spawn_comparative_viewer_detached(
     title="MRI Viewer",
 ):
     """
-    Helper that spawns a ComparativeViewer in its own Python subprocess.
+    Spawn ComparativeViewer in a separate Python subprocess.
 
-    For safe(ish) removal of temporary data generated, and to kill subprocesses for cleanup, add
-    this to your .bashrc or .zshrc:
+    Parameters
+    ----------
+    data : dict of np.ndarray or np.ndarray
+        Image data (single array or dict).
+    named_dims, view_dims, cat_dims, config_path
+        Passed to ComparativeViewer. Optional.
+    title : str
+        Browser tab title.
 
+    Notes
+    -----
+    For safe removal of subprocesses, create a shell command like this:
+    ```shell
     alias pyeyes_cleanup="pkill -9 -f '_PYEYES_SUBPROCESS.py' && rm -f /tmp/*_PYEYES_SUBPROCESS.*"
+    ```
+    Then, run `pyeyes_cleanup` to remove all subprocesses and temporary files.
     """
     # convert data to numpy in case its not, for pickling
     if not isinstance(data, dict):

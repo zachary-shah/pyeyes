@@ -12,9 +12,24 @@ def launch_viewers(
     **kwargs,
 ):
     """
-    Launches a web page hosting viewer(s).
-    """
+    Serve one or more viewers in a web app.
 
+    Parameters
+    ----------
+    viewer_dict : Viewer or Dict[str, Viewer]
+        Single viewer or dict of name -> viewer (uses .app if present).
+    port : Optional[int]
+        Port for server; 0 for auto.
+    show : bool
+        If True, open browser.
+    **kwargs
+        Passed to pn.serve.
+
+    Returns
+    -------
+    panel.server.Server or None
+        Server instance.
+    """
     if isinstance(viewer_dict, dict):
         viewer_dict_out = {}
         for k, v in viewer_dict.items():
