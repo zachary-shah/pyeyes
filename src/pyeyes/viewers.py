@@ -687,8 +687,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
             # Assume we need to autoscale if dimension updated is categorical
             if sdim in self.cat_dims.keys():
-                self.slicer.update_colormap()
                 self._autoscale_clim(event=None)
+                self.slicer.update_colormap()
 
         # Trigger
         if sdim in self.cat_dims.keys():
@@ -1479,9 +1479,10 @@ class ComparativeViewer(Viewer, param.Parameterized):
         # Normalize displayed images fully
         def display_normalize_callback(new_value):
             # disable error map normalization if displayed images are normalized
-            analysis_pane = self.panes["Analysis"]
-            analysis_pane.get_widget("error_normalize").disabled = new_value
-            self.slicer.normalize_for_display = new_value
+            with param.parameterized.discard_events(self.slicer):
+                analysis_pane = self.panes["Analysis"]
+                analysis_pane.get_widget("error_normalize").disabled = new_value
+                self.slicer.normalize_for_display = new_value
             self.slicer.param.trigger("normalize_for_display")
 
         display_normalize = Checkbox(
@@ -1791,7 +1792,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
         widgets = []
 
         def text_font_callback(new_value):
-            self.slicer.text_font = new_value
+            with param.parameterized.discard_events(self.slicer):
+                self.slicer.text_font = new_value
             self.slicer.param.trigger("text_font")
 
         text_font_input = Select(
@@ -1806,7 +1808,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
         widgets.append(text_font_input)
 
         def display_titles_checkbox_callback(new_value):
-            self.slicer.display_image_titles_visible = new_value
+            with param.parameterized.discard_events(self.slicer):
+                self.slicer.display_image_titles_visible = new_value
             self.slicer.param.trigger("display_image_titles_visible")
 
         # Display Image Titles
@@ -1821,7 +1824,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
         widgets.append(display_titles_checkbox)
 
         def display_error_map_titles_checkbox_callback(new_value):
-            self.slicer.display_error_map_titles_visible = new_value
+            with param.parameterized.discard_events(self.slicer):
+                self.slicer.display_error_map_titles_visible = new_value
             self.slicer.param.trigger("display_error_map_titles_visible")
 
         display_error_map_titles_checkbox = Checkbox(
@@ -1836,7 +1840,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # Display Grid
         def grid_visible_checkbox_callback(new_value):
-            self.slicer.grid_visible = new_value
+            with param.parameterized.discard_events(self.slicer):
+                self.slicer.grid_visible = new_value
             self.slicer.param.trigger("grid_visible")
 
         grid_visible_checkbox = Checkbox(
@@ -1879,14 +1884,17 @@ class ComparativeViewer(Viewer, param.Parameterized):
             pn.state.notifications.info(msg, duration=1000)
 
             # update widget visibility
-            misc_pane = self.panes["Misc"]
-            misc_pane.get_widget("show_popup_location_checkbox").visible = new_value
-            misc_pane.get_widget("popup_on_error_maps_checkbox").visible = new_value
-            misc_pane.get_widget("popup_loc").visible = new_value
-            misc_pane.get_widget("clear_popup_button").visible = new_value
+            with param.parameterized.discard_events(self.slicer):
+                misc_pane = self.panes["Misc"]
+                misc_pane.get_widget("show_popup_location_checkbox").visible = new_value
+                misc_pane.get_widget("popup_on_error_maps_checkbox").visible = new_value
+                misc_pane.get_widget("popup_loc").visible = new_value
+                misc_pane.get_widget("clear_popup_button").visible = new_value
 
-            # update slicer
-            self.slicer.update_popup_pixel_enabled(new_value)
+                # update slicer
+                self.slicer.update_popup_pixel_enabled(new_value)
+
+            self.slicer.param.trigger("popup_pixel_enabled")
 
             # pn.state.notifications.clear()
             if new_value:
@@ -1914,7 +1922,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # show popup location
         def show_popup_location_callback(new_value):
-            self.slicer.popup_pixel_show_location = new_value
+            with param.parameterized.discard_events(self.slicer):
+                self.slicer.popup_pixel_show_location = new_value
             self.slicer.param.trigger("popup_pixel_show_location")
 
         show_popup_location_checkbox = Checkbox(
@@ -1930,7 +1939,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # enable popup on error maps
         def popup_on_error_maps_callback(new_value):
-            self.slicer.popup_pixel_on_error_maps = new_value
+            with param.parameterized.discard_events(self.slicer):
+                self.slicer.popup_pixel_on_error_maps = new_value
             self.slicer.param.trigger("popup_pixel_on_error_maps")
 
         popup_on_error_maps_checkbox = Checkbox(
@@ -1946,7 +1956,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         # popup location picker
         def popup_location_picker_callback(new_value):
-            self.slicer.popup_pixel_location = POPUP_LOCATION(new_value)
+            with param.parameterized.discard_events(self.slicer):
+                self.slicer.popup_pixel_location = POPUP_LOCATION(new_value)
             self.slicer.param.trigger("popup_pixel_location")
 
         popup_location_picker = Select(
