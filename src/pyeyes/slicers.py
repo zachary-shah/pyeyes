@@ -714,8 +714,6 @@ class NDSlicer(param.Parameterized):
         else:
             use_scientific_at_all = use_scientific_main
 
-        print(f"use scientific at all: {use_scientific_at_all}")
-
         # Colorbar width setup
         CBAR_CONST_WIDTH = 46 if use_scientific_at_all else 36  # pix
         CBAR_TEXT_WIDTH = 24 if use_scientific_at_all else 22  # pix
