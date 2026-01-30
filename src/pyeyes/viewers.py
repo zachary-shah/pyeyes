@@ -14,6 +14,7 @@ import holoviews as hv
 import numpy as np
 import panel as pn
 import param
+from bokeh.models.formatters import BasicTickFormatter
 from holoviews import opts
 
 from . import config, error, metrics, themes
@@ -1027,6 +1028,11 @@ class ComparativeViewer(Viewer, param.Parameterized):
             end=self.slicer.param.vmax.bounds[1],
             value=(self.slicer.vmin, self.slicer.vmax),
             step=self.slicer.param.vmin.step,
+            format=BasicTickFormatter(
+                precision=2,
+                power_limit_low=-3,
+                power_limit_high=5,
+            ),
             css_classes=["pyeyes-clim"],
             callback=self._update_clim,
             viewer=self,

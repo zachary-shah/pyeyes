@@ -180,19 +180,17 @@ TASK 5
 - [x] Add option to add borders for gridspec layout. This would be controlled with a button on the "View" panel.
 - [x] `popup-pixel`: If the user clicks their mouse anywhere on a display image, a popup should then display the value of the pixel where they clicked their mouse, for all display images at that pixel location.
 - [x] For the error bars, if the scale of the image is either: (a) max value less than 0.1, or (b) max value above 100, then display the colorbar labels in scientific notation with 1 decimal. Otherwise, display in float notation with exactly 3 digits max (including integer component)
+- [x] Add option to normalize DisplayImages to reference on the Analysis tab, similarly to how the Error maps are optionally normalized.
+- [x] Fix bug with some values of error map in MRF being NaN and nrmse being too high
 
-TODO before final pyeyes update
-- [ ] Add option to normalize DisplayImages to reference on the Analysis tab, similarly to how the Error maps are optionally normalized.
-- [ ] Fix bug with some values of error map in MRF being NaN and nrmse being too high
-- [ ] fix qcmap bug
-- [ ] ensure voxel / slice is non-zero when computing metrics
-- [ ] ensure all features work
 
 Future TODOs
 - [ ] Add toggle for "Single View" mode on display images to be short-cutted by keyboard inputs (possibly up/down arrows or left-right arrows?). If the user has checked `Single View` button, then clicking the up/down buttons on the keyboard will trigger moving along the list of possible displayed images.
 - [ ] On the `Analysis` Tab, add a widget which specifies to what precision the metrics should be displayed. Also add a widget that allows the metrics to instead be displayed in scientific notation, which is just a toggle (always set to 3 sig figs for scientific notation)
 - [ ] Support masking, where if some pixels in the input image are "nan", then display these as transparent.
 - [ ] cache clim properties for quantitative maps / categorical input
+- [ ] allow clicking on any display image for popup
+- [ ] global watcher for scroller to disable scrolling page while scrolling images
 
 ## MultisliceViewer
 

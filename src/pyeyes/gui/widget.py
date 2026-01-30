@@ -278,12 +278,17 @@ class EditableRangeSlider(Widget):
         step: float = 0.1,
         display_name: Optional[str] = None,
         css_classes: Optional[List[str]] = None,
+        format=None,
         callback: Optional[Callable] = None,
         viewer: Optional[Any] = None,
     ):
         super().__init__(name, viewer)
         display_name = display_name or name
         self._callback = callback
+
+        kwargs = {}
+        if format is not None:
+            kwargs["format"] = format
 
         self.widget = pn.widgets.EditableRangeSlider(
             name=display_name,
@@ -292,6 +297,7 @@ class EditableRangeSlider(Widget):
             step=step,
             value=value,
             css_classes=css_classes or [],
+            **kwargs,
         )
 
         def _on_change(event):
