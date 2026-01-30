@@ -70,6 +70,15 @@ def _get_format_image(
         plot.state.title.text_color = themes.VIEW_THEME.text_color
         plot.state.title.text_font = text_font
 
+        # border
+        if grid_visible:
+            plot.state.border_line_color = themes.VIEW_THEME.accent_color
+            plot.state.border_line_alpha = 1.0
+            plot.state.border_line_width = 2
+        else:
+            plot.state.border_line_color = themes.VIEW_THEME.background_color
+            plot.state.border_line_alpha = 0.0
+
         # Constant height for the figure title
         if title_visible:
             if plot.state.title.text_font_size[-2:] in ["px", "pt"]:
@@ -126,6 +135,7 @@ def _get_format_colorbar(
     use_scientific_at_all: bool = False,
     pl_high: int = 4,
     pl_low: int = -2,
+    border_visible: bool = True,
 ):
     """Return colorbar hook (theme, size, optional scientific tick formatting)."""
 
@@ -173,7 +183,9 @@ def _get_format_colorbar(
 
         # coloring
         p.background_fill_color = themes.VIEW_THEME.background_color
-        p.background_fill_alpha = 1.0
+        p.background_fill_alpha = 0.0
+        p.border_line_alpha = 0.0
+        p.border_line_color = themes.VIEW_THEME.background_color
         p.major_label_text_color = themes.VIEW_THEME.text_color
         p.major_tick_line_color = themes.VIEW_THEME.text_color
         p.title_text_color = themes.VIEW_THEME.text_color
@@ -192,6 +204,19 @@ def _get_format_colorbar(
         p.major_tick_line_alpha = 1.0
         p.major_tick_line_dash_offset = 0
         p.major_tick_line_width = 1
+
+        if border_visible:
+            plot.state.background_fill_color = themes.VIEW_THEME.accent_color
+            plot.state.background_fill_alpha = 1.0
+            plot.state.border_line_color = themes.VIEW_THEME.accent_color
+            plot.state.border_line_alpha = 1.0
+            plot.state.border_line_width = 2
+        else:
+            plot.state.background_fill_color = themes.VIEW_THEME.background_color
+            plot.state.background_fill_alpha = 1.0
+            plot.state.border_line_color = themes.VIEW_THEME.background_color
+            plot.state.border_line_alpha = 0.0
+            plot.state.border_line_width = 2
 
     return _format_colorbar
 
@@ -738,7 +763,7 @@ class NDSlicer(param.Parameterized):
                 _get_format_image(
                     self.text_font,
                     title_visible=self.display_image_titles_visible,
-                    grid_visible=False,
+                    grid_visible=self.grid_visible,
                 ),
                 _bokeh_disable_wheel_zoom_tool,
                 _hide_image,
@@ -748,6 +773,7 @@ class NDSlicer(param.Parameterized):
                     use_scientific_at_all=use_scientific_at_all,
                     pl_high=pl_high,
                     pl_low=pl_low,
+                    border_visible=self.grid_visible,
                 ),
             ],  # Hide the dummy glyph
             **shared_opts,
@@ -786,7 +812,7 @@ class NDSlicer(param.Parameterized):
             _get_format_image(
                 self.text_font,
                 title_visible=self.display_error_map_titles_visible,
-                grid_visible=False,
+                grid_visible=self.grid_visible,
             ),
             _bokeh_disable_wheel_zoom_tool,
             _hide_image,
@@ -796,6 +822,7 @@ class NDSlicer(param.Parameterized):
                 use_scientific_at_all=use_scientific_at_all,
                 pl_high=pl_high,
                 pl_low=pl_low,
+                border_visible=self.grid_visible,
             ),
         ]
         diff_cbar_opts["clim"] = diff_opts["clim"]
@@ -1026,11 +1053,12 @@ class NDSlicer(param.Parameterized):
         """
         Add Colorbar elements (via dummy Image element)
         """
+        cbar_data = np.zeros((2, 2))
 
         if self.colorbar_on:
             Ncols += 1
 
-            main_cbar_fig = hv.Image(np.zeros((2, 2)), bounds=main_lbrt).opts(
+            main_cbar_fig = hv.Image(cbar_data, bounds=main_lbrt).opts(
                 cmap=self.ColorMapper.get_cmap(),
                 height=int(opts["height"]),
                 **opts["cbar_opts"],
@@ -1048,7 +1076,7 @@ class NDSlicer(param.Parameterized):
                 row += roi_img
 
             if self.colorbar_on:
-                roi_cbar_fig = hv.Image(np.zeros((2, 2))).opts(
+                roi_cbar_fig = hv.Image(cbar_data).opts(
                     cmap=self.ROI.cmap.get_cmap(),
                     height=int(opts["width"] * self.ROI.height() / self.ROI.width()),
                     **opts["cbar_opts"],
@@ -1139,7 +1167,7 @@ class NDSlicer(param.Parameterized):
 
             # Add colorbar for difference map
             if self.colorbar_on:
-                diff_cbar_fig = hv.Image(np.zeros((2, 2))).opts(
+                diff_cbar_fig = hv.Image(cbar_data).opts(
                     cmap=self.DifferenceColorMapper.get_cmap(),
                     height=int(opts["height"]),
                     **opts["diff_cbar_opts"],
