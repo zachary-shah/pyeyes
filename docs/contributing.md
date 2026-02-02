@@ -62,6 +62,15 @@ src/pyeyes/
 
 pyeyes uses `pytest` for automated testing and `playwright` for GUI interaction tests.
 
+**Grab data for pytests:**
+
+This can be done automatically with `tests/download_test_data.py`, or manually in bash with:
+
+```bash
+wget https://github.com/zachary-shah/pyeyes/releases/download/test-data-v0.4.0/test-data-v0.4.0.tar.gz
+tar -xzf test-data-v0.4.0.tar.gz -C tests/
+```
+
 **Run the full test suite:**
 ```bash
 pytest

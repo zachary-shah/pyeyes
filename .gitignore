@@ -9,6 +9,7 @@ __pycache__/
 play/
 tests/profs/
 tests/exports/
+tests/test-data/
 
 # deploy
 dist/
