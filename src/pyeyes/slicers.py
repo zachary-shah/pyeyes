@@ -306,6 +306,11 @@ class NDSlicer(param.Parameterized):
         default=True,
         doc="If True, enables popup pixel inspection on error maps.",
     )
+    popup_pixel_color = param.Color(
+        default=themes.BOKEH_WIDGET_COLOR,
+        doc="Color of the popup pixel.",
+    )
+    popup_font_size = param.Number(default=10, bounds=(3, 30), step=1)
     popup_pixel_coordinate_x = param.Number(default=-1)
     popup_pixel_coordinate_y = param.Number(default=-1)
 
@@ -1353,35 +1358,39 @@ class NDSlicer(param.Parameterized):
                 valign = "top"
 
         txt = "\n".join(lines)
+        tlwidth = max(1.5 * (self.popup_font_size / 8), 1)
+        tlborder_radius = int(max(self.popup_font_size, 4))
         text = hv.Text(
             x,
             y,
             txt,
             halign=halign,
             valign=valign,
-            fontsize=8,
+            fontsize=self.popup_font_size,
         ).opts(
             text_font=bokeh_value(self.text_font),
             text_color=themes.VIEW_THEME.text_color,
             text_alpha=1.0,
             background_fill_alpha=0.9,
             background_fill_color=themes.VIEW_THEME.accent_color,
-            border_line_width=1.5,
-            border_line_color=themes.BOKEH_WIDGET_COLOR,
-            border_radius=8,
+            border_line_width=tlwidth,
+            border_line_color=self.popup_pixel_color,
+            border_radius=tlborder_radius,
             border_line_alpha=0.6,
             show_legend=False,
         )
 
+        msize = int(max(5 * (self.popup_font_size / 8), 3))
+        mlwidth = max(1.5 * (self.popup_font_size / 8), 1)
         marker = hv.Points(
             np.array([[x, y]]),
         ).opts(
-            size=5,
+            size=msize,
             alpha=1,
-            color=themes.BOKEH_WIDGET_COLOR,
+            color=self.popup_pixel_color,
             marker="o",
-            line_color=themes.BOKEH_WIDGET_COLOR,
-            line_width=1.5,
+            line_color=self.popup_pixel_color,
+            line_width=mlwidth,
             show_legend=False,
         )
         return text * marker
@@ -1448,6 +1457,8 @@ class NDSlicer(param.Parameterized):
         "popup_pixel_show_location",
         "popup_pixel_location",
         "popup_pixel_on_error_maps",
+        "popup_pixel_color",
+        "popup_font_size",
         "normalize_for_display",
         watch=True,
     )
