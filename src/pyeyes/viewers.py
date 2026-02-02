@@ -1803,8 +1803,8 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         popup_desc = StaticText(
             name="popup_desc",
-            display_name="Popup Pixel Inspection",
-            value="Click on an image to inspect a pixel value.",
+            display_name="Pixel Inspection",
+            value="Click left-most image to inspect value.",
             width=dwidth,
             css_classes=["pyeyes-popup-desc"],
             viewer=self,
@@ -1826,9 +1826,9 @@ class ComparativeViewer(Viewer, param.Parameterized):
             # update widget visibility
             with param.parameterized.discard_events(self.slicer):
                 misc_pane = self.panes["Misc"]
-                misc_pane.get_widget("show_popup_location_checkbox").visible = new_value
-                misc_pane.get_widget("popup_on_error_maps_checkbox").visible = new_value
-                misc_pane.get_widget("popup_loc").visible = new_value
+                misc_pane.get_widget("popup_show_options_row").visible = new_value
+                misc_pane.get_widget("popup_font_size").visible = new_value
+                misc_pane.get_widget("popup_font_size_color_row").visible = new_value
                 misc_pane.get_widget("clear_popup_button").visible = new_value
 
                 # update slicer
@@ -1868,14 +1868,12 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         show_popup_location_checkbox = Checkbox(
             name="show_popup_location_checkbox",
-            display_name="Display Pixel Coordinates",
+            display_name="Show Coordinates",
             value=self.slicer.popup_pixel_show_location,
             css_classes=["pyeyes-show-popup-location-checkbox"],
             callback=show_popup_location_callback,
             viewer=self,
         )
-        show_popup_location_checkbox.visible = self.slicer.popup_pixel_enabled
-        widgets.append(show_popup_location_checkbox)
 
         # enable popup on error maps
         def popup_on_error_maps_callback(new_value):
@@ -1885,14 +1883,60 @@ class ComparativeViewer(Viewer, param.Parameterized):
 
         popup_on_error_maps_checkbox = Checkbox(
             name="popup_on_error_maps_checkbox",
-            display_name="Enable Popup on Error Maps",
+            display_name="Show on Error Maps",
             value=self.slicer.popup_pixel_on_error_maps,
             css_classes=["pyeyes-popup-on-error-maps-checkbox"],
             callback=popup_on_error_maps_callback,
             viewer=self,
         )
-        popup_on_error_maps_checkbox.visible = self.slicer.popup_pixel_enabled
-        widgets.append(popup_on_error_maps_checkbox)
+
+        # make row for show popup location and on error maps
+        popup_show_options_row = RawPanelObject(
+            name="popup_show_options_row",
+            panel_object=pn.Row(
+                show_popup_location_checkbox.get_widget(),
+                popup_on_error_maps_checkbox.get_widget(),
+            ),
+            viewer=self,
+        )
+        popup_show_options_row.visible = self.slicer.popup_pixel_enabled
+        widgets.append(popup_show_options_row)
+
+        # popup font size
+        def popup_font_size_callback(new_value):
+            with param.parameterized.discard_events(self.slicer):
+                self.slicer.popup_font_size = new_value
+            self.slicer.param.trigger("popup_font_size")
+
+        popup_font_size = EditableIntSlider(
+            name="popup_font_size",
+            display_name="Popup Size",
+            start=self.slicer.param.popup_font_size.bounds[0],
+            end=self.slicer.param.popup_font_size.bounds[1],
+            value=self.slicer.popup_font_size,
+            step=self.slicer.param.popup_font_size.step,
+            css_classes=["pyeyes-popup-font-size"],
+            callback=popup_font_size_callback,
+            viewer=self,
+        )
+        popup_font_size.visible = self.slicer.popup_pixel_enabled
+        widgets.append(popup_font_size)
+
+        # ROI Line Color
+        def popup_pixel_color_callback(new_value):
+            with param.parameterized.discard_events(self.slicer):
+                self.slicer.popup_pixel_color = new_value
+            self.slicer.param.trigger("popup_pixel_color")
+
+        popup_pixel_color = ColorPicker(
+            name="popup_pixel_color",
+            display_name="Color",
+            value=self.slicer.popup_pixel_color,
+            css_classes=["pyeyes-popup-pixel-color"],
+            callback=popup_pixel_color_callback,
+            viewer=self,
+        )
+        cwidth = popup_pixel_color.get_widget().width
 
         # popup location picker
         def popup_location_picker_callback(new_value):
@@ -1908,8 +1952,20 @@ class ComparativeViewer(Viewer, param.Parameterized):
             callback=popup_location_picker_callback,
             viewer=self,
         )
-        popup_location_picker.visible = self.slicer.popup_pixel_enabled
-        widgets.append(popup_location_picker)
+        popup_location_picker.set_width(int((dwidth - cwidth) * 0.9))
+
+        # make row for popup color and location
+        popup_font_size_color_row = RawPanelObject(
+            name="popup_font_size_color_row",
+            panel_object=pn.Row(
+                popup_pixel_color.get_widget(),
+                popup_location_picker.get_widget(),
+                width=dwidth,
+            ),
+            viewer=self,
+        )
+        popup_font_size_color_row.visible = self.slicer.popup_pixel_enabled
+        widgets.append(popup_font_size_color_row)
 
         # clear popup
         def clear_popup_callback(event):
@@ -1927,7 +1983,6 @@ class ComparativeViewer(Viewer, param.Parameterized):
         widgets.append(clear_popup_button)
 
         # Edit Display Image Titles
-
         misc_line2 = RawPanelObject(
             name="misc_line2",
             panel_object=pn.pane.HTML("<hr>", width=dwidth),
