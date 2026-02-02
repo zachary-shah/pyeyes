@@ -17,11 +17,6 @@ except ImportError:
 from .enums import ROI_LOCATION
 
 
-def rescale01(image):
-    """Rescale array to [0, 1] using min/max."""
-    return (image - image.min()) / (image.max() - image.min())
-
-
 def tonp(x: Union[np.ndarray, list, tuple]) -> np.ndarray:
     """
     Convert tensor, list, or tuple to numpy array; pass-through for ndarray.
@@ -215,39 +210,6 @@ def clone_dataset(
     new_data_dict["Value"] = new_value
 
     return original_dataset.clone(data=new_data_dict, link=link)
-
-
-def debug_imshow(data_dict: Dict[str, hv.Dataset]):
-    """
-    Display dict of hv.Datasets in a shared-axis grid (debugging).
-
-    Parameters
-    ----------
-    data_dict : dict of hv.Dataset
-        Keys = labels; each dataset has 2D kdims and Value vdim.
-    """
-    img_keys = list(data_dict.keys())
-    vdims = list(data_dict[img_keys[0]].vdims)
-    kdims_all = list(data_dict[img_keys[0]].kdims)[:2]
-
-    # Create a grid of images
-    layout = []
-
-    # make a holoview
-    for key in img_keys:
-        layout.append(
-            hv.Image(
-                data_dict[key],
-                label=key,
-                vdims=vdims,
-                kdims=kdims_all,
-            )
-        )
-
-    layout = hv.Layout(layout).opts(shared_axes=True)
-
-    # show
-    pn.serve(pn.Column(layout), show=True)
 
 
 def masked_angle(x, thresh=1e-2):

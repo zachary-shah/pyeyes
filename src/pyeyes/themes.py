@@ -66,10 +66,31 @@ def set_theme(theme_str: str) -> None:
     # set holoviews and panel theme
     if theme_str in ["dark", "soft_dark"]:
         hv.renderer("bokeh").theme = "dark_minimal"
-        pn.extension(theme="dark")
+        pn.extension(
+            theme="dark",
+            raw_css=[
+                """
+                .bk-tab.bk-active {
+                    color: #FFFFFF !important;  /* White text for active tabs */
+                }
+                .bk-tab {
+                    color: #888888;  /* Grey text for inactive tabs */
+                }
+            """
+            ],
+        )
     else:
         hv.renderer("bokeh").theme = "light_minimal"
-        pn.extension(theme="default")
+        pn.extension(
+            theme="default",
+            raw_css=[
+                """
+                .bk-tab.bk-active {
+                    color: #000000 !important;  /* Black text for active tabs */
+                }
+            """
+            ],
+        )
 
     # Update the global theme
     VIEW_THEME = SUPPORTED_THEMES[theme_str]

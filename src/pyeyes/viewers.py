@@ -2149,14 +2149,13 @@ class ComparativeViewer(Viewer, param.Parameterized):
         silent : bool
             If True, launcher uses show=False for testing.
 
-        Example:
+        Examples
         --------
-        ```
-        # Keep 20 slices in 'z' dimension, 10 in 't' dimension
-        viewer.export_reloadable_pyeyes("./viewer.py", num_slices_to_keep={"z": 20, "t": 10})
+        Keep 20 slices in 'z' dimension, 10 in 't' dimension
+        >>> viewer.export_reloadable_pyeyes("./viewer.py", num_slices_to_keep={"z": 20, "t": 10})
 
-        # Use step size of 2 for all subsampleable dimensions
-        viewer.export_reloadable_pyeyes("./viewer.py", subsampling=2)
+        Use step size of 2 for all subsampleable dimensions
+        >>> viewer.export_reloadable_pyeyes("./viewer.py", subsampling=2)
         """
 
         if isinstance(path, str):

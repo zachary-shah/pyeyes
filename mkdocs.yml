@@ -1,0 +1,57 @@
+# MkDocs config for pyeyes (Material theme)
+site_name: pyeyes
+site_description: n-dimensional image viewer for MRI and comparative analysis
+site_url: https://zachary-shah.github.io/pyeyes/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: numpy
+            show_source: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            heading_level: 2
+            show_signature_annotations: true
+            separate_signature: true
+            merge_init_into_class: true
+            docstring_section_style: spacy
+            members_order: source
+            show_category_heading: true
+            show_if_no_docstring: false
+            show_docstring_attributes: true
+            show_docstring_functions: true
+            show_docstring_classes: true
+            show_docstring_modules: false
+
+docs_dir: docs
+strict: true
+
+nav:
+  - Home: index.md
+  - User Guide: user_guide.md
+  - Changelog: changelog.md
+  - Contributing: contributing.md
+  - API:
+    - Main API: api_main.md
+    - Core API: api_core.md

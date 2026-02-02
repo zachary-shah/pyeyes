@@ -70,6 +70,15 @@ def _get_format_image(
         plot.state.title.text_color = themes.VIEW_THEME.text_color
         plot.state.title.text_font = text_font
 
+        # border
+        if grid_visible:
+            plot.state.border_line_color = themes.VIEW_THEME.accent_color
+            plot.state.border_line_alpha = 1.0
+            plot.state.border_line_width = 2
+        else:
+            plot.state.border_line_color = themes.VIEW_THEME.background_color
+            plot.state.border_line_alpha = 0.0
+
         # Constant height for the figure title
         if title_visible:
             if plot.state.title.text_font_size[-2:] in ["px", "pt"]:
@@ -108,11 +117,25 @@ def _hide_image(plot, element):
     plot.state.outline_line_alpha = 0
 
 
+def _determine_use_scientific(
+    im_scale: float, power_limit_high: int, power_limit_low: int
+) -> bool:
+    """Determine if scientific notation should be used for the colorbar."""
+    im_scale_log = np.log10(im_scale)
+    im_scale_log = int(im_scale_log)
+    if im_scale_log >= power_limit_high or im_scale_log <= power_limit_low:
+        return True
+    else:
+        return False
+
+
 def _get_format_colorbar(
     text_font: str,
-    im_scale: Optional[float] = None,
-    power_limit_high: Optional[int] = 5,
-    power_limit_low: Optional[int] = -2,
+    use_scientific: bool,
+    use_scientific_at_all: bool = False,
+    pl_high: int = 4,
+    pl_low: int = -2,
+    border_visible: bool = True,
 ):
     """Return colorbar hook (theme, size, optional scientific tick formatting)."""
 
@@ -124,18 +147,45 @@ def _get_format_colorbar(
         if p.title == "":
             p.title = None
 
-        # sizes
-        p.width = int(plot.state.width * (0.22 - 0.03 * (p.title is not None)))
+        # Apply tick formatter for custom number formatting
+        tick_args = {
+            "use_scientific": use_scientific,
+            "power_limit_high": pl_high,
+            "power_limit_low": pl_low,
+            "precision": 1 if use_scientific else 2,
+        }
 
-        p.major_label_text_font_size = f"{int(plot.state.width/8)}pt"
-        p.title_text_font_size = f"{int(plot.state.width/8)}pt"
+        formatter = BasicTickFormatter(**tick_args)
+        if hasattr(p, "formatter"):
+            p.formatter = formatter
+
+        # sizes based on scientific notation
+        if use_scientific_at_all:
+            W1 = 0.2075
+            W2 = 0.028
+            TDIV = 8
+            FDIV = 9
+        else:
+            W1 = 0.21
+            W2 = 0.03
+            TDIV = 7
+            FDIV = 8
+
+        FF = (W1 - W2 * (p.title is not None)) / W1
+        p.width = int(plot.state.width * (W1 - W2 * (p.title is not None)))
+        p.major_label_text_font_size = f"{int(np.floor(plot.state.width * FF /FDIV))}pt"
+        p.title_text_font_size = f"{int(np.floor(plot.state.width * FF /TDIV))}pt"
 
         # spacing
-        p.padding = 5
+        p.padding = 9
+        p.label_standoff = 4
+        p.title_standoff = 1
 
         # coloring
         p.background_fill_color = themes.VIEW_THEME.background_color
-        p.background_fill_alpha = 1.0
+        p.background_fill_alpha = 0.0
+        p.border_line_alpha = 0.0
+        p.border_line_color = themes.VIEW_THEME.background_color
         p.major_label_text_color = themes.VIEW_THEME.text_color
         p.major_tick_line_color = themes.VIEW_THEME.text_color
         p.title_text_color = themes.VIEW_THEME.text_color
@@ -155,33 +205,18 @@ def _get_format_colorbar(
         p.major_tick_line_dash_offset = 0
         p.major_tick_line_width = 1
 
-        # Apply tick formatter for custom number formatting
-        tick_args = {}
-
-        use_scientific = None
-        precision = 2
-        if im_scale is not None:
-            # determine precision based on im_slale
-            im_scale_log = np.log10(im_scale)
-            im_scale_log = int(im_scale_log)
-            if im_scale_log >= power_limit_high or im_scale_log <= power_limit_low:
-                use_scientific = True
-                precision = 1
-            else:
-                use_scientific = False
-
-        if precision is not None:
-            tick_args["precision"] = precision
-        if use_scientific is not None:
-            tick_args["use_scientific"] = use_scientific
-        if power_limit_high is not None:
-            tick_args["power_limit_high"] = power_limit_high
-        if power_limit_low is not None:
-            tick_args["power_limit_low"] = power_limit_low
-
-        formatter = BasicTickFormatter(**tick_args)
-        if hasattr(p, "formatter"):
-            p.formatter = formatter
+        if border_visible:
+            plot.state.background_fill_color = themes.VIEW_THEME.accent_color
+            plot.state.background_fill_alpha = 1.0
+            plot.state.border_line_color = themes.VIEW_THEME.accent_color
+            plot.state.border_line_alpha = 1.0
+            plot.state.border_line_width = 2
+        else:
+            plot.state.background_fill_color = themes.VIEW_THEME.background_color
+            plot.state.background_fill_alpha = 1.0
+            plot.state.border_line_color = themes.VIEW_THEME.background_color
+            plot.state.border_line_alpha = 0.0
+            plot.state.border_line_width = 2
 
     return _format_colorbar
 
@@ -619,13 +654,11 @@ class NDSlicer(param.Parameterized):
 
     def _build_figure_opts(self):
         """Build opts dict for images, colorbars, ROI, and difference maps."""
-        # TODO: move these constants
-        BORDER_SIZE = 3  # a.u.
-        CBAR_CONST_WIDTH = 35  # pix
-        CBAR_TEXT_WIDTH = 18  # pix
-        CBAR_SCALE_RATIO = 0.15  # fraction [0, 1]
 
-        # Determine sizes
+        """
+        general sizing
+        """
+        BORDER_SIZE = 3
         new_im_size = (
             self.lr_crop[1] - self.lr_crop[0],
             self.ud_crop[1] - self.ud_crop[0],
@@ -647,7 +680,9 @@ class NDSlicer(param.Parameterized):
             self.grid_visible,
         )
 
-        # Image options
+        """
+        Image opts
+        """
         im_opts = dict(
             cmap=self.ColorMapper.get_cmap(),
             width=int(main_width),
@@ -671,7 +706,9 @@ class NDSlicer(param.Parameterized):
             show_legend=False,
         )
 
-        # Opts to pass to ROI
+        """
+        ROI opts
+        """
         roi_opts = dict(
             **shared_opts,
         )
@@ -687,7 +724,25 @@ class NDSlicer(param.Parameterized):
                 )
             )
 
-        # Colorbar opts
+        """
+        cbar opts
+        """
+        # determine if scientific notation used on cbar ticks for main and diff maps
+        pl_high = 4
+        pl_low = -2
+        use_scientific_main = _determine_use_scientific(self.vmax, pl_high, pl_low)
+        use_scientifc_diff = _determine_use_scientific(
+            self.vmax / self.error_map_scale, pl_high, pl_low
+        )
+        if self.metrics_state in [METRICS_STATE.MAP, METRICS_STATE.ALL]:
+            use_scientific_at_all = use_scientific_main or use_scientifc_diff
+        else:
+            use_scientific_at_all = use_scientific_main
+
+        # Colorbar width setup
+        CBAR_CONST_WIDTH = 46 if use_scientific_at_all else 36  # pix
+        CBAR_TEXT_WIDTH = 24 if use_scientific_at_all else 22  # pix
+        CBAR_SCALE_RATIO = 0.25 if use_scientific_at_all else 0.21  # fraction [0, 1]
         cbar_const_w = CBAR_CONST_WIDTH
         if self.colorbar_label is not None and len(self.colorbar_label) > 0:
             cbar_const_w += CBAR_TEXT_WIDTH
@@ -708,16 +763,25 @@ class NDSlicer(param.Parameterized):
                 _get_format_image(
                     self.text_font,
                     title_visible=self.display_image_titles_visible,
-                    grid_visible=False,
+                    grid_visible=self.grid_visible,
                 ),
                 _bokeh_disable_wheel_zoom_tool,
                 _hide_image,
-                _get_format_colorbar(self.text_font, im_scale=self.vmax),
+                _get_format_colorbar(
+                    self.text_font,
+                    use_scientific=use_scientific_main,
+                    use_scientific_at_all=use_scientific_at_all,
+                    pl_high=pl_high,
+                    pl_low=pl_low,
+                    border_visible=self.grid_visible,
+                ),
             ],  # Hide the dummy glyph
             **shared_opts,
         )
 
-        # Difference map
+        """
+        diff map
+        """
         diff_opts = im_opts.copy()
         diff_opts["hooks"] = [
             _get_format_image(
@@ -740,18 +804,25 @@ class NDSlicer(param.Parameterized):
         else:
             diff_opts["clim"] = (0, self.vmax / self.error_map_scale)
 
-        # Diff map colorbar
+        """
+        diff map colorbar
+        """
         diff_cbar_opts = cbar_opts.copy()
         diff_cbar_opts["hooks"] = [
             _get_format_image(
                 self.text_font,
                 title_visible=self.display_error_map_titles_visible,
-                grid_visible=False,
+                grid_visible=self.grid_visible,
             ),
             _bokeh_disable_wheel_zoom_tool,
             _hide_image,
             _get_format_colorbar(
-                self.text_font, im_scale=self.vmax / self.error_map_scale
+                self.text_font,
+                use_scientific=use_scientifc_diff,
+                use_scientific_at_all=use_scientific_at_all,
+                pl_high=pl_high,
+                pl_low=pl_low,
+                border_visible=self.grid_visible,
             ),
         ]
         diff_cbar_opts["clim"] = diff_opts["clim"]
@@ -765,6 +836,9 @@ class NDSlicer(param.Parameterized):
                     title=f"Difference ({round_str(self.error_map_scale, ndec=3)}x)"
                 )
 
+        """
+        package all opts
+        """
         opts = dict(
             height=main_height,
             width=main_width,
@@ -979,11 +1053,12 @@ class NDSlicer(param.Parameterized):
         """
         Add Colorbar elements (via dummy Image element)
         """
+        cbar_data = np.zeros((2, 2))
 
         if self.colorbar_on:
             Ncols += 1
 
-            main_cbar_fig = hv.Image(np.zeros((2, 2)), bounds=main_lbrt).opts(
+            main_cbar_fig = hv.Image(cbar_data, bounds=main_lbrt).opts(
                 cmap=self.ColorMapper.get_cmap(),
                 height=int(opts["height"]),
                 **opts["cbar_opts"],
@@ -1001,7 +1076,7 @@ class NDSlicer(param.Parameterized):
                 row += roi_img
 
             if self.colorbar_on:
-                roi_cbar_fig = hv.Image(np.zeros((2, 2))).opts(
+                roi_cbar_fig = hv.Image(cbar_data).opts(
                     cmap=self.ROI.cmap.get_cmap(),
                     height=int(opts["width"] * self.ROI.height() / self.ROI.width()),
                     **opts["cbar_opts"],
@@ -1092,7 +1167,7 @@ class NDSlicer(param.Parameterized):
 
             # Add colorbar for difference map
             if self.colorbar_on:
-                diff_cbar_fig = hv.Image(np.zeros((2, 2))).opts(
+                diff_cbar_fig = hv.Image(cbar_data).opts(
                     cmap=self.DifferenceColorMapper.get_cmap(),
                     height=int(opts["height"]),
                     **opts["diff_cbar_opts"],

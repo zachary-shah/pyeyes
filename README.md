@@ -1,6 +1,8 @@
 # pyeyes
 
-Pyeyes is a n-dimensional data visualization tool for comparing images. Especially designed as an MRI visualization tool, inspired by FSLEyes. Built on top of [Holoviews](https://holoviews.org/) and [Bokeh](https://bokeh.org/) for interative plotting.
+Pyeyes is an n-dimensional data visualization tool for comparing images, especially designed for MRI and built on [Holoviews](https://holoviews.org/), [Bokeh](https://bokeh.org/), and [Panel](https://panel.holoviz.org/) for interactive plotting.
+
+[![Documentation](https://img.shields.io/badge/docs-mkdocs-blue)](https://zachary-shah.github.io/pyeyes/) [![PyPI version](https://img.shields.io/pypi/v/pyeyes.svg)](https://pypi.org/project/pyeyes/) [![PyPI downloads](https://img.shields.io/pypi/dm/pyeyes.svg)](https://pypi.org/project/pyeyes/) [![Python versions](https://img.shields.io/pypi/pyversions/pyeyes.svg)](https://pypi.org/project/pyeyes/) [![License](https://img.shields.io/pypi/l/pyeyes.svg)](https://pypi.org/project/pyeyes/)
 
 ---
 
@@ -20,27 +22,34 @@ Pyeyes is a n-dimensional data visualization tool for comparing images. Especial
 
 ## Features
 
-**Interactive Slicing:** Seemlessly navigate through MRI volumes of arbitrary dimensionality.
-**Dynamic Contrast Adjustment:** Toggle through different color maps, color limits, and more on the fly.
+**Interactive Slicing:** Seamlessly navigate through MRI volumes of arbitrary dimensionality.
 
-![viewer demo](./doc/viewer_gif.gif "Demo")
+![viewer demo](./doc/pyeyes_1_view.gif "View")
+
+
+**Dynamic Contrast Adjustment:** Toggle color maps, color limits, and more on the fly.
+
+![color demo](./doc/pyeyes_2_color.gif "View")
+
+**Complex Data:** Navigate different views of complex-valued datasets.
+
+![color demo](./doc/pyeyes_3_cplx.gif "Cplx")
 
 **ROI Tools**: Add "Region of Interest" to plot views.
 
-![roi demo](./doc/roi.gif "ROI")
-
+![roi demo](./doc/pyeyes_4_roi.gif "ROI")
 
 **Comparative Metrics:** Get quick looks at standard image-processing metrics against your gold-standard datasets.
 
-![analysis demo](./doc/analysis.gif "Analysis")
+![analysis demo](./doc/pyeyes_5_analysis.gif "Analysis")
 
 **Repeatability:** Save viewer configurations you like and export static figures with ease.
 
-![save demo](./doc/save_config.gif "Save")
+![save demo](./doc/pyeyes_6_export.gif "Export")
 
 **Export:** Save figures with built-in Bokeh toolbar.
 
-![save demo](./doc/download.gif "Save")
+![save demo](./doc/pyeyes_7_save.gif "Save")
 
 
 ## Installation
@@ -62,10 +71,13 @@ Activate the installed environment:
 mamba activate pyeyes
 ```
 
+For more details, see [Contributing](https://zachary-shah.github.io/pyeyes/contributing).
+
+
 ## Examples
 
-### Reccomended Usage
-Pyeyes viewer takes basic specifications on the shape of the data, all of which are optional, but helpful for making navigating your data easier!
+### Recommended Usage
+Pyeyes viewer takes basic specifications on the shape of the data, all of which are optional, but helpful for navigating your data.
 
 
 ```python
@@ -91,9 +103,8 @@ view_dims = ["y", "z"]
 # Allow categorial dimensions to be specified.
 cat_dims = {"Contrast": ["SE", "MPRAGE", "FLAIR"]}
 
-# Once launched, viewer config can be saved to config
-# path for repeating view with same or different data
-config_path = "/your/config/path/here.yaml"
+# Save config from the Export tab; load it here to repeat the same view
+config_path = "./config.json"
 
 # Initialize
 Viewer = ComparativeViewer(
@@ -149,12 +160,4 @@ ComparativeViewer(
     view_dims=view_dims,
     cat_dims=cat_dims,
 ).launch()
-```
-
-
-# Contributing
-
-Before contributing, run
-```bash
-pre-commit install
 ```
