@@ -147,6 +147,10 @@ class Select(Widget):
         """Set available options."""
         self.widget.options = val
 
+    def set_width(self, width: int) -> None:
+        """Set the width of the widget."""
+        self.widget.width = width
+
 
 class EditableIntSlider(Widget):
     """Wrapper for pn.widgets.EditableIntSlider."""
