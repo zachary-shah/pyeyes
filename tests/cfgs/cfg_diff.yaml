@@ -43,11 +43,31 @@
         },
         "config_path": {
             "type": "String",
-            "value": "./cfgs/diff_config.yaml",
+            "value": "./cfgs/cfg_diff.yaml",
             "default": "./config.yaml"
+        },
+        "html_export_path": {
+            "type": "String",
+            "value": "./viewer.html",
+            "default": "./viewer.html"
+        },
+        "html_export_page_name": {
+            "type": "String",
+            "value": "MRI Viewer",
+            "default": "MRI Viewer"
         }
     },
     "slicer_config": {
+        "title_font_size": {
+            "type": "Number",
+            "value": 12,
+            "default": 12,
+            "bounds": [
+                2,
+                36
+            ],
+            "step": 1
+        },
         "vmin": {
             "type": "Number",
             "value": 0.0,
@@ -70,8 +90,8 @@
         },
         "size_scale": {
             "type": "Number",
-            "value": 400,
-            "default": 400,
+            "value": 300,
+            "default": 300,
             "bounds": [
                 200,
                 1000
@@ -113,19 +133,39 @@
                 "uncorr"
             ]
         },
+        "display_image_titles": {
+            "type": "Dict",
+            "value": {
+                "skope": "Skope Field Camera",
+                "festive": "FESTiVE MLP",
+                "uncorr": "Eddy Uncorrected"
+            },
+            "default": {}
+        },
+        "display_image_titles_visible": {
+            "type": "Boolean",
+            "value": true,
+            "default": true
+        },
+        "display_error_map_titles_visible": {
+            "type": "Boolean",
+            "value": false,
+            "default": false
+        },
+        "grid_visible": {
+            "type": "Boolean",
+            "value": false,
+            "default": false
+        },
+        "text_font": {
+            "type": "ObjectSelector",
+            "value": "Helvetica Neue",
+            "default": "Times"
+        },
         "cmap": {
             "type": "ObjectSelector",
             "value": "gray",
-            "default": "gray",
-            "objects": [
-                "gray",
-                "jet",
-                "viridis",
-                "inferno",
-                "RdBu",
-                "Magma",
-                "Quantitative"
-            ]
+            "default": "gray"
         },
         "colorbar_on": {
             "type": "Boolean",
@@ -134,25 +174,25 @@
         },
         "colorbar_label": {
             "type": "String",
-            "value": "",
+            "value": "a.u.",
             "default": ""
         },
         "dim_indices": {
             "type": "Dict",
             "value": {
                 "z": 15,
-                "Bdir": 10
+                "Bdir": 2
             },
             "default": {
                 "z": 15,
-                "Bdir": 10
+                "Bdir": 2
             }
         },
         "lr_crop": {
             "type": "Range",
             "value": [
                 0,
-                230
+                220
             ],
             "default": [
                 0,
@@ -160,7 +200,7 @@
             ],
             "bounds": [
                 0,
-                230
+                220
             ],
             "step": 1
         },
@@ -176,7 +216,7 @@
             ],
             "bounds": [
                 0,
-                230
+                220
             ],
             "step": 1
         },
@@ -187,17 +227,7 @@
         "roi_cmap": {
             "type": "ObjectSelector",
             "value": "Same",
-            "default": "Same",
-            "objects": [
-                "gray",
-                "jet",
-                "viridis",
-                "inferno",
-                "RdBu",
-                "Magma",
-                "Quantitative",
-                "Same"
-            ]
+            "default": "Same"
         },
         "roi_mode": {
             "value": 0,
@@ -227,40 +257,24 @@
         "error_map_type": {
             "type": "ObjectSelector",
             "value": "SSIM",
-            "default": "L1Diff",
-            "objects": [
-                "L1Diff",
-                "L2Diff",
-                "SSIM"
-            ]
+            "default": "L1Diff"
         },
         "error_map_cmap": {
             "type": "ObjectSelector",
             "value": "Grays",
-            "default": "inferno",
-            "objects": [
-                "gray",
-                "jet",
-                "viridis",
-                "inferno",
-                "RdBu",
-                "Magma",
-                "Grays"
-            ]
+            "default": "inferno"
+        },
+        "normalize_error_map": {
+            "type": "Boolean",
+            "value": true,
+            "default": true
         },
         "metrics_text_types": {
             "type": "ListSelector",
             "value": [
                 "NRMSE"
             ],
-            "default": [],
-            "objects": [
-                "L1Diff",
-                "RMSE",
-                "NRMSE",
-                "PSNR",
-                "SSIM"
-            ]
+            "default": []
         },
         "metrics_text_location": {
             "value": "Top Left",
@@ -280,9 +294,20 @@
             "type": "Boolean",
             "value": false,
             "default": false
+        },
+        "scroll_dim": {
+            "type": "String",
+            "value": "z",
+            "default": null
         }
     },
     "roi_config": {
+        "roi_loc": "Top Right",
+        "zoom_scale": 2.0,
+        "color": "red",
+        "line_width": 2,
+        "zoom_order": 1,
+        "padding_pct": 0.001,
         "point1": {
             "x": 138.86498651649745,
             "y": 52.46949000388198
@@ -290,12 +315,6 @@
         "point2": {
             "x": 204.73596129441626,
             "y": 83.01533385093167
-        },
-        "roi_loc": "Top Right",
-        "zoom_scale": 2.0,
-        "color": "red",
-        "line_width": 2,
-        "zoom_order": 1,
-        "padding_pct": 0.001
+        }
     }
 }

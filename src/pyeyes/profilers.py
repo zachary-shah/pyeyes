@@ -13,18 +13,25 @@ def profile_decorator(
     max_profs_size: int = 25,
 ) -> callable:
     """
-    Decorator for profiling functions
+    Decorator to time function calls and optionally dump cProfile stats.
 
     Parameters
     ----------
-    verbose : bool, optional
-        Whether to print basic profile of timing of function call, by default True
-    save : bool, optional
-        Whether to save the profiling information using cProfile, by default False
-    save_path : str, optional
-        Path to save the profiling information, by default "./profs/view_profile"
-    max_profs_size : int, optional
-        Maximum number of profiles to save, by default 3
+    enable : bool
+        If False, return identity decorator.
+    verbose : bool
+        Print timing (call count, last, avg) to stdout.
+    save : bool
+        If True, run cProfile and dump to save_path.
+    save_path : str
+        Prefix for .prof files (e.g. "./profs/function_profile").
+    max_profs_size : int
+        Max number of .prof files to write before warning.
+
+    Returns
+    -------
+    callable
+        Decorator that wraps a function.
     """
 
     def decorator(func):

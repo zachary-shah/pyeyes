@@ -39,11 +39,21 @@ dependencies = [
 Homepage = "https://github.com/zachary-shah/pyeyes"
 Repository = "https://github.com/zachary-shah/pyeyes"
 "Bug Tracker" = "https://github.com/zachary-shah/pyeyes/issues"
+Documentation = "https://zachary-shah.github.io/pyeyes/"
 
 [project.optional-dependencies]
+docs = [
+    "mkdocs-material",
+    "mkdocstrings[python]",
+]
 dev = [
     "pre-commit",
     "black",
+]
+test = [
+    "pytest>=6.0",
+    "pytest-playwright>=0.4.0",
+    "pytest-timeout",
 ]
 
 [tool.setuptools]

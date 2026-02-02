@@ -1,8 +1,7 @@
-"""
-Initial prototype of config class for current factoring of project.
-"""
+"""Serialize/deserialize Parameterized objects and JSON-friendly values."""
 
 import enum
+import warnings
 
 import numpy as np
 import param
@@ -16,10 +15,12 @@ UNSERIALIZED_OBJECTS_KEYS = [
     "error_map_type",
     "error_map_cmap",
     "metrics_text_types",
+    "text_font",
 ]
 
 
 def json_serial(obj):
+    """Recursively convert obj to JSON-serializable types (e.g. ndarray -> list)."""
     if isinstance(obj, (str, int, float, bool)):
         return obj
     if isinstance(obj, (np.integer, np.floating)):
@@ -38,13 +39,17 @@ def json_serial(obj):
 
 def serialize_parameters(obj: param.Parameterized) -> dict:
     """
-    Serialize both parameter definitions and values of a Parameterized object.
+    Serialize parameter definitions and values of a Parameterized object.
 
-    Parameters:
-    - obj (param.Parameterized): The object to serialize.
+    Parameters
+    ----------
+    obj : param.Parameterized
+        Object to serialize.
 
-    Returns:
-    - dict: A dictionary containing parameter definitions and their current values.
+    Returns
+    -------
+    dict
+        Parameter names to dicts with type, value, bounds, step, objects as needed.
     """
     serialized = {}
     for name in obj.param:
@@ -82,13 +87,23 @@ def serialize_parameters(obj: param.Parameterized) -> dict:
     return serialized
 
 
-def deserialize_parameters(obj: param.Parameterized, serialized: dict):
+def deserialize_parameters(
+    obj: param.Parameterized, serialized: dict
+) -> param.Parameterized:
     """
-    Deserialize parameter definitions and values into a Parameterized object.
+    Restore parameter values (and attributes) from a serialized dict into obj.
 
-    Parameters:
-    - obj (param.Parameterized): The object to deserialize into.
-    - serialized (dict): A dictionary containing parameter definitions and their current values.
+    Parameters
+    ----------
+    obj : param.Parameterized
+        Object to update.
+    serialized : dict
+        Output of serialize_parameters (param name -> param info).
+
+    Returns
+    -------
+    param.Parameterized
+        Updated object with restored parameters.
     """
     for name in obj.param:
 
@@ -113,6 +128,22 @@ def deserialize_parameters(obj: param.Parameterized, serialized: dict):
             elif isinstance(p, (param.ObjectSelector, param.ListSelector)):
                 if name not in UNSERIALIZED_OBJECTS_KEYS:
                     p.objects = param_info["objects"]
+                if isinstance(p, param.ObjectSelector):
+                    if value not in p.objects:
+                        warnings.warn(
+                            f"Config value {value} for {name} not supported. Using default: {p.default}"
+                        )
+                        value = p.default
+                elif isinstance(p, param.ListSelector):
+                    valid_list = []
+                    for v in value:
+                        if v in p.objects:
+                            valid_list.append(v)
+                        else:
+                            warnings.warn(
+                                f"Config value {v} for param {name} not in supported object list."
+                            )
+                    value = valid_list
 
             if isinstance(p, (param.Range)):
                 value = tuple(value)

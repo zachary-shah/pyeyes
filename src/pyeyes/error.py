@@ -7,8 +7,9 @@ pn.extension(notifications=True)
 _ORIGINAL_EXCEPTHOOK = sys.excepthook
 
 
-# Decorator to handle errors
 def error_handler_decorator(disp_duration_ms=3000):
+    """Decorator: on exception, show Panel notification then re-raise."""
+
     def decorator(func):
         # This ensures the wrapper retains the metadata (including name) of the original function
         @wraps(func)
@@ -28,11 +29,12 @@ def error_handler_decorator(disp_duration_ms=3000):
 
 
 def warning(msg, duration_ms=3000):
+    """Show Panel warning notification."""
     pn.state.notifications.warning(msg, duration=duration_ms)
 
 
-# This will catch any unhandled exceptions
 def global_error_handler(exc_type, exc_value, exc_traceback):
+    """Excepthook: show Panel error and re-raise; KeyboardInterrupt passes through."""
     if issubclass(exc_type, KeyboardInterrupt):
         # Allow KeyboardInterrupt to exit gracefully
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
@@ -42,10 +44,10 @@ def global_error_handler(exc_type, exc_value, exc_traceback):
 
 
 def install_pyeyes_error_handler():
-    """Call this when you actually launch your PyEyes viewer."""
+    """Install global excepthook that shows Panel error notification."""
     sys.excepthook = global_error_handler
 
 
 def uninstall_pyeyes_error_handler():
-    """Restore the system default hook."""
+    """Restore default sys.excepthook."""
     sys.excepthook = _ORIGINAL_EXCEPTHOOK

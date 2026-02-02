@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 import holoviews as hv
 import numpy as np
@@ -11,12 +11,17 @@ from .utils import get_effective_location
 
 
 class Point:
+    """Simple (x, y) point for ROI corners."""
+
     def __init__(self, x=0, y=0):
+        """Store x, y (default 0, 0)."""
         self.x = x
         self.y = y
 
 
 class ROI:
+    """Region-of-interest: two corners, overlay/separate view, zoom, and serialization."""
+
     def __init__(
         self,
         point1: Optional[Point] = None,
@@ -31,9 +36,27 @@ class ROI:
         config: Optional[dict] = None,
     ):
         """
-        Basic ROI class responsible for extracting ROIs from images.
-        """
+        ROI from two corners or from serialized config.
 
+        Parameters
+        ----------
+        point1, point2 : Optional[Point]
+            Corner points (None until drawn).
+        roi_loc : ROI_LOCATION
+            Corner for overlay (TOP_LEFT, TOP_RIGHT, etc.).
+        zoom_scale : float
+            Scale factor for zoomed ROI view.
+        cmap : ColorMap
+            Colormap for ROI image.
+        color : str
+            Border color (e.g. 'red').
+        line_width, zoom_order : int
+            Border width and zoom interpolation order.
+        padding_pct : float
+            Padding fraction at overlay edges.
+        config : Optional[dict]
+            If set, init_from_config(cfg, cmap) is used instead.
+        """
         if config is not None:
             self.init_from_config(config, cmap=cmap)
             return
@@ -56,11 +79,26 @@ class ROI:
         addnl_opts: Optional[dict] = {},
         flip_lr: Optional[bool] = False,
         flip_ud: Optional[bool] = False,
-    ) -> hv.Image:
+    ) -> Tuple:
         """
-        Return the overlay layer for the ROI inside the main image.
-        """
+        Build overlay ROI image and pipe; position by roi_loc and flips.
 
+        Parameters
+        ----------
+        img_arr : hv.Dataset
+            Source image (2D + Value).
+        label : str
+            Title for ROI image.
+        addnl_opts : dict
+            Extra holoviews opts for ROI image.
+        flip_lr, flip_ud : bool
+            Apply to effective corner.
+
+        Returns
+        -------
+        tuple
+            (scaled_roi_image * bounds, roi_pipe).
+        """
         self._validate()
 
         # Original bounds
@@ -134,11 +172,26 @@ class ROI:
         label: str,
         width: float,
         addnl_opts: Optional[dict] = {},
-    ) -> hv.Image:
+    ) -> Tuple:
         """
-        Return a new image object for the ROI with size scaled to have equivalent width to original image
-        """
+        Build separate ROI image (fixed width) and pipe.
 
+        Parameters
+        ----------
+        img_arr : hv.Dataset
+            Source image.
+        label : str
+            Title.
+        width : float
+            Display width in px (height from aspect).
+        addnl_opts : dict
+            Extra opts.
+
+        Returns
+        -------
+        tuple
+            (roi_image * bounds, roi_pipe).
+        """
         self._validate()
 
         # We want to maintain crop aspect ratio with equivalent image width
@@ -187,23 +240,25 @@ class ROI:
         return scaled_roi_img, roi_pipe
 
     def height(self):
+        """Return absolute height (point2.y - point1.y)."""
         return abs(self.point2.y - self.point1.y)
 
     def width(self):
+        """Return absolute width (point2.x - point1.x)."""
         return abs(self.point2.x - self.point1.x)
 
     def set_xrange(self, new_x1, new_x2):
-
+        """Set left/right from two x values."""
         self.point1.x = new_x1
         self.point2.x = new_x2
 
     def set_yrange(self, new_y1, new_y2):
-
+        """Set bottom/top from two y values."""
         self.point1.y = new_y1
         self.point2.y = new_y2
 
     def lbrt(self):
-
+        """Return (left, bottom, right, top) from point1/point2."""
         self._validate()
 
         l, r = sorted([self.point1.x, self.point2.x])
@@ -216,7 +271,7 @@ class ROI:
         img: hv.Image,
         zoom_scale: Optional[float] = None,
     ) -> np.ndarray:
-
+        """Crop ROI from img, flipud, and zoom; return 2D array."""
         if zoom_scale is None:
             zoom_scale = self.zoom_scale
 
@@ -238,7 +293,7 @@ class ROI:
         return data_np
 
     def _validate(self):
-
+        """Raise if points missing or zero width/height."""
         if self.point1 is None or self.point2 is None:
             raise ValueError("To create ROI, both points must be provided")
 
@@ -249,10 +304,7 @@ class ROI:
             raise ValueError("ROI width cannot be zero")
 
     def serialize(self) -> dict:
-        """
-        Hard-coded serialization for use in saving config by viewer.
-        FIXME: color-maps do not serialize.
-        """
+        """Return dict of ROI settings and point coords for viewer config save."""
         out_dict = {
             "roi_loc": self.roi_loc.value,
             "zoom_scale": self.zoom_scale,
@@ -270,11 +322,7 @@ class ROI:
         return out_dict
 
     def init_from_config(self, cfg: dict, cmap):
-        """
-        Initialize ROI from hard-coded serialized config.
-        For now, assuming that cmap is passed in separately.
-        """
-
+        """Restore ROI from serialized config; cmap passed separately (not serialized)."""
         self.roi_loc = ROI_LOCATION(cfg["roi_loc"])
         self.zoom_scale = cfg["zoom_scale"]
         self.color = cfg["color"]
