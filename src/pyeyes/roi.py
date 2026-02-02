@@ -32,7 +32,6 @@ class ROI:
         color: Optional[str] = "red",
         line_width: Optional[int] = 2,
         zoom_order: Optional[int] = 1,
-        padding_pct: Optional[float] = 0.001,
         config: Optional[dict] = None,
     ):
         """
@@ -52,8 +51,6 @@ class ROI:
             Border color (e.g. 'red').
         line_width, zoom_order : int
             Border width and zoom interpolation order.
-        padding_pct : float
-            Padding fraction at overlay edges.
         config : Optional[dict]
             If set, init_from_config(cfg, cmap) is used instead.
         """
@@ -70,7 +67,6 @@ class ROI:
         self.color = color
         self.line_width = line_width
         self.zoom_order = zoom_order
-        self.padding_pct = padding_pct
 
     def get_overlay_roi(
         self,
@@ -109,28 +105,28 @@ class ROI:
         scaled_height = self.height() * self.zoom_scale
 
         # Padding on roi inview location
-        padding_x = self.padding_pct * (r_im - l_im)
-        padding_y = self.padding_pct * (t_im - b_im)
+        padding_x = 0.002 * (r_im - l_im) * self.line_width
+        padding_y = 0.002 * (t_im - b_im) * self.line_width
 
         effective_loc = get_effective_location(self.roi_loc, flip_lr, flip_ud)
 
         if effective_loc == ROI_LOCATION.TOP_LEFT:
-            new_x_min = l_im + padding_x
+            new_x_min = l_im + padding_x + 0.5 * (int(flip_lr))
             new_x_max = new_x_min + scaled_width
             new_y_max = t_im - padding_y
             new_y_min = new_y_max - scaled_height
         elif effective_loc == ROI_LOCATION.TOP_RIGHT:
-            new_x_max = r_im - padding_x
+            new_x_max = r_im - padding_x - 0.5 * (1 - int(flip_lr))
             new_x_min = new_x_max - scaled_width
             new_y_max = t_im - padding_y
             new_y_min = new_y_max - scaled_height
         elif effective_loc == ROI_LOCATION.BOTTOM_LEFT:
-            new_x_min = l_im + padding_x
-            new_y_min = b_im + padding_y
+            new_x_min = l_im + padding_x + 0.5 * (int(flip_lr))
             new_x_max = new_x_min + scaled_width
+            new_y_min = b_im + padding_y
             new_y_max = new_y_min + scaled_height
         elif effective_loc == ROI_LOCATION.BOTTOM_RIGHT:
-            new_x_max = r_im - padding_x
+            new_x_max = r_im - padding_x - 0.5 * (1 - int(flip_lr))
             new_x_min = new_x_max - scaled_width
             new_y_min = b_im + padding_y
             new_y_max = new_y_min + scaled_height
@@ -227,7 +223,7 @@ class ROI:
 
         # Get new bounds
         le, be, re, te = _return_separate_roi(img_arr).bounds.lbrt()
-        extent_padded = (le + 0.5, be + 0.5, re - 0.5, te - 0.5)
+        extent_padded = (le + 0.5, be + 0.5, re - 1.0, te - 0.5)
 
         scaled_roi_img = scaled_roi_dmap * hv.Bounds(
             extent_padded,
@@ -311,7 +307,6 @@ class ROI:
             "color": self.color,
             "line_width": self.line_width,
             "zoom_order": self.zoom_order,
-            "padding_pct": self.padding_pct,
         }
 
         if self.point1 is not None:
@@ -328,7 +323,6 @@ class ROI:
         self.color = cfg["color"]
         self.line_width = cfg["line_width"]
         self.zoom_order = cfg["zoom_order"]
-        self.padding_pct = cfg["padding_pct"]
 
         if "point1" in cfg:
             self.point1 = Point(cfg["point1"]["x"], cfg["point1"]["y"])
