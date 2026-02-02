@@ -4,9 +4,33 @@ This document provides a detailed changelog for pyeyes releases, documenting new
 
 ---
 
+## v0.4.1
+
+**Release Date:** February 02 2026
+
+### Overview
+
+Patch release addressing GUI improvements for pixel inspection and fixing an ROI boundary issue.
+
+### Improvements
+
+| Area | Description |
+|------|-------------|
+| Pixel inspection | Exposed size and color customization options for pixel popup markers |
+| GUI layout | More compact Misc tab layout for pixel inspection controls |
+| Dependencies | Updated package dependencies in `pyproject.toml` |
+
+### Bug Fixes
+
+| Issue | Description |
+|-------|-------------|
+| ROI bounding box | Fixed padding issue with ROI bounding box calculations |
+
+---
+
 ## v0.4.0
 
-**Release Date:** February 2026
+**Release Date:** February 01 2026
 
 ### Overview
 
@@ -154,6 +178,7 @@ v0.1.3 introduces core features that form the foundation of pyeyes' interactive 
 
 | Version | Release Date | Key Features |
 |---------|--------------|-------------|
+| v0.4.1 | February 2026 | Additional popup customization, pip dependency fixes |
 | v0.4.0 | February 2026 | Mouse scrolling, pixel popup, normalization options, Misc tab features |
 | v0.3.0 | January 2026 | Error map overlays, reloadable viewer export, colorbar fixes, 1D viewer prototype |
 | v0.2.0 | March 2025 | Additional error maps (SSIM, relative), HTML export, multi-viewer launcher |
