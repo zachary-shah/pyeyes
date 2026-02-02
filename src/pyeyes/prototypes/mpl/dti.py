@@ -9,7 +9,6 @@ import warnings
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import nibabel as nib
 import numpy as np
 from matplotlib import use as backend_use
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
@@ -19,6 +18,14 @@ from .mpl_config import PlotConfig, dark_mode
 
 
 def load_dti(dti_path):
+    # lazy import
+    try:
+        import nibabel as nib
+    except ImportError:
+        raise ImportError(
+            "nibabel is not installed. Please install it with `pip install nibabel`"
+        )
+
     dti_keys = ["FA", "MD", "MO", "S0", "L1", "L2", "L3", "V1", "V2", "V3"]
 
     dti_imgs = {}
