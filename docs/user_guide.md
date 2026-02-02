@@ -1,6 +1,6 @@
 # User Guide
 
-This guide provides an overview of pyeyes functionality and features. For installation and usage examples, see the [README](https://github.com/zachary-shah/pyeyes#readme). For  Python API, see [API](api_main.md). 
+This guide provides an overview of pyeyes functionality and features. For installation and usage examples, see the [README](https://github.com/zachary-shah/pyeyes#readme). For  Python API, see [API](api_main.md).
 
 ---
 
@@ -36,7 +36,7 @@ The interface is organized into a figure window and a control panel, comprised o
 
 ### Figure Window
 
-The figure window displays the datasets at the current slice. In the top right corner of the figure is the **Bokeh Toolbar**, containing Bokeh-native navigation tools only for the currently displayed data. The most useful feature is the "Save" Icon to save the current displayed data as a `.png` file. 
+The figure window displays the datasets at the current slice. In the top right corner of the figure is the **Bokeh Toolbar**, containing Bokeh-native navigation tools only for the currently displayed data. The most useful feature is the "Save" Icon to save the current displayed data as a `.png` file.
 
 ### Viewer Control Panel
 

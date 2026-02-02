@@ -1,8 +1,8 @@
 # pyeyes
 
-Pyeyes is an n-dimensional data visualization tool for comparing images, especially designed for MRI and built on [Holoviews](https://holoviews.org/), [Bokeh](https://bokeh.org/), and [Panel](https://panel.holoviz.org/) for interactive plotting. *(v0.4.0)*
+Pyeyes is an n-dimensional data visualization tool for comparing images, especially designed for MRI and built on [Holoviews](https://holoviews.org/), [Bokeh](https://bokeh.org/), and [Panel](https://panel.holoviz.org/) for interactive plotting.
 
-**For full documentation (GUI overview, v0.4.0 features, roadmap, API), see [Documentation](docs/user_guide.md).**
+**For full documentation, see [Documentation](docs/index.md).**
 
 ---
 
@@ -23,28 +23,33 @@ Pyeyes is an n-dimensional data visualization tool for comparing images, especia
 ## Features
 
 **Interactive Slicing:** Seamlessly navigate through MRI volumes of arbitrary dimensionality.
+
+![viewer demo](./doc/pyeyes_1_view.gif "View")
+
+
 **Dynamic Contrast Adjustment:** Toggle color maps, color limits, and more on the fly.
 
-![viewer demo](./doc/viewer_gif.gif "Demo")
+![color demo](./doc/pyeyes_2_color.gif "View")
+
+**Complex Data:** Navigate different views of complex-valued datasets.
+
+![color demo](./doc/pyeyes_3_cplx.gif "Cplx")
 
 **ROI Tools**: Add "Region of Interest" to plot views.
 
-![roi demo](./doc/roi.gif "ROI")
-
+![roi demo](./doc/pyeyes_4_roi.gif "ROI")
 
 **Comparative Metrics:** Get quick looks at standard image-processing metrics against your gold-standard datasets.
 
-![analysis demo](./doc/analysis.gif "Analysis")
+![analysis demo](./doc/pyeyes_5_analysis.gif "Analysis")
 
 **Repeatability:** Save viewer configurations you like and export static figures with ease.
 
-![save demo](./doc/save_config.gif "Save")
+![save demo](./doc/pyeyes_6_export.gif "Export")
 
 **Export:** Save figures with built-in Bokeh toolbar.
 
-**Pixel inspection (v0.4.0):** Click on an image to show a popup with the pixel value; enable from the Misc tab.
-
-![save demo](./doc/download.gif "Save")
+![save demo](./doc/pyeyes_7_save.gif "Save")
 
 
 ## Installation

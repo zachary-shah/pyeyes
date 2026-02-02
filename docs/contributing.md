@@ -104,4 +104,3 @@ playwright install
 ### Questions?
 
 For questions or discussion about contributing, please open an issue on [GitHub](https://github.com/zachary-shah/pyeyes/issues).
-
