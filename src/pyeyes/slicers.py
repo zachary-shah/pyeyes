@@ -721,6 +721,8 @@ class NDSlicer(param.Parameterized):
             roi_opts.update(
                 dict(
                     shared_axes=False,
+                    invert_yaxis=self.flip_ud,
+                    invert_xaxis=self.flip_lr,
                     hooks=[
                         fmt_img_hook,
                         _bokeh_disable_wheel_zoom_tool,
@@ -924,6 +926,7 @@ class NDSlicer(param.Parameterized):
             self._image_pipes[k] = pipe
 
             def _img_callback(data, image_name=image_name):
+                # return hv.Image(data, label=image_name, bounds=main_lbrt).opts(**opts["im_opts"])
                 return hv.Image(data, label=image_name).opts(**opts["im_opts"])
 
             imgs.append(
