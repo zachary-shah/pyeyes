@@ -2082,7 +2082,16 @@
 
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">NDSlicer</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">vdims</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">cdim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">clabs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">cat_dims</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">cfg</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">plot_hooks</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Callable</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">NDSlicer</span><span class="p">(</span>
+    <span class="n">data</span><span class="p">:</span> <span class="n">Dataset</span><span class="p">,</span>
+    <span class="n">vdims</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">cdim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">clabs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cat_dims</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cfg</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">plot_hooks</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Callable</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">params</span>
+<span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -2246,12 +2255,7 @@
 
                   <details class="mkdocstrings-source">
                     <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">312</span>
-<span class="normal">313</span>
-<span class="normal">314</span>
-<span class="normal">315</span>
-<span class="normal">316</span>
-<span class="normal">317</span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">317</span>
 <span class="normal">318</span>
 <span class="normal">319</span>
 <span class="normal">320</span>
@@ -2419,7 +2423,12 @@
 <span class="normal">482</span>
 <span class="normal">483</span>
 <span class="normal">484</span>
-<span class="normal">485</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">485</span>
+<span class="normal">486</span>
+<span class="normal">487</span>
+<span class="normal">488</span>
+<span class="normal">489</span>
+<span class="normal">490</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">data</span><span class="p">:</span> <span class="n">hv</span><span class="o">.</span><span class="n">Dataset</span><span class="p">,</span>
     <span class="n">vdims</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
@@ -2617,7 +2626,9 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">slice</span><span class="p">(</span><span class="n">apply_colormap</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">return_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">slice</span><span class="p">(</span>
+    <span class="n">apply_colormap</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">return_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -2703,12 +2714,7 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">509</span>
-<span class="normal">510</span>
-<span class="normal">511</span>
-<span class="normal">512</span>
-<span class="normal">513</span>
-<span class="normal">514</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">514</span>
 <span class="normal">515</span>
 <span class="normal">516</span>
 <span class="normal">517</span>
@@ -2847,7 +2853,12 @@
 <span class="normal">650</span>
 <span class="normal">651</span>
 <span class="normal">652</span>
-<span class="normal">653</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">slice</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">apply_colormap</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">return_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="normal">653</span>
+<span class="normal">654</span>
+<span class="normal">655</span>
+<span class="normal">656</span>
+<span class="normal">657</span>
+<span class="normal">658</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">slice</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">apply_colormap</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">return_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return current 2D slice and optional error maps/metrics.</span>
 
@@ -3040,21 +3051,7 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1460</span>
-<span class="normal">1461</span>
-<span class="normal">1462</span>
-<span class="normal">1463</span>
-<span class="normal">1464</span>
-<span class="normal">1465</span>
-<span class="normal">1466</span>
-<span class="normal">1467</span>
-<span class="normal">1468</span>
-<span class="normal">1469</span>
-<span class="normal">1470</span>
-<span class="normal">1471</span>
-<span class="normal">1472</span>
-<span class="normal">1473</span>
-<span class="normal">1474</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1474</span>
 <span class="normal">1475</span>
 <span class="normal">1476</span>
 <span class="normal">1477</span>
@@ -3077,7 +3074,21 @@
 <span class="normal">1494</span>
 <span class="normal">1495</span>
 <span class="normal">1496</span>
-<span class="normal">1497</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@param</span><span class="o">.</span><span class="n">depends</span><span class="p">(</span><span class="s2">&quot;dim_indices&quot;</span><span class="p">,</span> <span class="s2">&quot;rebuild_figure_flag&quot;</span><span class="p">)</span>
+<span class="normal">1497</span>
+<span class="normal">1498</span>
+<span class="normal">1499</span>
+<span class="normal">1500</span>
+<span class="normal">1501</span>
+<span class="normal">1502</span>
+<span class="normal">1503</span>
+<span class="normal">1504</span>
+<span class="normal">1505</span>
+<span class="normal">1506</span>
+<span class="normal">1507</span>
+<span class="normal">1508</span>
+<span class="normal">1509</span>
+<span class="normal">1510</span>
+<span class="normal">1511</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@param</span><span class="o">.</span><span class="n">depends</span><span class="p">(</span><span class="s2">&quot;dim_indices&quot;</span><span class="p">,</span> <span class="s2">&quot;rebuild_figure_flag&quot;</span><span class="p">)</span>
 <span class="nd">@error</span><span class="o">.</span><span class="n">error_handler_decorator</span><span class="p">()</span>
 <span class="nd">@profilers</span><span class="o">.</span><span class="n">profile_decorator</span><span class="p">(</span>
     <span class="n">enable</span><span class="o">=</span><span class="kc">False</span>
@@ -3129,7 +3140,9 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">set_volatile_dims</span><span class="p">(</span><span class="n">vdims</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">pre_cache</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">set_volatile_dims</span><span class="p">(</span>
+    <span class="n">vdims</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">pre_cache</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -3139,21 +3152,7 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1507</span>
-<span class="normal">1508</span>
-<span class="normal">1509</span>
-<span class="normal">1510</span>
-<span class="normal">1511</span>
-<span class="normal">1512</span>
-<span class="normal">1513</span>
-<span class="normal">1514</span>
-<span class="normal">1515</span>
-<span class="normal">1516</span>
-<span class="normal">1517</span>
-<span class="normal">1518</span>
-<span class="normal">1519</span>
-<span class="normal">1520</span>
-<span class="normal">1521</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1521</span>
 <span class="normal">1522</span>
 <span class="normal">1523</span>
 <span class="normal">1524</span>
@@ -3181,7 +3180,21 @@
 <span class="normal">1546</span>
 <span class="normal">1547</span>
 <span class="normal">1548</span>
-<span class="normal">1549</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">set_volatile_dims</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vdims</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">pre_cache</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+<span class="normal">1549</span>
+<span class="normal">1550</span>
+<span class="normal">1551</span>
+<span class="normal">1552</span>
+<span class="normal">1553</span>
+<span class="normal">1554</span>
+<span class="normal">1555</span>
+<span class="normal">1556</span>
+<span class="normal">1557</span>
+<span class="normal">1558</span>
+<span class="normal">1559</span>
+<span class="normal">1560</span>
+<span class="normal">1561</span>
+<span class="normal">1562</span>
+<span class="normal">1563</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">set_volatile_dims</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vdims</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">pre_cache</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set viewing dims and derive slicing dims, crop bounds, dim_indices.&quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">pre_cache</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_cache</span><span class="p">()</span>
@@ -3248,18 +3261,18 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1634</span>
-<span class="normal">1635</span>
-<span class="normal">1636</span>
-<span class="normal">1637</span>
-<span class="normal">1638</span>
-<span class="normal">1639</span>
-<span class="normal">1640</span>
-<span class="normal">1641</span>
-<span class="normal">1642</span>
-<span class="normal">1643</span>
-<span class="normal">1644</span>
-<span class="normal">1645</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_slice_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1648</span>
+<span class="normal">1649</span>
+<span class="normal">1650</span>
+<span class="normal">1651</span>
+<span class="normal">1652</span>
+<span class="normal">1653</span>
+<span class="normal">1654</span>
+<span class="normal">1655</span>
+<span class="normal">1656</span>
+<span class="normal">1657</span>
+<span class="normal">1658</span>
+<span class="normal">1659</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_slice_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Stack current slice image values (no colormap) into one array.&quot;&quot;&quot;</span>
     <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span>
         <span class="p">[</span>
@@ -3295,10 +3308,10 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1647</span>
-<span class="normal">1648</span>
-<span class="normal">1649</span>
-<span class="normal">1650</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_data_lims</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1661</span>
+<span class="normal">1662</span>
+<span class="normal">1663</span>
+<span class="normal">1664</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_data_lims</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return (min, max) of current slice data.&quot;&quot;&quot;</span>
     <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_slice_data</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
@@ -3316,7 +3329,15 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">set_vmin_vmax</span><span class="p">(</span><span class="n">vmin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">dmin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">dmax</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">bound_min</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">bound_max</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">set_vmin_vmax</span><span class="p">(</span>
+    <span class="n">vmin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">vmax</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">dmin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">dmax</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">bound_min</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">bound_max</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">step</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -3326,21 +3347,7 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1652</span>
-<span class="normal">1653</span>
-<span class="normal">1654</span>
-<span class="normal">1655</span>
-<span class="normal">1656</span>
-<span class="normal">1657</span>
-<span class="normal">1658</span>
-<span class="normal">1659</span>
-<span class="normal">1660</span>
-<span class="normal">1661</span>
-<span class="normal">1662</span>
-<span class="normal">1663</span>
-<span class="normal">1664</span>
-<span class="normal">1665</span>
-<span class="normal">1666</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1666</span>
 <span class="normal">1667</span>
 <span class="normal">1668</span>
 <span class="normal">1669</span>
@@ -3418,7 +3425,21 @@
 <span class="normal">1741</span>
 <span class="normal">1742</span>
 <span class="normal">1743</span>
-<span class="normal">1744</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">set_vmin_vmax</span><span class="p">(</span>
+<span class="normal">1744</span>
+<span class="normal">1745</span>
+<span class="normal">1746</span>
+<span class="normal">1747</span>
+<span class="normal">1748</span>
+<span class="normal">1749</span>
+<span class="normal">1750</span>
+<span class="normal">1751</span>
+<span class="normal">1752</span>
+<span class="normal">1753</span>
+<span class="normal">1754</span>
+<span class="normal">1755</span>
+<span class="normal">1756</span>
+<span class="normal">1757</span>
+<span class="normal">1758</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">set_vmin_vmax</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">vmin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">vmax</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -3535,20 +3556,20 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1746</span>
-<span class="normal">1747</span>
-<span class="normal">1748</span>
-<span class="normal">1749</span>
-<span class="normal">1750</span>
-<span class="normal">1751</span>
-<span class="normal">1752</span>
-<span class="normal">1753</span>
-<span class="normal">1754</span>
-<span class="normal">1755</span>
-<span class="normal">1756</span>
-<span class="normal">1757</span>
-<span class="normal">1758</span>
-<span class="normal">1759</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_autoscale_lims</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1760</span>
+<span class="normal">1761</span>
+<span class="normal">1762</span>
+<span class="normal">1763</span>
+<span class="normal">1764</span>
+<span class="normal">1765</span>
+<span class="normal">1766</span>
+<span class="normal">1767</span>
+<span class="normal">1768</span>
+<span class="normal">1769</span>
+<span class="normal">1770</span>
+<span class="normal">1771</span>
+<span class="normal">1772</span>
+<span class="normal">1773</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_autoscale_lims</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return (dmin, dmax, vmin, vmax) using data percentiles (phase: -pi, pi).&quot;&quot;&quot;</span>
     <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_slice_data</span><span class="p">()</span>
 
@@ -3586,25 +3607,25 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1761</span>
-<span class="normal">1762</span>
-<span class="normal">1763</span>
-<span class="normal">1764</span>
-<span class="normal">1765</span>
-<span class="normal">1766</span>
-<span class="normal">1767</span>
-<span class="normal">1768</span>
-<span class="normal">1769</span>
-<span class="normal">1770</span>
-<span class="normal">1771</span>
-<span class="normal">1772</span>
-<span class="normal">1773</span>
-<span class="normal">1774</span>
-<span class="normal">1775</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1775</span>
 <span class="normal">1776</span>
 <span class="normal">1777</span>
 <span class="normal">1778</span>
-<span class="normal">1779</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">autoscale_clim</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="normal">1779</span>
+<span class="normal">1780</span>
+<span class="normal">1781</span>
+<span class="normal">1782</span>
+<span class="normal">1783</span>
+<span class="normal">1784</span>
+<span class="normal">1785</span>
+<span class="normal">1786</span>
+<span class="normal">1787</span>
+<span class="normal">1788</span>
+<span class="normal">1789</span>
+<span class="normal">1790</span>
+<span class="normal">1791</span>
+<span class="normal">1792</span>
+<span class="normal">1793</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">autoscale_clim</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set vmin/vmax from percentiles and return (vmin, vmax, bound_min, bound_max, step).&quot;&quot;&quot;</span>
     <span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">parameterized</span><span class="o">.</span><span class="n">discard_events</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="c1"># Get data limits and auto-scale by percentiles</span>
@@ -3647,9 +3668,9 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1781</span>
-<span class="normal">1782</span>
-<span class="normal">1783</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_display_image_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">display_images</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1795</span>
+<span class="normal">1796</span>
+<span class="normal">1797</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_display_image_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">display_images</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set which images are displayed.&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">display_images</span> <span class="o">=</span> <span class="n">display_images</span>
 </code></pre></div></td></tr></table></div>
@@ -3676,21 +3697,7 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1785</span>
-<span class="normal">1786</span>
-<span class="normal">1787</span>
-<span class="normal">1788</span>
-<span class="normal">1789</span>
-<span class="normal">1790</span>
-<span class="normal">1791</span>
-<span class="normal">1792</span>
-<span class="normal">1793</span>
-<span class="normal">1794</span>
-<span class="normal">1795</span>
-<span class="normal">1796</span>
-<span class="normal">1797</span>
-<span class="normal">1798</span>
-<span class="normal">1799</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1799</span>
 <span class="normal">1800</span>
 <span class="normal">1801</span>
 <span class="normal">1802</span>
@@ -3698,7 +3705,21 @@
 <span class="normal">1804</span>
 <span class="normal">1805</span>
 <span class="normal">1806</span>
-<span class="normal">1807</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_colormap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="normal">1807</span>
+<span class="normal">1808</span>
+<span class="normal">1809</span>
+<span class="normal">1810</span>
+<span class="normal">1811</span>
+<span class="normal">1812</span>
+<span class="normal">1813</span>
+<span class="normal">1814</span>
+<span class="normal">1815</span>
+<span class="normal">1816</span>
+<span class="normal">1817</span>
+<span class="normal">1818</span>
+<span class="normal">1819</span>
+<span class="normal">1820</span>
+<span class="normal">1821</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_colormap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Refresh ColorMapper from cmap param (including Quantitative).&quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cmap</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;Quantitative&quot;</span><span class="p">:</span>
         <span class="n">qmaptype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_infer_quantitative_maptype</span><span class="p">()</span>
@@ -3745,26 +3766,26 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1809</span>
-<span class="normal">1810</span>
-<span class="normal">1811</span>
-<span class="normal">1812</span>
-<span class="normal">1813</span>
-<span class="normal">1814</span>
-<span class="normal">1815</span>
-<span class="normal">1816</span>
-<span class="normal">1817</span>
-<span class="normal">1818</span>
-<span class="normal">1819</span>
-<span class="normal">1820</span>
-<span class="normal">1821</span>
-<span class="normal">1822</span>
-<span class="normal">1823</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1823</span>
 <span class="normal">1824</span>
 <span class="normal">1825</span>
 <span class="normal">1826</span>
 <span class="normal">1827</span>
-<span class="normal">1828</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_colormap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_cmap</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="normal">1828</span>
+<span class="normal">1829</span>
+<span class="normal">1830</span>
+<span class="normal">1831</span>
+<span class="normal">1832</span>
+<span class="normal">1833</span>
+<span class="normal">1834</span>
+<span class="normal">1835</span>
+<span class="normal">1836</span>
+<span class="normal">1837</span>
+<span class="normal">1838</span>
+<span class="normal">1839</span>
+<span class="normal">1840</span>
+<span class="normal">1841</span>
+<span class="normal">1842</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_colormap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_cmap</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set ROI colormap (Same / Quantitative / named).&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">roi_cmap</span> <span class="o">=</span> <span class="n">new_cmap</span>
 
@@ -3808,10 +3829,10 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1830</span>
-<span class="normal">1831</span>
-<span class="normal">1832</span>
-<span class="normal">1833</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_zoom_scale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_zoom</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1844</span>
+<span class="normal">1845</span>
+<span class="normal">1846</span>
+<span class="normal">1847</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_zoom_scale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_zoom</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set ROI zoom scale and trigger redraw.&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">ROI</span><span class="o">.</span><span class="n">zoom_scale</span> <span class="o">=</span> <span class="n">new_zoom</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">trigger</span><span class="p">(</span><span class="s2">&quot;roi_state&quot;</span><span class="p">)</span>
@@ -3839,10 +3860,10 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1835</span>
-<span class="normal">1836</span>
-<span class="normal">1837</span>
-<span class="normal">1838</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_loc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_loc</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1849</span>
+<span class="normal">1850</span>
+<span class="normal">1851</span>
+<span class="normal">1852</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_loc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_loc</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set ROI overlay corner and trigger redraw.&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">ROI</span><span class="o">.</span><span class="n">roi_loc</span> <span class="o">=</span> <span class="n">ROI_LOCATION</span><span class="p">(</span><span class="n">new_loc</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">trigger</span><span class="p">(</span><span class="s2">&quot;roi_state&quot;</span><span class="p">)</span>
@@ -3870,10 +3891,10 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1840</span>
-<span class="normal">1841</span>
-<span class="normal">1842</span>
-<span class="normal">1843</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_lr_crop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_lr_crop</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1854</span>
+<span class="normal">1855</span>
+<span class="normal">1856</span>
+<span class="normal">1857</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_lr_crop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_lr_crop</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set ROI left/right crop and trigger redraw.&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">ROI</span><span class="o">.</span><span class="n">set_xrange</span><span class="p">(</span><span class="o">*</span><span class="n">new_lr_crop</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">trigger</span><span class="p">(</span><span class="s2">&quot;roi_state&quot;</span><span class="p">)</span>
@@ -3901,10 +3922,10 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1845</span>
-<span class="normal">1846</span>
-<span class="normal">1847</span>
-<span class="normal">1848</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_ud_crop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_ud_crop</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1859</span>
+<span class="normal">1860</span>
+<span class="normal">1861</span>
+<span class="normal">1862</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_ud_crop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_ud_crop</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set ROI up/down crop and trigger redraw.&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">ROI</span><span class="o">.</span><span class="n">set_yrange</span><span class="p">(</span><span class="o">*</span><span class="n">new_ud_crop</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">trigger</span><span class="p">(</span><span class="s2">&quot;roi_state&quot;</span><span class="p">)</span>
@@ -3932,10 +3953,10 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1850</span>
-<span class="normal">1851</span>
-<span class="normal">1852</span>
-<span class="normal">1853</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_line_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_color</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1864</span>
+<span class="normal">1865</span>
+<span class="normal">1866</span>
+<span class="normal">1867</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_line_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_color</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set ROI border color and trigger redraw.&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">ROI</span><span class="o">.</span><span class="n">color</span> <span class="o">=</span> <span class="n">new_color</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">trigger</span><span class="p">(</span><span class="s2">&quot;roi_state&quot;</span><span class="p">)</span>
@@ -3963,10 +3984,10 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1855</span>
-<span class="normal">1856</span>
-<span class="normal">1857</span>
-<span class="normal">1858</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_line_width</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_width</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1869</span>
+<span class="normal">1870</span>
+<span class="normal">1871</span>
+<span class="normal">1872</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_line_width</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_width</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set ROI border width and trigger redraw.&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">ROI</span><span class="o">.</span><span class="n">line_width</span> <span class="o">=</span> <span class="n">new_width</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">trigger</span><span class="p">(</span><span class="s2">&quot;roi_state&quot;</span><span class="p">)</span>
@@ -3994,10 +4015,10 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1860</span>
-<span class="normal">1861</span>
-<span class="normal">1862</span>
-<span class="normal">1863</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_zoom_order</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_order</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1874</span>
+<span class="normal">1875</span>
+<span class="normal">1876</span>
+<span class="normal">1877</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_zoom_order</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_order</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set ROI zoom interpolation order and trigger redraw.&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">ROI</span><span class="o">.</span><span class="n">zoom_order</span> <span class="o">=</span> <span class="n">new_order</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">trigger</span><span class="p">(</span><span class="s2">&quot;roi_state&quot;</span><span class="p">)</span>
@@ -4025,10 +4046,10 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1865</span>
-<span class="normal">1866</span>
-<span class="normal">1867</span>
-<span class="normal">1868</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_mode</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1879</span>
+<span class="normal">1880</span>
+<span class="normal">1881</span>
+<span class="normal">1882</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_mode</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set ROI view mode (overlay vs separate) and trigger redraw.&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">roi_mode</span> <span class="o">=</span> <span class="n">ROI_VIEW_MODE</span><span class="p">(</span><span class="n">new_mode</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">trigger</span><span class="p">(</span><span class="s2">&quot;roi_state&quot;</span><span class="p">)</span>
@@ -4056,21 +4077,7 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1870</span>
-<span class="normal">1871</span>
-<span class="normal">1872</span>
-<span class="normal">1873</span>
-<span class="normal">1874</span>
-<span class="normal">1875</span>
-<span class="normal">1876</span>
-<span class="normal">1877</span>
-<span class="normal">1878</span>
-<span class="normal">1879</span>
-<span class="normal">1880</span>
-<span class="normal">1881</span>
-<span class="normal">1882</span>
-<span class="normal">1883</span>
-<span class="normal">1884</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1884</span>
 <span class="normal">1885</span>
 <span class="normal">1886</span>
 <span class="normal">1887</span>
@@ -4118,7 +4125,21 @@
 <span class="normal">1929</span>
 <span class="normal">1930</span>
 <span class="normal">1931</span>
-<span class="normal">1932</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_state</span><span class="p">:</span> <span class="n">ROI_STATE</span><span class="p">):</span>
+<span class="normal">1932</span>
+<span class="normal">1933</span>
+<span class="normal">1934</span>
+<span class="normal">1935</span>
+<span class="normal">1936</span>
+<span class="normal">1937</span>
+<span class="normal">1938</span>
+<span class="normal">1939</span>
+<span class="normal">1940</span>
+<span class="normal">1941</span>
+<span class="normal">1942</span>
+<span class="normal">1943</span>
+<span class="normal">1944</span>
+<span class="normal">1945</span>
+<span class="normal">1946</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_roi_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_state</span><span class="p">:</span> <span class="n">ROI_STATE</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set ROI state (inactive / first_click / second_click / active) and show message.&quot;&quot;&quot;</span>
     <span class="n">prev_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi_state</span>
 
@@ -4205,11 +4226,11 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1934</span>
-<span class="normal">1935</span>
-<span class="normal">1936</span>
-<span class="normal">1937</span>
-<span class="normal">1938</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_reference_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_ref</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1948</span>
+<span class="normal">1949</span>
+<span class="normal">1950</span>
+<span class="normal">1951</span>
+<span class="normal">1952</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_reference_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_ref</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set reference image for metrics and trigger redraw.&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">metrics_reference</span> <span class="o">=</span> <span class="n">new_ref</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metrics_state</span> <span class="o">!=</span> <span class="n">METRICS_STATE</span><span class="o">.</span><span class="n">INACTIVE</span><span class="p">:</span>
@@ -4238,11 +4259,11 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1940</span>
-<span class="normal">1941</span>
-<span class="normal">1942</span>
-<span class="normal">1943</span>
-<span class="normal">1944</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_error_map_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1954</span>
+<span class="normal">1955</span>
+<span class="normal">1956</span>
+<span class="normal">1957</span>
+<span class="normal">1958</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_error_map_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set error map metric type and trigger redraw.&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">error_map_type</span> <span class="o">=</span> <span class="n">new_type</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metrics_state</span> <span class="ow">in</span> <span class="p">[</span><span class="n">METRICS_STATE</span><span class="o">.</span><span class="n">MAP</span><span class="p">,</span> <span class="n">METRICS_STATE</span><span class="o">.</span><span class="n">ALL</span><span class="p">]:</span>
@@ -4271,11 +4292,11 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1946</span>
-<span class="normal">1947</span>
-<span class="normal">1948</span>
-<span class="normal">1949</span>
-<span class="normal">1950</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_metrics_text_types</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_metrics</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1960</span>
+<span class="normal">1961</span>
+<span class="normal">1962</span>
+<span class="normal">1963</span>
+<span class="normal">1964</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_metrics_text_types</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_metrics</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set which metrics to show as text and trigger redraw.&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">metrics_text_types</span> <span class="o">=</span> <span class="n">new_metrics</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metrics_state</span> <span class="ow">in</span> <span class="p">[</span><span class="n">METRICS_STATE</span><span class="o">.</span><span class="n">TEXT</span><span class="p">,</span> <span class="n">METRICS_STATE</span><span class="o">.</span><span class="n">ALL</span><span class="p">]:</span>
@@ -4304,9 +4325,9 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1952</span>
-<span class="normal">1953</span>
-<span class="normal">1954</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_metrics_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_metrics_state</span><span class="p">:</span> <span class="n">METRICS_STATE</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1966</span>
+<span class="normal">1967</span>
+<span class="normal">1968</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_metrics_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_metrics_state</span><span class="p">:</span> <span class="n">METRICS_STATE</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set metrics state (inactive / map / text / all).&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">metrics_state</span> <span class="o">=</span> <span class="n">new_metrics_state</span>
 </code></pre></div></td></tr></table></div>
@@ -4333,12 +4354,12 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1956</span>
-<span class="normal">1957</span>
-<span class="normal">1958</span>
-<span class="normal">1959</span>
-<span class="normal">1960</span>
-<span class="normal">1961</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_error_map_scale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_scale</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1970</span>
+<span class="normal">1971</span>
+<span class="normal">1972</span>
+<span class="normal">1973</span>
+<span class="normal">1974</span>
+<span class="normal">1975</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_error_map_scale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_scale</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set error map scale and trigger redraw.&quot;&quot;&quot;</span>
     <span class="k">with</span> <span class="n">param</span><span class="o">.</span><span class="n">parameterized</span><span class="o">.</span><span class="n">discard_events</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">error_map_scale</span> <span class="o">=</span> <span class="n">new_scale</span>
@@ -4368,12 +4389,12 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1963</span>
-<span class="normal">1964</span>
-<span class="normal">1965</span>
-<span class="normal">1966</span>
-<span class="normal">1967</span>
-<span class="normal">1968</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_error_map_cmap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_cmap</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1977</span>
+<span class="normal">1978</span>
+<span class="normal">1979</span>
+<span class="normal">1980</span>
+<span class="normal">1981</span>
+<span class="normal">1982</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_error_map_cmap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_cmap</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set error map colormap and trigger redraw.&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">error_map_cmap</span> <span class="o">=</span> <span class="n">new_cmap</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">DifferenceColorMapper</span> <span class="o">=</span> <span class="n">ColorMap</span><span class="p">(</span><span class="n">new_cmap</span><span class="p">)</span>
@@ -4403,11 +4424,11 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1970</span>
-<span class="normal">1971</span>
-<span class="normal">1972</span>
-<span class="normal">1973</span>
-<span class="normal">1974</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_normalize_error_map</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1984</span>
+<span class="normal">1985</span>
+<span class="normal">1986</span>
+<span class="normal">1987</span>
+<span class="normal">1988</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_normalize_error_map</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Toggle error-map normalization and trigger redraw.&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">normalize_error_map</span> <span class="o">=</span> <span class="n">normalize</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metrics_state</span> <span class="ow">in</span> <span class="p">[</span><span class="n">METRICS_STATE</span><span class="o">.</span><span class="n">MAP</span><span class="p">,</span> <span class="n">METRICS_STATE</span><span class="o">.</span><span class="n">ALL</span><span class="p">]:</span>
@@ -4436,11 +4457,11 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1976</span>
-<span class="normal">1977</span>
-<span class="normal">1978</span>
-<span class="normal">1979</span>
-<span class="normal">1980</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_metrics_text_font_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1990</span>
+<span class="normal">1991</span>
+<span class="normal">1992</span>
+<span class="normal">1993</span>
+<span class="normal">1994</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_metrics_text_font_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set metrics text font size and trigger redraw.&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">metrics_text_font_size</span> <span class="o">=</span> <span class="n">new_size</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metrics_state</span> <span class="ow">in</span> <span class="p">[</span><span class="n">METRICS_STATE</span><span class="o">.</span><span class="n">TEXT</span><span class="p">,</span> <span class="n">METRICS_STATE</span><span class="o">.</span><span class="n">ALL</span><span class="p">]:</span>
@@ -4469,11 +4490,11 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1982</span>
-<span class="normal">1983</span>
-<span class="normal">1984</span>
-<span class="normal">1985</span>
-<span class="normal">1986</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_metrics_text_location</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_loc</span><span class="p">:</span> <span class="n">ROI_LOCATION</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1996</span>
+<span class="normal">1997</span>
+<span class="normal">1998</span>
+<span class="normal">1999</span>
+<span class="normal">2000</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_metrics_text_location</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_loc</span><span class="p">:</span> <span class="n">ROI_LOCATION</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set corner for metrics text overlay and trigger redraw.&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">metrics_text_location</span> <span class="o">=</span> <span class="n">new_loc</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metrics_state</span> <span class="ow">in</span> <span class="p">[</span><span class="n">METRICS_STATE</span><span class="o">.</span><span class="n">TEXT</span><span class="p">,</span> <span class="n">METRICS_STATE</span><span class="o">.</span><span class="n">ALL</span><span class="p">]:</span>
@@ -4502,19 +4523,19 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1988</span>
-<span class="normal">1989</span>
-<span class="normal">1990</span>
-<span class="normal">1991</span>
-<span class="normal">1992</span>
-<span class="normal">1993</span>
-<span class="normal">1994</span>
-<span class="normal">1995</span>
-<span class="normal">1996</span>
-<span class="normal">1997</span>
-<span class="normal">1998</span>
-<span class="normal">1999</span>
-<span class="normal">2000</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">clear_popup_pixel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2002</span>
+<span class="normal">2003</span>
+<span class="normal">2004</span>
+<span class="normal">2005</span>
+<span class="normal">2006</span>
+<span class="normal">2007</span>
+<span class="normal">2008</span>
+<span class="normal">2009</span>
+<span class="normal">2010</span>
+<span class="normal">2011</span>
+<span class="normal">2012</span>
+<span class="normal">2013</span>
+<span class="normal">2014</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">clear_popup_pixel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Clear popup pixel overlay and coordinates.&quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="p">(</span>
         <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_popout_active</span>
@@ -4551,18 +4572,18 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2002</span>
-<span class="normal">2003</span>
-<span class="normal">2004</span>
-<span class="normal">2005</span>
-<span class="normal">2006</span>
-<span class="normal">2007</span>
-<span class="normal">2008</span>
-<span class="normal">2009</span>
-<span class="normal">2010</span>
-<span class="normal">2011</span>
-<span class="normal">2012</span>
-<span class="normal">2013</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_popup_pixel_enabled</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_val</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2016</span>
+<span class="normal">2017</span>
+<span class="normal">2018</span>
+<span class="normal">2019</span>
+<span class="normal">2020</span>
+<span class="normal">2021</span>
+<span class="normal">2022</span>
+<span class="normal">2023</span>
+<span class="normal">2024</span>
+<span class="normal">2025</span>
+<span class="normal">2026</span>
+<span class="normal">2027</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_popup_pixel_enabled</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_val</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Enable/disable popup pixel inspection and clear if disabling.&quot;&quot;&quot;</span>
     <span class="n">old_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">popup_pixel_enabled</span>
     <span class="k">if</span> <span class="n">old_val</span> <span class="o">==</span> <span class="n">new_val</span><span class="p">:</span>
@@ -4598,21 +4619,7 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2015</span>
-<span class="normal">2016</span>
-<span class="normal">2017</span>
-<span class="normal">2018</span>
-<span class="normal">2019</span>
-<span class="normal">2020</span>
-<span class="normal">2021</span>
-<span class="normal">2022</span>
-<span class="normal">2023</span>
-<span class="normal">2024</span>
-<span class="normal">2025</span>
-<span class="normal">2026</span>
-<span class="normal">2027</span>
-<span class="normal">2028</span>
-<span class="normal">2029</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2029</span>
 <span class="normal">2030</span>
 <span class="normal">2031</span>
 <span class="normal">2032</span>
@@ -4634,7 +4641,21 @@
 <span class="normal">2048</span>
 <span class="normal">2049</span>
 <span class="normal">2050</span>
-<span class="normal">2051</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">autoformat_error_map</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="normal">2051</span>
+<span class="normal">2052</span>
+<span class="normal">2053</span>
+<span class="normal">2054</span>
+<span class="normal">2055</span>
+<span class="normal">2056</span>
+<span class="normal">2057</span>
+<span class="normal">2058</span>
+<span class="normal">2059</span>
+<span class="normal">2060</span>
+<span class="normal">2061</span>
+<span class="normal">2062</span>
+<span class="normal">2063</span>
+<span class="normal">2064</span>
+<span class="normal">2065</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">autoformat_error_map</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set error map scale and cmap from data (e.g. match main image scale).&quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metrics_state</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">METRICS_STATE</span><span class="o">.</span><span class="n">MAP</span><span class="p">,</span> <span class="n">METRICS_STATE</span><span class="o">.</span><span class="n">ALL</span><span class="p">]:</span>
         <span class="n">error</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Error maps are not enabled.&quot;</span><span class="p">)</span>
@@ -4695,17 +4716,17 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2053</span>
-<span class="normal">2054</span>
-<span class="normal">2055</span>
-<span class="normal">2056</span>
-<span class="normal">2057</span>
-<span class="normal">2058</span>
-<span class="normal">2059</span>
-<span class="normal">2060</span>
-<span class="normal">2061</span>
-<span class="normal">2062</span>
-<span class="normal">2063</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_max_err</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2067</span>
+<span class="normal">2068</span>
+<span class="normal">2069</span>
+<span class="normal">2070</span>
+<span class="normal">2071</span>
+<span class="normal">2072</span>
+<span class="normal">2073</span>
+<span class="normal">2074</span>
+<span class="normal">2075</span>
+<span class="normal">2076</span>
+<span class="normal">2077</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_max_err</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return 99.9th percentile of current slice error map values.&quot;&quot;&quot;</span>
     <span class="n">error_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slice</span><span class="p">()[</span><span class="s2">&quot;error_map&quot;</span><span class="p">]</span>
 
@@ -4730,7 +4751,9 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">compute_scroll_delta</span><span class="p">(</span><span class="n">delta</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">compute_scroll_delta</span><span class="p">(</span>
+    <span class="n">delta</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -4740,21 +4763,7 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/pyeyes/slicers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2065</span>
-<span class="normal">2066</span>
-<span class="normal">2067</span>
-<span class="normal">2068</span>
-<span class="normal">2069</span>
-<span class="normal">2070</span>
-<span class="normal">2071</span>
-<span class="normal">2072</span>
-<span class="normal">2073</span>
-<span class="normal">2074</span>
-<span class="normal">2075</span>
-<span class="normal">2076</span>
-<span class="normal">2077</span>
-<span class="normal">2078</span>
-<span class="normal">2079</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2079</span>
 <span class="normal">2080</span>
 <span class="normal">2081</span>
 <span class="normal">2082</span>
@@ -4772,7 +4781,21 @@
 <span class="normal">2094</span>
 <span class="normal">2095</span>
 <span class="normal">2096</span>
-<span class="normal">2097</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">compute_scroll_delta</span><span class="p">(</span>
+<span class="normal">2097</span>
+<span class="normal">2098</span>
+<span class="normal">2099</span>
+<span class="normal">2100</span>
+<span class="normal">2101</span>
+<span class="normal">2102</span>
+<span class="normal">2103</span>
+<span class="normal">2104</span>
+<span class="normal">2105</span>
+<span class="normal">2106</span>
+<span class="normal">2107</span>
+<span class="normal">2108</span>
+<span class="normal">2109</span>
+<span class="normal">2110</span>
+<span class="normal">2111</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">compute_scroll_delta</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">delta</span><span class="p">:</span> <span class="nb">float</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Increment/decrement scroll_dim by delta; return (dim_name, new_value) or (None, None).&quot;&quot;&quot;</span>
@@ -4860,7 +4883,12 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">diff</span><span class="p">(</span><span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">diff</span><span class="p">(</span>
+    <span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -4909,7 +4937,12 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">L1Diff</span><span class="p">(</span><span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">L1Diff</span><span class="p">(</span>
+    <span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -4978,7 +5011,12 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">RelativeL1</span><span class="p">(</span><span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">RelativeL1</span><span class="p">(</span>
+    <span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -5053,7 +5091,12 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">RMSE</span><span class="p">(</span><span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">RMSE</span><span class="p">(</span>
+    <span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -5114,7 +5157,12 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">NRMSE</span><span class="p">(</span><span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">NRMSE</span><span class="p">(</span>
+    <span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -5183,7 +5231,13 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">SSIM</span><span class="p">(</span><span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">percentiles</span><span class="o">=</span><span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">99.5</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">float</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">SSIM</span><span class="p">(</span>
+    <span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">percentiles</span><span class="o">=</span><span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">99.5</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -5266,7 +5320,12 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">PSNR</span><span class="p">(</span><span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">max_percentile</span><span class="o">=</span><span class="mf">99.5</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">PSNR</span><span class="p">(</span>
+    <span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">max_percentile</span><span class="o">=</span><span class="mf">99.5</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -5495,7 +5554,9 @@
 
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">QuantitativeColorMap</span><span class="p">(</span><span class="n">maptype</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">loLev</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">upLev</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">QuantitativeColorMap</span><span class="p">(</span>
+    <span class="n">maptype</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">loLev</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">upLev</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -5704,7 +5765,16 @@
   </span>
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="n">VALID_COLORMAPS</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;gray&#39;</span><span class="p">,</span> <span class="s1">&#39;jet&#39;</span><span class="p">,</span> <span class="s1">&#39;viridis&#39;</span><span class="p">,</span> <span class="s1">&#39;inferno&#39;</span><span class="p">,</span> <span class="s1">&#39;RdBu&#39;</span><span class="p">,</span> <span class="s1">&#39;Magma&#39;</span><span class="p">,</span> <span class="s1">&#39;hot&#39;</span><span class="p">,</span> <span class="s1">&#39;Quantitative&#39;</span><span class="p">]</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">VALID_COLORMAPS</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;gray&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;jet&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;inferno&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;RdBu&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Magma&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;hot&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Quantitative&quot;</span><span class="p">,</span>
+<span class="p">]</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -5726,7 +5796,19 @@
   </span>
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="n">QUANTITATIVE_MAPTYPES</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;T1&#39;</span><span class="p">,</span> <span class="s1">&#39;T2&#39;</span><span class="p">,</span> <span class="s1">&#39;R1&#39;</span><span class="p">,</span> <span class="s1">&#39;R2&#39;</span><span class="p">,</span> <span class="s1">&#39;T1rho&#39;</span><span class="p">,</span> <span class="s1">&#39;T1ρ&#39;</span><span class="p">,</span> <span class="s1">&#39;R1rho&#39;</span><span class="p">,</span> <span class="s1">&#39;R1ρ&#39;</span><span class="p">,</span> <span class="s1">&#39;T2*&#39;</span><span class="p">,</span> <span class="s1">&#39;R2*&#39;</span><span class="p">,</span> <span class="s1">&#39;T2s&#39;</span><span class="p">]</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">QUANTITATIVE_MAPTYPES</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;T1&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;T2&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;R1&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;R2&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;T1rho&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;T1ρ&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;R1rho&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;R1ρ&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;T2*&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;R2*&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;T2s&quot;</span><span class="p">,</span>
+<span class="p">]</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -5744,7 +5826,13 @@
 
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">profile_decorator</span><span class="p">(</span><span class="n">enable</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">save</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">save_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;./profs/function_profile&#39;</span><span class="p">,</span> <span class="n">max_profs_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">25</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">callable</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">profile_decorator</span><span class="p">(</span>
+    <span class="n">enable</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">save</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">save_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;./profs/function_profile&quot;</span><span class="p">,</span>
+    <span class="n">max_profs_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">25</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">callable</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -6497,7 +6585,9 @@
 
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">normalize_scale</span><span class="p">(</span><span class="n">shifted</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-10</span><span class="p">,</span> <span class="n">scale_tol</span><span class="o">=</span><span class="mf">1e-05</span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">normalize_scale</span><span class="p">(</span>
+    <span class="n">shifted</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-10</span><span class="p">,</span> <span class="n">scale_tol</span><span class="o">=</span><span class="mf">1e-05</span>
+<span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
