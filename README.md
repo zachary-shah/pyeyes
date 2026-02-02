@@ -2,7 +2,7 @@
 
 Pyeyes is an n-dimensional data visualization tool for comparing images, especially designed for MRI and built on [Holoviews](https://holoviews.org/), [Bokeh](https://bokeh.org/), and [Panel](https://panel.holoviz.org/) for interactive plotting.
 
-**For full documentation, see [Documentation](docs/index.md).**
+[![Documentation](https://img.shields.io/badge/docs-mkdocs-blue)](https://zachary-shah.github.io/pyeyes/) [![PyPI version](https://img.shields.io/pypi/v/pyeyes.svg)](https://pypi.org/project/pyeyes/) [![PyPI downloads](https://img.shields.io/pypi/dm/pyeyes.svg)](https://pypi.org/project/pyeyes/) [![Python versions](https://img.shields.io/pypi/pyversions/pyeyes.svg)](https://pypi.org/project/pyeyes/) [![License](https://img.shields.io/pypi/l/pyeyes.svg)](https://pypi.org/project/pyeyes/)
 
 ---
 
@@ -70,6 +70,9 @@ Activate the installed environment:
 ```
 mamba activate pyeyes
 ```
+
+For more details, see [Contributing](https://zachary-shah.github.io/pyeyes/contributing).
+
 
 ## Examples
 
@@ -158,12 +161,3 @@ ComparativeViewer(
     cat_dims=cat_dims,
 ).launch()
 ```
-
-
-## Contributing
-
-Before contributing, run:
-```bash
-pre-commit install
-```
-See the [user guide](docs/user_guide.md) for more on development and tests.
