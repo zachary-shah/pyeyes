@@ -2082,16 +2082,7 @@
 
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">NDSlicer</span><span class="p">(</span>
-    <span class="n">data</span><span class="p">:</span> <span class="n">Dataset</span><span class="p">,</span>
-    <span class="n">vdims</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
-    <span class="n">cdim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">clabs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">cat_dims</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">cfg</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">plot_hooks</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Callable</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="o">**</span><span class="n">params</span>
-<span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">NDSlicer</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">vdims</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">cdim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">clabs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">cat_dims</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">cfg</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">plot_hooks</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Callable</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -2626,9 +2617,7 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">slice</span><span class="p">(</span>
-    <span class="n">apply_colormap</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">return_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">slice</span><span class="p">(</span><span class="n">apply_colormap</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">return_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -3140,9 +3129,7 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">set_volatile_dims</span><span class="p">(</span>
-    <span class="n">vdims</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">pre_cache</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
-<span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">set_volatile_dims</span><span class="p">(</span><span class="n">vdims</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">pre_cache</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -3329,15 +3316,7 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">set_vmin_vmax</span><span class="p">(</span>
-    <span class="n">vmin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">vmax</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">dmin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">dmax</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">bound_min</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">bound_max</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">step</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">set_vmin_vmax</span><span class="p">(</span><span class="n">vmin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">dmin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">dmax</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">bound_min</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">bound_max</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -4751,9 +4730,7 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">compute_scroll_delta</span><span class="p">(</span>
-    <span class="n">delta</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">compute_scroll_delta</span><span class="p">(</span><span class="n">delta</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -4883,12 +4860,7 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">diff</span><span class="p">(</span>
-    <span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">diff</span><span class="p">(</span><span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -4937,12 +4909,7 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">L1Diff</span><span class="p">(</span>
-    <span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">L1Diff</span><span class="p">(</span><span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -5011,12 +4978,7 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">RelativeL1</span><span class="p">(</span>
-    <span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">RelativeL1</span><span class="p">(</span><span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -5091,12 +5053,7 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">RMSE</span><span class="p">(</span>
-    <span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">RMSE</span><span class="p">(</span><span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -5157,12 +5114,7 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">NRMSE</span><span class="p">(</span>
-    <span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">NRMSE</span><span class="p">(</span><span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -5231,13 +5183,7 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">SSIM</span><span class="p">(</span>
-    <span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="n">percentiles</span><span class="o">=</span><span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">99.5</span><span class="p">],</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">SSIM</span><span class="p">(</span><span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">return_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">percentiles</span><span class="o">=</span><span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">99.5</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -5320,12 +5266,7 @@
 
 
 </h5>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">PSNR</span><span class="p">(</span>
-    <span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="n">max_percentile</span><span class="o">=</span><span class="mf">99.5</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">PSNR</span><span class="p">(</span><span class="n">recon</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">true</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">isphase</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">max_percentile</span><span class="o">=</span><span class="mf">99.5</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -5554,9 +5495,7 @@
 
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">QuantitativeColorMap</span><span class="p">(</span>
-    <span class="n">maptype</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">loLev</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">upLev</span><span class="p">:</span> <span class="nb">float</span>
-<span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">QuantitativeColorMap</span><span class="p">(</span><span class="n">maptype</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">loLev</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">upLev</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -5765,16 +5704,7 @@
   </span>
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="n">VALID_COLORMAPS</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;gray&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;jet&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;inferno&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;RdBu&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;Magma&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;hot&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;Quantitative&quot;</span><span class="p">,</span>
-<span class="p">]</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">VALID_COLORMAPS</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;gray&#39;</span><span class="p">,</span> <span class="s1">&#39;jet&#39;</span><span class="p">,</span> <span class="s1">&#39;viridis&#39;</span><span class="p">,</span> <span class="s1">&#39;inferno&#39;</span><span class="p">,</span> <span class="s1">&#39;RdBu&#39;</span><span class="p">,</span> <span class="s1">&#39;Magma&#39;</span><span class="p">,</span> <span class="s1">&#39;hot&#39;</span><span class="p">,</span> <span class="s1">&#39;Quantitative&#39;</span><span class="p">]</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -5796,19 +5726,7 @@
   </span>
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="n">QUANTITATIVE_MAPTYPES</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;T1&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;T2&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;R1&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;R2&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;T1rho&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;T1ρ&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;R1rho&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;R1ρ&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;T2*&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;R2*&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;T2s&quot;</span><span class="p">,</span>
-<span class="p">]</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">QUANTITATIVE_MAPTYPES</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;T1&#39;</span><span class="p">,</span> <span class="s1">&#39;T2&#39;</span><span class="p">,</span> <span class="s1">&#39;R1&#39;</span><span class="p">,</span> <span class="s1">&#39;R2&#39;</span><span class="p">,</span> <span class="s1">&#39;T1rho&#39;</span><span class="p">,</span> <span class="s1">&#39;T1ρ&#39;</span><span class="p">,</span> <span class="s1">&#39;R1rho&#39;</span><span class="p">,</span> <span class="s1">&#39;R1ρ&#39;</span><span class="p">,</span> <span class="s1">&#39;T2*&#39;</span><span class="p">,</span> <span class="s1">&#39;R2*&#39;</span><span class="p">,</span> <span class="s1">&#39;T2s&#39;</span><span class="p">]</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -5826,13 +5744,7 @@
 
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">profile_decorator</span><span class="p">(</span>
-    <span class="n">enable</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-    <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-    <span class="n">save</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="n">save_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;./profs/function_profile&quot;</span><span class="p">,</span>
-    <span class="n">max_profs_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">25</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">callable</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">profile_decorator</span><span class="p">(</span><span class="n">enable</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">save</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">save_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;./profs/function_profile&#39;</span><span class="p">,</span> <span class="n">max_profs_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">25</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">callable</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -6585,9 +6497,7 @@
 
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">normalize_scale</span><span class="p">(</span>
-    <span class="n">shifted</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-10</span><span class="p">,</span> <span class="n">scale_tol</span><span class="o">=</span><span class="mf">1e-05</span>
-<span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">normalize_scale</span><span class="p">(</span><span class="n">shifted</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-10</span><span class="p">,</span> <span class="n">scale_tol</span><span class="o">=</span><span class="mf">1e-05</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
