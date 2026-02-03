@@ -4,7 +4,7 @@ This document provides a detailed changelog for pyeyes releases, documenting new
 
 ---
 
-## v0.4.1
+## v0.4.2
 
 **Release Date:** February 02 2026
 
@@ -25,6 +25,7 @@ Patch release addressing GUI improvements for pixel inspection and fixing an ROI
 | Issue | Description |
 |-------|-------------|
 | ROI bounding box | Fixed padding issue with ROI bounding box calculations |
+| PyPI README | Fixed doc lincs for PyPI compatibility |
 
 ---
 
