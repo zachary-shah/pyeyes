@@ -24,32 +24,32 @@ Pyeyes is an n-dimensional data visualization tool for comparing images, especia
 
 **Interactive Slicing:** Seamlessly navigate through MRI volumes of arbitrary dimensionality.
 
-![viewer demo](./doc/pyeyes_1_view.gif "View")
+![viewer demo](https://raw.githubusercontent.com/zachary-shah/pyeyes/main/doc/pyeyes_1_view.gif "View")
 
 
 **Dynamic Contrast Adjustment:** Toggle color maps, color limits, and more on the fly.
 
-![color demo](./doc/pyeyes_2_color.gif "View")
+![color demo](https://raw.githubusercontent.com/zachary-shah/pyeyes/main/doc/pyeyes_2_color.gif "View")
 
 **Complex Data:** Navigate different views of complex-valued datasets.
 
-![color demo](./doc/pyeyes_3_cplx.gif "Cplx")
+![color demo](https://raw.githubusercontent.com/zachary-shah/pyeyes/main/doc/pyeyes_3_cplx.gif "Cplx")
 
 **ROI Tools**: Add "Region of Interest" to plot views.
 
-![roi demo](./doc/pyeyes_4_roi.gif "ROI")
+![roi demo](https://raw.githubusercontent.com/zachary-shah/pyeyes/main/doc/pyeyes_4_roi.gif "ROI")
 
 **Comparative Metrics:** Get quick looks at standard image-processing metrics against your gold-standard datasets.
 
-![analysis demo](./doc/pyeyes_5_analysis.gif "Analysis")
+![analysis demo](https://raw.githubusercontent.com/zachary-shah/pyeyes/main/doc/pyeyes_5_analysis.gif "Analysis")
 
 **Repeatability:** Save viewer configurations you like and export static figures with ease.
 
-![save demo](./doc/pyeyes_6_export.gif "Export")
+![save demo](https://raw.githubusercontent.com/zachary-shah/pyeyes/main/doc/pyeyes_6_export.gif "Export")
 
 **Export:** Save figures with built-in Bokeh toolbar.
 
-![save demo](./doc/pyeyes_7_save.gif "Save")
+![save demo](https://raw.githubusercontent.com/zachary-shah/pyeyes/main/doc/pyeyes_7_save.gif "Save")
 
 
 ## Installation
